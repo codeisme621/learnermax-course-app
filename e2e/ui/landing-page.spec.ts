@@ -1,12 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('landing page displays "Hello world from Rico"', async ({ page }) => {
-  // Set Vercel protection bypass header if available
-  if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
-    await page.setExtraHTTPHeaders({
-      'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET
-    });
-  }
+  // Required: Bypass Vercel protection for automated testing
+  await page.setExtraHTTPHeaders({
+    'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+  });
 
   await page.goto('/');
 
