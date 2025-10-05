@@ -10,15 +10,6 @@ Resources:
   # Express.js API Function using Lambda Web Adapter
   ExpressApiFunction:
     Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: false
-        Target: es2022
-        EntryPoints:
-          - src/app.ts
-        External:
-          - '@aws-sdk/*'
     Properties:
       CodeUri: ./
       Handler: run.sh
@@ -28,46 +19,63 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Description: Express.js API running on Lambda with Web Adapter
-      Policies:
-        # Give Create/Read/Update/Delete Permissions to the SampleTable
-      - DynamoDBCrudPolicy:
-          TableName: !Ref SampleTable
       Environment:
         Variables:
           # Lambda Web Adapter configuration
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           RUST_LOG: info
           PORT: 8080
-          # Make table name accessible as environment variable from function code during execution
-          SAMPLE_TABLE: !Ref SampleTable
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
       Events:
-        # Catch all routes
-        RootPath:
+        HelloEndpoint:
           Type: Api
           Properties:
-            Path: /
-            Method: ANY
-        ProxyPath:
-          Type: Api
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
-  # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
+            Path: /hello
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
 
-  # DynamoDB table to store item: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
-  SampleTable:
-    Type: AWS::Serverless::SimpleTable
+  # API Gateway with API Key authentication
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
     Properties:
-      PrimaryKey:
-        Name: id
-        Type: String
-      ProvisionedThroughput:
-        ReadCapacityUnits: 2
-        WriteCapacityUnits: 2
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+
+  # API Key
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn:
+      - ApiGatewayApiProdStage
+    Properties:
+      Name: !Sub "${AWS::StackName}-api-key"
+      Description: API Key for LearnerMax Course Backend
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref ApiGatewayApi
+          StageName: Prod
+
+  # Usage Plan
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - ApiGatewayApiProdStage
+    Properties:
+      UsagePlanName: !Sub "${AWS::StackName}-usage-plan"
+      Description: Usage plan for LearnerMax Course Backend
+      ApiStages:
+        - ApiId: !Ref ApiGatewayApi
+          Stage: Prod
+
+  # Link API Key to Usage Plan
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
@@ -85,7 +93,10 @@ Resources:
 Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for Prod stage
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ApiKeyId:
+    Description: API Key ID
+    Value: !Ref ApiKey
   ExpressApiFunction:
     Description: Express API Lambda Function ARN
     Value: !GetAtt ExpressApiFunction.Arn
