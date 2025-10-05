@@ -28,7 +28,11 @@
         "build": "tsc",
         "start": "node dist/app.js",
         "dev": "tsc && node dist/app.js",
+        "dev:bg": "./scripts/start-dev-bg.sh",
+        "dev:stop": "./scripts/stop-dev-bg.sh",
+        "dev:logs": "cat .local-dev.log",
         "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
         "clean": "rm -rf dist",
         "typecheck": "tsc --noEmit",
         "lint": "eslint src --ext .ts"
@@ -55,6 +59,14 @@
         ],
         "collectCoverageFrom": [
             "src/**/*.ts"
-        ]
+        ],
+        "coverageThreshold": {
+            "global": {
+                "statements": 90,
+                "branches": 90,
+                "functions": 90,
+                "lines": 90
+            }
+        }
     }
 }
