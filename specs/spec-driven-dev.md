@@ -149,11 +149,16 @@ specs/
 
 ### Why Logical Slices?
 
+**Start with the end in mind.** The mainspec.md is valuable because it defines your end state first, then you work backwards from there.
+
+Once you have your mainspec, the logical slices become much easier to identify. You know where you're headed, and you can reverse-engineer the path to get there. This reverse engineering strategy—starting from the complete vision and decomposing it into manageable pieces—will become one of the key skills in a spec-driven world.
+
 A large feature might be too complex to implement all at once. Logical slices let you:
 - Work on one coherent piece at a time
 - Give the coding agent focused context
 - Make progress incrementally
 - Reason about smaller, manageable chunks
+- Track progress against the end state defined in mainspec.md
 
 For example, "user authentication" might slice into:
 - Login flow
@@ -161,7 +166,7 @@ For example, "user authentication" might slice into:
 - Password reset
 - Session management
 
-Each slice gets its own spec file, but they all relate to the `mainspec.md`.
+Each slice gets its own spec file, but they all relate to the `mainspec.md`, which describes the complete end state you're working towards.
 
 ### Writing Good Specs
 
@@ -225,7 +230,7 @@ This gives the AI clear direction while leaving room for good implementation dec
 
 This project implements Spec-Driven Development through a set of slash commands that represent the canonical workflow.
 
-**The workflow starts with a human-written spec** (located in `specs/<feature-name>/mainspec.md` or a logical slice). The phase commands then operate on that spec to research, plan, and implement.
+**The workflow starts with a human-written mainspec** (located in `specs/<feature-name>/mainspec.md`). Once you've defined your end state, you identify logical slices. The phase commands then operate on individual slices to research, plan, and implement—keeping context focused.
 
 While you can create specialized commands for specific task types (e.g., UI features), the underlying pattern remains the same.
 
@@ -334,7 +339,7 @@ Before opening a coding agent session, **you write the spec**:
 - What success looks like
 - What constraints exist
 
-Create it in `specs/<feature-name>/mainspec.md` or a logical slice. This human-written spec drives everything else.
+Start by creating `specs/<feature-name>/mainspec.md` to define your end state. Then reverse-engineer logical slices from it. These human-written specs drive everything else.
 
 ### 2. Review Your Specs, Then Review Plans
 
