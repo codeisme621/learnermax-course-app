@@ -8,6 +8,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "test": "jest --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests",
     "test:watch": "jest --watch",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
@@ -48,9 +49,21 @@
       "**/?(*.)+(spec|test).[jt]s?(x)"
     ],
     "collectCoverageFrom": [
+      "app/**/*.{js,jsx,ts,tsx}",
       "src/**/*.{js,jsx,ts,tsx}",
-      "!src/**/*.d.ts"
+      "lib/**/*.{js,jsx,ts,tsx}",
+      "!app/**/*.d.ts",
+      "!src/**/*.d.ts",
+      "!lib/**/*.d.ts"
     ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 90,
+        "branches": 90,
+        "functions": 90,
+        "lines": 90
+      }
+    },
     "transform": {
       "^.+\\.(ts|tsx)$": ["@swc/jest", {
         "jsc": {

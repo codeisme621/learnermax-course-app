@@ -13,6 +13,7 @@ learnermax-course-app/
 ├── backend/          # Express.js API (TypeScript, AWS Lambda + SAM)
 ├── frontend/         # Next.js application (React, Tailwind CSS)
 ├── e2e/              # Playwright end-to-end tests
+├── scripts/          # Deployment and monitoring scripts
 └── specs/            # Feature specifications (human-written)
 ```
 
@@ -62,6 +63,31 @@ pnpm run test:ui  # Run with Playwright UI
 cd backend
 pnpm run build && sam build && sam deploy
 ```
+
+## Deployment & Monitoring Scripts
+
+All deployment and monitoring scripts are located in the `scripts/` directory. See `scripts/README.md` for detailed documentation.
+
+### Preview Deployments
+```bash
+./scripts/deploy-preview-frontend.sh  # Deploy frontend to Vercel preview
+./scripts/deploy-preview-backend.sh   # Deploy backend to AWS SAM preview
+```
+
+### Log Monitoring (Signal System)
+The log monitoring scripts provide real-time feedback to AI agents:
+
+```bash
+# Vercel logs (frontend)
+./scripts/start-vercel-logs.sh        # Start tailing logs in background
+./scripts/stop-vercel-logs.sh         # Stop log tailing
+
+# SAM logs (backend)
+./scripts/start-sam-logs.sh           # Start tailing logs in background
+./scripts/stop-sam-logs.sh            # Stop log tailing
+```
+
+Logs are written to `scripts/.vercel-logs.log` and `scripts/.sam-logs.log` for AI agents to monitor.
 
 ## Spec-Driven Development
 

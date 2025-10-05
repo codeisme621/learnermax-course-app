@@ -2,9 +2,13 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 echo "🚀 Deploying frontend to Vercel preview environment..."
 
 # Deploy to Vercel and capture the preview URL
+cd "$PROJECT_ROOT"
 PREVIEW_URL=$(vercel --yes)
 
 echo "✅ Deployment successful!"
