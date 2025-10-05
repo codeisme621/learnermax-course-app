@@ -5,6 +5,9 @@
   "packageManager": "pnpm@10.13.1",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:bg": "./scripts/start-dev-bg.sh",
+    "dev:stop": "./scripts/stop-dev-bg.sh",
+    "dev:logs": "cat .local-dev.log",
     "build": "next build --turbopack",
     "start": "next start",
     "test": "jest --passWithNoTests",
