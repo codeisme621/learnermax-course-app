@@ -1,0 +1,288 @@
+# Implement Plan UI
+
+You are tasked with implementing an approved UI/frontend technical plan from `specs/<description>/plan.md`. These plans contain phases with specific UI changes, component requirements, and visual success criteria.
+
+## Getting Started
+
+When given a plan path:
+- Read the plan completely and check for any existing checkmarks (- [x])
+- Read any referenced research documents from `specs/<description>/research.md`
+- Read all files mentioned in the plan
+- **Read files fully** - never use limit/offset parameters, you need complete context
+- Check the project's component library and existing UI patterns
+- Create a todo list to track your progress
+- Start implementing if you understand what needs to be done
+
+If no plan path provided, ask for one.
+
+## UI Implementation Philosophy
+
+UI plans require special consideration for:
+- Component reuse and consistency
+- Visual design accuracy
+- Responsive behavior across devices
+- User experience and accessibility
+- Performance and loading states
+
+Your job is to:
+- Follow the plan's intent while adapting to existing UI patterns
+- Prioritize component reuse over custom solutions
+- Validate visual output continuously during development
+- Ensure responsive and accessible implementation
+- Update checkboxes in the plan as you complete sections
+
+## UI-Specific Implementation Workflow
+
+### Step 1: Component Discovery and Planning
+
+Before starting implementation:
+
+1. **Check Local Component Library**:
+   - Use Glob and Read tools to explore existing components in `/components`, `/ui`, or similar directories
+   - Identify reusable components that match your needs
+   - Document existing patterns and conventions
+
+2. **Explore shadcn Component Registries**:
+   ```
+   Use mcp__shadcn__get_project_registries to see available registries
+   Use mcp__shadcn__search_items_in_registries to find components you need
+   Use mcp__shadcn__view_items_in_registries for detailed component information
+   Use mcp__shadcn__get_item_examples_from_registries for usage examples
+   ```
+
+3. **Component Decision Matrix**:
+   - Document which components to reuse locally
+   - Which components to install from shadcn
+   - Which components need custom implementation
+   - Update your todo list with component acquisition tasks
+
+### Step 2: Development Environment Setup
+
+1. **Start Development Server**:
+   - Run `pnpm run dev` to start the local development server
+   - Note the localhost URL (typically http://localhost:3000)
+
+2. **Setup Live Feedback Loop**:
+   - Use playwright MCP server for continuous visual validation
+   - Plan to take screenshots at key implementation milestones
+   - Monitor console messages for errors and warnings
+
+### Step 3: Iterative Implementation with Visual Validation
+
+For each component or UI section:
+
+1. **Implement Changes**:
+   - Add/modify components following the plan
+   - Install shadcn components if needed using `mcp__shadcn__get_add_command_for_items`
+   - Follow existing code patterns and conventions
+
+2. **Visual Validation Cycle**:
+   ```
+   After each significant change:
+   - Navigate to the page using mcp__playwright__browser_navigate
+   - Take screenshots using mcp__playwright__browser_take_screenshot
+   - Check console messages using mcp__playwright__browser_console_messages
+   - Test responsive behavior by resizing browser
+   - Compare against design specifications
+   ```
+
+3. **Fix Issues Immediately**:
+   - Address visual discrepancies before moving on
+   - Fix console errors and warnings
+   - Ensure responsive behavior works correctly
+
+### Step 4: Component Integration Best Practices
+
+1. **When Installing shadcn Components**:
+   ```bash
+   # Get the correct add command from MCP
+   # Example: npx shadcn@latest add button card
+   ```
+
+2. **When Using Existing Components**:
+   - Read the component's implementation fully
+   - Check for required props and TypeScript interfaces
+   - Follow established patterns for styling and behavior
+
+3. **When Creating Custom Components**:
+   - Follow the project's component structure
+   - Use existing design tokens and CSS variables
+   - Implement proper TypeScript types
+   - Consider accessibility from the start
+
+## Visual Validation Process
+
+### Taking Meaningful Screenshots
+
+1. **Component-Level Screenshots**:
+   - Individual component in isolation
+   - Different states (hover, active, disabled)
+   - Various prop combinations
+
+2. **Page-Level Screenshots**:
+   - Full page layout
+   - Different screen sizes (mobile, tablet, desktop)
+   - Light/dark mode if applicable
+
+3. **Interactive States**:
+   - Forms with validation states
+   - Loading states and animations
+   - Error states and edge cases
+
+### Console Monitoring
+
+Continuously monitor for:
+- React warnings and errors
+- TypeScript type errors
+- CSS warnings
+- Network request failures
+- Performance warnings
+
+### Responsive Testing
+
+For each major UI change:
+1. Test desktop view (1920x1080)
+2. Test tablet view (768x1024)
+3. Test mobile view (375x667)
+4. Test edge cases (very wide, very narrow)
+
+## Success Criteria Verification
+
+### Automated Verification
+- [ ] Tests pass: `pnpm test`
+- [ ] Type checking passes: `pnpm run typecheck`
+- [ ] Linting passes: `pnpm run lint`
+- [ ] Build succeeds: `pnpm run build`
+- [ ] No console errors in development
+
+### Visual Verification
+- [ ] Components match design specifications
+- [ ] Responsive behavior works across breakpoints
+- [ ] Interactive states function correctly
+- [ ] Loading states display appropriately
+- [ ] Error states are handled gracefully
+
+### Accessibility Verification
+- [ ] Proper semantic HTML structure
+- [ ] ARIA labels where needed
+- [ ] Keyboard navigation works
+- [ ] Color contrast meets standards
+- [ ] Screen reader compatibility
+
+## Creating Implementation Documentation
+
+Create `specs/<description>/implementation.md` with UI-specific sections:
+
+```markdown
+# [Feature/Task Name] UI Implementation
+
+**Date**: [Current date]
+**Plan**: `specs/<description>/plan.md`
+**Status**: [In Progress | Completed | Blocked]
+
+## Summary
+[Brief overview of UI implementation]
+
+## Component Decisions
+- **Reused Local Components**: [List with file paths]
+- **Added shadcn Components**: [List with installation commands]
+- **Custom Components**: [List with rationale]
+
+## Visual Validation Results
+- **Screenshots Taken**: [List key screenshots with descriptions]
+- **Responsive Testing**: [Results across breakpoints]
+- **Browser Testing**: [Browsers/devices tested]
+
+## Implementation Progress
+
+### Phase 1: [Name] - [Status]
+- [Components implemented]
+- [Visual validation results]
+- [Any issues encountered]
+
+### Phase 2: [Name] - [Status]
+...
+
+## Key UI Changes Made
+- `components/ui/button.tsx` - Added custom variant for CTAs
+- `app/landing/page.tsx:45-67` - Implemented hero section layout
+- `styles/globals.css:120` - Added responsive grid utilities
+
+## Design Deviations
+[Any places where implementation differed from design and why]
+
+## Performance Considerations
+- [Bundle size impact]
+- [Loading performance]
+- [Animation performance]
+
+## Accessibility Notes
+- [ARIA implementations]
+- [Keyboard navigation patterns]
+- [Screen reader considerations]
+```
+
+## Troubleshooting UI Issues
+
+### Common shadcn Issues
+1. **Component not found**: Check registry configuration
+2. **Style conflicts**: Verify Tailwind CSS setup
+3. **TypeScript errors**: Check component prop types
+
+### Visual Discrepancies
+1. **Layout issues**: Check CSS Grid/Flexbox properties
+2. **Spacing problems**: Verify Tailwind spacing utilities
+3. **Responsive breakage**: Test each breakpoint individually
+
+### Performance Issues
+1. **Slow page loads**: Check bundle size and imports
+2. **Janky animations**: Verify CSS transform usage
+3. **Memory leaks**: Check React component cleanup
+
+## When to Use Playwright MCP Tools
+
+### Navigation and Setup
+- `mcp__playwright__browser_navigate` - Navigate to pages under development
+- `mcp__playwright__browser_resize` - Test responsive behavior
+
+### Visual Validation
+- `mcp__playwright__browser_take_screenshot` - Capture current state
+- `mcp__playwright__browser_snapshot` - Get accessibility tree
+
+### Interaction Testing
+- `mcp__playwright__browser_click` - Test interactive elements
+- `mcp__playwright__browser_type` - Test form inputs
+- `mcp__playwright__browser_hover` - Test hover states
+
+### Debugging
+- `mcp__playwright__browser_console_messages` - Check for errors
+- `mcp__playwright__browser_evaluate` - Run custom JavaScript
+
+## Important Guidelines
+
+1. **Component-First Approach**:
+   - Always check for existing components first
+   - Prefer shadcn components over custom implementations
+   - Maintain consistent component patterns
+
+2. **Visual Quality**:
+   - Take screenshots frequently during development
+   - Test responsive behavior continuously
+   - Fix visual issues immediately, don't accumulate them
+
+3. **Performance Awareness**:
+   - Monitor bundle size when adding components
+   - Optimize images and assets
+   - Use proper loading strategies
+
+4. **Accessibility First**:
+   - Consider accessibility from the start
+   - Test with keyboard navigation
+   - Ensure proper semantic structure
+
+5. **Documentation**:
+   - Document component decisions
+   - Capture visual validation results
+   - Note any design deviations and rationale
+
+Remember: UI implementation is iterative. Use the live development server and playwright tools to get immediate feedback and ensure your implementation matches the intended design and user experience.

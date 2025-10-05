@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  LearnerMax Course Backend - Express.js API with Lambda Web Adapter
+Transform:
+- AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Express.js API Function using Lambda Web Adapter
+  ExpressApiFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        EntryPoints:
+          - src/app.ts
+        External:
+          - '@aws-sdk/*'
+    Properties:
+      CodeUri: ./
+      Handler: run.sh
+      Runtime: nodejs22.x
+      Architectures:
+      - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      Description: Express.js API running on Lambda with Web Adapter
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the SampleTable
+      - DynamoDBCrudPolicy:
+          TableName: !Ref SampleTable
+      Environment:
+        Variables:
+          # Lambda Web Adapter configuration
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          RUST_LOG: info
+          PORT: 8080
+          # Make table name accessible as environment variable from function code during execution
+          SAMPLE_TABLE: !Ref SampleTable
+      Layers:
+        # Lambda Web Adapter Layer
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
+      Events:
+        # Catch all routes
+        RootPath:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyPath:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+  # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
+
+  # DynamoDB table to store item: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
+  SampleTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+Outputs:
+  WebEndpoint:
+    Description: API Gateway endpoint URL for Prod stage
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ExpressApiFunction:
+    Description: Express API Lambda Function ARN
+    Value: !GetAtt ExpressApiFunction.Arn
+  ExpressApiFunctionIamRole:
+    Description: Implicit IAM Role created for Express API function
+    Value: !GetAtt ExpressApiFunctionRole.Arn
+# # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Tracing: Active
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+  Api:
+    TracingEnabled: true
