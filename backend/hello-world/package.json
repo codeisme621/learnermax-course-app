@@ -1,0 +1,23 @@
+{
+  "name": "backend-api",
+  "version": "1.0.0",
+  "description": "Backend API with Express.js for Lambda",
+  "main": "app.mjs",
+  "type": "module",
+  "repository": "",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "@aws-sdk/client-dynamodb": "^3.713.0",
+    "@aws-sdk/lib-dynamodb": "^3.713.0"
+  },
+  "scripts": {
+    "start": "node app.mjs",
+    "test": "mocha tests/unit/"
+  },
+  "devDependencies": {
+    "chai": "^4.3.6",
+    "mocha": "^10.2.0"
+  }
+}

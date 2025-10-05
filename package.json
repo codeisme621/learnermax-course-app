@@ -1,0 +1,21 @@
+{
+  "name": "learnermax-course-app",
+  "version": "1.0.0",
+  "description": "A fully open source Course application that is modern and hackable",
+  "private": true,
+  "scripts": {
+    "install:all": "cd frontend && npm install && cd ../backend/hello-world && npm install && cd ../../e2e && npm install",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && sam local start-api",
+    "test:e2e": "cd e2e && npm test",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && sam build"
+  },
+  "keywords": [
+    "course",
+    "learning",
+    "education"
+  ],
+  "author": "",
+  "license": "MIT"
+}
