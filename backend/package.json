@@ -1,0 +1,58 @@
+{
+    "name": "learnermax-course-backend",
+    "description": "LearnerMax Course Backend API",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "packageManager": "pnpm@10.13.1",
+    "main": "dist/app.js",
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.398.0",
+        "@aws-sdk/lib-dynamodb": "^3.398.0",
+        "express": "^4.18.2"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.17",
+        "@types/jest": "^29.5.0",
+        "@types/node": "^20.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.0.0",
+        "@typescript-eslint/parser": "^8.0.0",
+        "aws-sdk-client-mock": "^2.0.0",
+        "eslint": "^9.0.0",
+        "jest": "^29.2.1",
+        "ts-jest": "^29.1.0",
+        "typescript": "^5.0.0"
+    },
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/app.js",
+        "dev": "tsc && node dist/app.js",
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "clean": "rm -rf dist",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src --ext .ts"
+    },
+    "jest": {
+        "preset": "ts-jest/presets/default-esm",
+        "testEnvironment": "node",
+        "extensionsToTreatAsEsm": [".ts"],
+        "moduleNameMapper": {
+            "^(\\.{1,2}/.*)\\.js$": "$1"
+        },
+        "transform": {
+            "^.+\\.tsx?$": [
+                "ts-jest",
+                {
+                    "useESM": true
+                }
+            ]
+        },
+        "testMatch": [
+            "**/__tests__/**/*.test.ts"
+        ],
+        "collectCoverageFrom": [
+            "src/**/*.ts"
+        ]
+    }
+}
+
