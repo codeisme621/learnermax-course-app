@@ -1,12 +1,12 @@
 # Implement Plan UI
 
-You are tasked with implementing an approved UI/frontend technical plan from `specs/<description>/plan.md`. These plans contain phases with specific UI changes, component requirements, and visual success criteria.
+You are tasked with implementing an approved UI/frontend technical plan from `specs/<feature-name>/plan.md` or `specs/<feature-name>/slices/<slice-name>/plan.md`. These plans contain phases with specific UI changes, component requirements, and visual success criteria.
 
 ## Getting Started
 
 When given a plan path:
 - Read the plan completely and check for any existing checkmarks (- [x])
-- Read any referenced research documents from `specs/<description>/research.md`
+- Read any referenced research documents from the same directory (e.g., `specs/<feature-name>/research.md` or `specs/<feature-name>/slices/<slice-name>/research.md`)
 - Read all files mentioned in the plan
 - **Read files fully** - never use limit/offset parameters, you need complete context
 - Check the project's component library and existing UI patterns
@@ -307,13 +307,13 @@ Check all success criteria from the plan are met:
 
 ## Creating Implementation Documentation
 
-Create `specs/<description>/implementation.md` with UI-specific sections:
+Create `specs/<feature-name>/implementation.md` (or `specs/<feature-name>/slices/<slice-name>/implementation.md` for slices) with UI-specific sections:
 
 ```markdown
 # [Feature/Task Name] UI Implementation
 
 **Date**: [Current date]
-**Plan**: `specs/<description>/plan.md`
+**Plan**: `specs/<feature-name>/plan.md` (or `specs/<feature-name>/slices/<slice-name>/plan.md`)
 **Status**: [In Progress | Completed | Blocked]
 
 ## Summary
