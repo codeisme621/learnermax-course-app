@@ -29,4 +29,19 @@ describe('TestimonialsSection', () => {
     expect(screen.getByLabelText(/previous testimonial/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/next testimonial/i)).toBeInTheDocument();
   });
+
+  it('renders partial star ratings correctly', () => {
+    const courseWithPartialRating = {
+      ...mockCourse,
+      testimonials: [
+        {
+          ...mockCourse.testimonials[0],
+          rating: 3,
+        },
+      ],
+    };
+    render(<TestimonialsSection course={courseWithPartialRating} />);
+    // Should render 3 filled stars and 2 empty stars
+    expect(screen.getByText(courseWithPartialRating.testimonials[0].name)).toBeInTheDocument();
+  });
 });

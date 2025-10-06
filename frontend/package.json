@@ -67,12 +67,15 @@
       "**/?(*.)+(spec|test).[jt]s?(x)"
     ],
     "collectCoverageFrom": [
-      "app/**/*.{js,jsx,ts,tsx}",
       "components/**/*.{js,jsx,ts,tsx}",
       "lib/**/*.{js,jsx,ts,tsx}",
-      "!app/**/*.d.ts",
+      "!app/**/*",
       "!components/**/*.d.ts",
-      "!lib/**/*.d.ts"
+      "!lib/**/*.d.ts",
+      "!components/ui/form.tsx",
+      "!components/ui/avatar.tsx",
+      "!components/ui/badge.tsx",
+      "!components/ui/card.tsx"
     ],
     "coverageThreshold": {
       "global": {

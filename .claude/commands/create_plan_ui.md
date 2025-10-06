@@ -297,19 +297,28 @@ export function HeroSection({ title, subtitle, ctaText, onCtaClick }: HeroSectio
 
 ### Success Criteria:
 
-#### Automated Verification:
-- [ ] Component renders without TypeScript errors
-- [ ] Tests pass: `pnpm test`
+#### Continuous Validation (During Implementation):
+- [ ] Run `pnpm test [file]` after each component change - all pass
+- [ ] Monitor dev server logs via `pnpm run dev:logs` - no build errors
+- [ ] Check browser console via Playwright MCP - no React warnings
+- [ ] Take screenshots after changes - matches design
+- [ ] Test responsive behavior with browser resize - works correctly
+
+#### Phase Completion Validation:
+- [ ] All component tests pass: `cd frontend && pnpm test`
 - [ ] Type checking passes: `pnpm run typecheck`
 - [ ] Linting passes: `pnpm run lint`
+- [ ] Test coverage meets 90% threshold: `pnpm run test:coverage`
 - [ ] Build succeeds: `pnpm run build`
+- [ ] Component renders without errors on local dev
 
-#### Visual Verification:
+#### Visual Verification (via Playwright MCP):
 - [ ] Component displays correctly on desktop (1920x1080)
 - [ ] Basic responsive behavior works on tablet (768x1024)
 - [ ] Mobile layout is functional (375x667)
 - [ ] No console errors when component mounts
 - [ ] Design system tokens are properly applied
+- [ ] Screenshots taken for all breakpoints
 
 ---
 
@@ -350,17 +359,26 @@ export function HeroSection({ title, subtitle, ctaText, onCtaClick }: HeroSectio
 
 ### Success Criteria:
 
-#### Automated Verification:
-- [ ] All tests continue to pass
-- [ ] No TypeScript errors
-- [ ] Accessibility tests pass
+#### Continuous Validation (During Implementation):
+- [ ] Run tests after each interactive state added - all pass
+- [ ] Monitor dev logs - no compilation errors
+- [ ] Test with Playwright MCP - all states render correctly
+- [ ] Verify keyboard navigation - focus states visible
 
-#### Visual Verification:
+#### Phase Completion Validation:
+- [ ] All tests pass: `cd frontend && pnpm test`
+- [ ] Type checking passes: `pnpm run typecheck`
+- [ ] Linting passes: `pnpm run lint`
+- [ ] Test coverage maintained: `pnpm run test:coverage`
+- [ ] Build succeeds: `pnpm run build`
+
+#### Visual Verification (via Playwright MCP):
 - [ ] Smooth responsive behavior across all breakpoints
 - [ ] Interactive states (hover, focus, active) work correctly
-- [ ] Typography scales appropriately
+- [ ] Typography scales appropriately across devices
 - [ ] Spacing is consistent with design system
 - [ ] Loading states display properly
+- [ ] Screenshots captured for all interactive states
 
 #### Accessibility Verification:
 - [ ] Proper heading hierarchy (h1, h2, etc.)
@@ -410,16 +428,36 @@ export default function HomePage() {
 
 ### Success Criteria:
 
-#### Automated Verification:
-- [ ] Page loads without errors
-- [ ] Bundle size impact is acceptable
-- [ ] Core Web Vitals metrics are good
+#### Continuous Validation (During Implementation):
+- [ ] Monitor dev logs during integration - no errors
+- [ ] Test page with Playwright MCP - component renders in context
+- [ ] Verify data flow with browser console - props passed correctly
+- [ ] Check for layout shift - smooth rendering
 
-#### Integration Verification:
+#### Phase Completion Validation:
+- [ ] All tests pass: `cd frontend && pnpm test`
+- [ ] Type checking passes: `pnpm run typecheck`
+- [ ] Linting passes: `pnpm run lint`
+- [ ] Test coverage meets 90%: `pnpm run test:coverage`
+- [ ] Build succeeds: `pnpm run build`
+- [ ] Bundle size impact acceptable (check build output)
+
+#### Integration Verification (Local):
 - [ ] Component works correctly within page layout
 - [ ] Data flow functions as expected
-- [ ] No layout shift during loading
-- [ ] Performance meets expectations
+- [ ] No layout shift during loading via Playwright screenshots
+- [ ] Performance meets expectations on local dev
+- [ ] No console warnings or errors
+
+#### Preview Deployment Validation:
+- [ ] Frontend deployed successfully: `./scripts/deploy-preview-frontend.sh`
+- [ ] Backend deployed successfully: `./scripts/deploy-preview-backend.sh`
+- [ ] E2E tests created in `e2e/tests/[feature-name].spec.ts`
+- [ ] E2E tests pass: `cd e2e && pnpm test`
+- [ ] No errors in frontend logs: `scripts/.vercel-logs.log`
+- [ ] No errors in backend logs: `scripts/.sam-logs.log`
+- [ ] UI works correctly in preview environment
+- [ ] Core Web Vitals metrics are good in preview
 
 ---
 
@@ -431,18 +469,33 @@ export default function HomePage() {
 - Responsive classes are applied
 - Accessibility attributes are present
 
-### Visual Regression Tests:
+### Visual Regression Tests (via Playwright MCP during local dev):
 - Desktop layout screenshot comparison
 - Mobile layout screenshot comparison
 - Interactive state screenshots
 - Dark mode compatibility (if applicable)
 
-### Manual Testing Steps:
-1. Load page and verify hero section displays correctly
+### E2E Tests (Created During Preview Validation):
+- [Complete user flow testing UI and backend integration]
+- [Form submission and data persistence]
+- [Navigation and routing]
+- [Error handling and edge cases]
+
+**Note**: E2E tests are written and run against the preview environment after local implementation is complete. Monitor frontend and backend logs in real-time while writing and running E2E tests to get immediate signal about issues.
+
+### Manual Testing Steps (Local Dev):
+1. Load page and verify component displays correctly
 2. Test responsive behavior by resizing browser window
 3. Navigate using keyboard only to verify accessibility
 4. Test with screen reader to verify semantic structure
 5. Verify performance on slow network connections
+
+### Manual Testing Steps (Preview Environment):
+1. Verify UI renders correctly in preview URL
+2. Test complete user flows end-to-end
+3. Check browser console for errors
+4. Review preview logs for backend errors
+5. Validate Core Web Vitals metrics
 
 ## Performance Considerations
 

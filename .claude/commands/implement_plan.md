@@ -37,20 +37,166 @@ If you encounter a mismatch:
   How should I proceed?
   ```
 
-## Verification Approach
+## Validation Workflow: Continuous Signal-Driven Development
 
-After implementing a phase:
-- Run the success criteria checks from the plan
-- Common commands include:
-  - `npm test` or `make test` for tests
-  - `npm run typecheck` or `make check` for type checking
-  - `npm run lint` or `make lint` for linting
-  - `npm run build` or `make build` for builds
-- Fix any issues before proceeding
-- Update your progress in both the plan and your todos
-- Check off completed items in the plan file itself using Edit
+**Philosophy**: Get continuous signal during implementation to know you're on the right track.
 
-Don't let verification interrupt your flow - batch it at natural stopping points.
+### Step 1: Local Development Setup (Before Implementation)
+
+1. **Navigate to backend directory**:
+   ```bash
+   cd backend
+   ```
+
+2. **Start backend dev server in background**:
+   ```bash
+   pnpm run dev:bg
+   ```
+   This starts the server on port 8080 and logs to `.local-dev.log`
+
+3. **Verify server is running**:
+   ```bash
+   curl http://localhost:8080/health
+   ```
+
+4. **Create todo list**:
+   - Use TodoWrite to track all phases and tasks from the plan
+
+### Step 2: Iterative Implementation with Continuous Signal
+
+For each code change:
+
+1. **Make the change** (edit/write files)
+
+2. **Get immediate signal**:
+   ```bash
+   pnpm run dev:logs  # Check for compilation/runtime errors
+   ```
+
+3. **Run relevant tests** after each significant change:
+   ```bash
+   pnpm test [specific-test-file]  # Quick feedback
+   ```
+
+4. **Test with curl** (for API changes):
+   ```bash
+   curl -X POST http://localhost:8080/api/endpoint -H "Content-Type: application/json" -d '{"test":"data"}'
+   ```
+
+5. **Monitor continuously**:
+   - Watch dev server logs for errors
+   - Check TypeScript compilation errors
+   - Verify API responses
+
+6. **Fix issues immediately** before moving to next change
+   - Don't accumulate errors
+   - Each change should leave codebase in working state
+
+### Step 3: Phase Completion Validation
+
+After completing a phase:
+
+1. **Run full test suite**:
+   ```bash
+   pnpm test
+   ```
+
+2. **Type checking**:
+   ```bash
+   pnpm run typecheck
+   ```
+
+3. **Linting**:
+   ```bash
+   pnpm run lint
+   ```
+
+4. **Test coverage** (verify 90% threshold):
+   ```bash
+   pnpm run test:coverage
+   ```
+
+5. **Build verification**:
+   ```bash
+   pnpm run build
+   ```
+
+6. **Update plan checkboxes** for completed phase using Edit tool
+
+7. **Document in implementation.md** if any deviations occurred
+
+### Step 4: Local Development Cleanup
+
+Before preview deployment:
+
+```bash
+pnpm run dev:stop
+```
+
+Verify process stopped (no "port already in use" errors on next run).
+
+### Step 5: Preview Deployment & E2E Validation
+
+1. **Deploy backend to preview**:
+   ```bash
+   cd /home/rico/projects/learnermax-course-app
+   ./scripts/deploy-preview-backend.sh
+   ```
+
+2. **Deploy frontend to preview** (needed for full stack E2E):
+   ```bash
+   ./scripts/deploy-preview-frontend.sh
+   ```
+
+3. **Start log monitoring**:
+   ```bash
+   ./scripts/start-sam-logs.sh
+   ./scripts/start-vercel-logs.sh
+   ```
+   Logs written to: `scripts/.sam-logs.log`, `scripts/.vercel-logs.log`
+
+4. **Write E2E tests while monitoring logs**:
+   - Create tests in `e2e/tests/[feature-name].spec.ts`
+   - **Monitor log files in real-time** as you write and run tests
+   - Get signal from preview environment:
+     - API errors in `scripts/.sam-logs.log`
+     - Frontend errors in `scripts/.vercel-logs.log`
+     - Request/response patterns
+     - Performance issues
+
+5. **Run E2E tests**:
+   ```bash
+   cd e2e && pnpm test
+   ```
+   Continue monitoring logs during test runs. Fix issues revealed by logs or test failures.
+
+6. **Review logs for errors**:
+   ```bash
+   cat scripts/.sam-logs.log | grep -i error
+   cat scripts/.vercel-logs.log | grep -i error
+   ```
+
+7. **Stop log monitoring**:
+   ```bash
+   ./scripts/stop-sam-logs.sh
+   ./scripts/stop-vercel-logs.sh
+   ```
+
+8. **Update implementation.md** with preview validation results
+
+### Step 6: Final Verification
+
+Check all success criteria from the plan are met:
+- [ ] All local tests pass
+- [ ] All builds successful
+- [ ] Test coverage meets 90% threshold
+- [ ] Preview deployments successful
+- [ ] E2E tests pass
+- [ ] No errors in preview logs
+- [ ] All plan checkboxes marked complete
+- [ ] implementation.md documents entire process
+
+**Key Principle**: Get signal continuously, fix issues immediately when they appear. Don't batch validation - that defeats the purpose of signal-driven development.
 
 ## Creating Implementation Documentation
 
