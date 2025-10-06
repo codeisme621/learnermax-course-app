@@ -58,11 +58,22 @@ Before starting implementation:
 
 ### Step 2: Development Environment Setup
 
-1. **Start Development Server**:
-   - Run `pnpm run dev` to start the local development server
-   - Note the localhost URL (typically http://localhost:3000)
+1. **Navigate to frontend directory**:
+   ```bash
+   cd frontend
+   ```
 
-2. **Setup Live Feedback Loop**:
+2. **Start frontend dev server in background**:
+   ```bash
+   pnpm run dev:bg
+   ```
+   This starts Next.js on port 3000 and logs to `.local-dev.log`
+
+3. **Verify server is running**:
+   - Navigate to http://localhost:3000 using Playwright MCP
+   - Or check logs: `pnpm run dev:logs`
+
+4. **Setup Live Feedback Loop**:
    - Use playwright MCP server for continuous visual validation
    - Plan to take screenshots at key implementation milestones
    - Monitor console messages for errors and warnings
@@ -76,20 +87,34 @@ For each component or UI section:
    - Install shadcn components if needed using `mcp__shadcn__get_add_command_for_items`
    - Follow existing code patterns and conventions
 
-2. **Visual Validation Cycle**:
-   ```
-   After each significant change:
-   - Navigate to the page using mcp__playwright__browser_navigate
-   - Take screenshots using mcp__playwright__browser_take_screenshot
-   - Check console messages using mcp__playwright__browser_console_messages
-   - Test responsive behavior by resizing browser
-   - Compare against design specifications
+2. **Get Immediate Signal**:
+   ```bash
+   pnpm run dev:logs  # Check for compilation/build errors
    ```
 
-3. **Fix Issues Immediately**:
+3. **Visual Validation Cycle** (after each significant change):
+   - Navigate to page: `mcp__playwright__browser_navigate` to http://localhost:3000
+   - Take screenshots: `mcp__playwright__browser_take_screenshot`
+   - Check console: `mcp__playwright__browser_console_messages`
+   - Test responsive: Resize browser with `mcp__playwright__browser_resize`
+   - Compare against design specifications
+
+4. **Run Relevant Tests**:
+   ```bash
+   pnpm test [component-test-file]  # Quick feedback
+   ```
+
+5. **Monitor Continuously**:
+   - Watch dev server logs for errors
+   - Check browser console for React warnings
+   - Verify TypeScript compilation
+   - Check for accessibility warnings
+
+6. **Fix Issues Immediately**:
    - Address visual discrepancies before moving on
    - Fix console errors and warnings
    - Ensure responsive behavior works correctly
+   - Don't accumulate errors
 
 ### Step 4: Component Integration Best Practices
 
@@ -146,13 +171,114 @@ For each major UI change:
 3. Test mobile view (375x667)
 4. Test edge cases (very wide, very narrow)
 
-## Success Criteria Verification
+## Phase Completion Validation
+
+After completing a phase:
+
+1. **Run full test suite**:
+   ```bash
+   pnpm test
+   ```
+
+2. **Type checking**:
+   ```bash
+   pnpm run typecheck
+   ```
+
+3. **Linting**:
+   ```bash
+   pnpm run lint
+   ```
+
+4. **Test coverage** (verify 90% threshold):
+   ```bash
+   pnpm run test:coverage
+   ```
+
+5. **Build verification**:
+   ```bash
+   pnpm run build
+   ```
+
+6. **Final visual validation**:
+   - Take screenshots of all breakpoints (mobile, tablet, desktop)
+   - Verify no console errors: `mcp__playwright__browser_console_messages`
+   - Test all interactive states
+   - Verify accessibility with keyboard navigation
+
+7. **Update plan checkboxes** for completed phase using Edit tool
+
+8. **Document in implementation.md** if any deviations occurred
+
+## Local Development Cleanup
+
+Before preview deployment:
+
+```bash
+pnpm run dev:stop
+```
+
+Verify process stopped (no "port already in use" errors on next run).
+
+## Preview Deployment & E2E Validation
+
+1. **Deploy frontend to preview**:
+   ```bash
+   cd /home/rico/projects/learnermax-course-app
+   ./scripts/deploy-preview-frontend.sh
+   ```
+
+2. **Deploy backend to preview** (needed for full stack E2E):
+   ```bash
+   ./scripts/deploy-preview-backend.sh
+   ```
+
+3. **Start log monitoring**:
+   ```bash
+   ./scripts/start-vercel-logs.sh
+   ./scripts/start-sam-logs.sh
+   ```
+   Logs written to: `scripts/.vercel-logs.log`, `scripts/.sam-logs.log`
+
+4. **Write E2E tests while monitoring logs**:
+   - Create tests in `e2e/tests/[feature-name].spec.ts`
+   - **Monitor log files in real-time** as you write and run tests
+   - Get signal from preview environment:
+     - Frontend errors in `scripts/.vercel-logs.log`
+     - API errors in `scripts/.sam-logs.log`
+     - UI rendering issues
+     - Performance problems
+
+5. **Run E2E tests**:
+   ```bash
+   cd e2e && pnpm test
+   ```
+   Continue monitoring logs during test runs. Fix issues revealed by logs or test failures.
+
+6. **Review logs for errors**:
+   ```bash
+   cat scripts/.vercel-logs.log | grep -i error
+   cat scripts/.sam-logs.log | grep -i error
+   ```
+
+7. **Stop log monitoring**:
+   ```bash
+   ./scripts/stop-vercel-logs.sh
+   ./scripts/stop-sam-logs.sh
+   ```
+
+8. **Update implementation.md** with preview validation results
+
+## Final Success Criteria Verification
+
+Check all success criteria from the plan are met:
 
 ### Automated Verification
-- [ ] Tests pass: `pnpm test`
+- [ ] All unit tests pass: `pnpm test`
 - [ ] Type checking passes: `pnpm run typecheck`
 - [ ] Linting passes: `pnpm run lint`
 - [ ] Build succeeds: `pnpm run build`
+- [ ] Test coverage meets 90% threshold: `pnpm run test:coverage`
 - [ ] No console errors in development
 
 ### Visual Verification
@@ -168,6 +294,16 @@ For each major UI change:
 - [ ] Keyboard navigation works
 - [ ] Color contrast meets standards
 - [ ] Screen reader compatibility
+
+### Preview Environment Verification
+- [ ] Frontend deployed successfully
+- [ ] Backend deployed successfully
+- [ ] E2E tests pass
+- [ ] No errors in preview logs
+- [ ] All plan checkboxes marked complete
+- [ ] implementation.md documents entire process
+
+**Key Principle**: Get visual signal continuously through Playwright, fix UI issues immediately. Don't batch validation - that defeats the purpose of signal-driven UI development.
 
 ## Creating Implementation Documentation
 

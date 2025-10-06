@@ -205,17 +205,28 @@ After structure approval:
 
 ### Success Criteria:
 
-#### Automated Verification:
-- [ ] Tests pass: `pnpm test`
+#### Continuous Validation (During Implementation):
+- [ ] Run `pnpm test [file]` after each significant change - all pass
+- [ ] Monitor dev server logs via `pnpm run dev:logs` - no errors
+- [ ] Test API endpoints with curl - correct responses
+- [ ] Check TypeScript compilation - no type errors
+
+#### Phase Completion Validation:
+- [ ] All unit tests pass: `cd backend && pnpm test`
 - [ ] Type checking passes: `pnpm run typecheck`
 - [ ] Linting passes: `pnpm run lint`
+- [ ] Test coverage meets 90% threshold: `pnpm run test:coverage`
 - [ ] Build succeeds: `pnpm run build`
+- [ ] Local dev server runs without errors
+- [ ] API endpoints tested with curl and respond correctly
 
-#### Manual Verification:
-- [ ] Feature works as expected when tested via UI
-- [ ] Performance is acceptable under load
-- [ ] Edge case handling verified manually
-- [ ] No regressions in related features
+#### Preview Deployment Validation:
+- [ ] Backend deployed successfully: `./scripts/deploy-preview-backend.sh`
+- [ ] Frontend deployed successfully: `./scripts/deploy-preview-frontend.sh`
+- [ ] E2E tests created in `e2e/tests/[feature-name].spec.ts`
+- [ ] E2E tests pass: `cd e2e && pnpm test`
+- [ ] No errors in backend logs: `scripts/.sam-logs.log`
+- [ ] No errors in frontend logs: `scripts/.vercel-logs.log`
 
 ---
 
@@ -233,6 +244,13 @@ After structure approval:
 
 ### Integration Tests:
 - [End-to-end scenarios]
+
+### E2E Tests (Created During Preview Validation):
+- [User flow to test in preview environment]
+- [Integration between frontend and backend]
+- [Critical path testing]
+
+**Note**: E2E tests are written and run against the preview environment after local implementation is complete. This validates the feature in a production-like setting with full stack integration.
 
 ### Manual Testing Steps:
 1. [Specific step to verify feature]
