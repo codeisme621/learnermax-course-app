@@ -33,8 +33,8 @@ Then wait for the user's input.
 ### Step 1: UI Context Gathering & Initial Analysis
 
 1. **Read all mentioned files immediately and FULLY**:
-   - Design specifications (e.g., `specs/hero_section/design.md`)
-   - UI research documents (e.g., `specs/hero_section/ui_research.md`)
+   - Design specifications (e.g., `specs/hero_section/design.md` or `specs/landing_page/slices/hero_section/design.md`)
+   - UI research documents (e.g., `specs/hero_section/research.md` or `specs/landing_page/slices/hero_section/research.md`)
    - Any design files or screenshots mentioned
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
    - **CRITICAL**: DO NOT spawn sub-tasks before reading these files yourself in the main context
@@ -197,9 +197,11 @@ Once aligned on approach:
 
 After structure approval:
 
-1. **Write the plan** to `specs/<description>/plan.md` where:
-   - `<description>` is a brief, descriptive name using underscores
-   - Examples: `hero_section`, `navigation_menu`, `product_carousel`
+1. **Write the plan** where:
+   - **Feature-level**: `specs/<feature-name>/plan.md` (e.g., `specs/landing_page/plan.md`)
+   - **Slice-level**: `specs/<feature-name>/slices/<slice-name>/plan.md` (e.g., `specs/landing_page/slices/hero_section/plan.md`)
+   - Use slice-level path when planning a specific slice from `specs/<feature-name>/slices/<slice-name>.md`
+   - Use feature-level path when planning the entire feature
 
 2. **Use this UI-specific template structure**:
 
@@ -532,6 +534,8 @@ export default function HomePage() {
 
 ## References
 
+- Related research: `specs/<feature-name>/research.md` (or `specs/<feature-name>/slices/<slice-name>/research.md`)
+- Main spec (if this is a slice): `specs/<feature-name>/mainspec.md`
 - Design system: `styles/design-system.css`
 - Component patterns: `components/ui/`
 - shadcn documentation: [Registry components used]
@@ -543,7 +547,7 @@ export default function HomePage() {
 1. **Present the draft plan location**:
    ```
    I've created the initial UI implementation plan at:
-   `specs/<description>/plan.md`
+   `specs/<feature-name>/plan.md` (or `specs/<feature-name>/slices/<slice-name>/plan.md`)
 
    Please review it and let me know:
    - Are the component choices appropriate?

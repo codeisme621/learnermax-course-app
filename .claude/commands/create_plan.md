@@ -32,7 +32,7 @@ Then wait for the user's input.
 ### Step 1: Context Gathering & Initial Analysis
 
 1. **Read all mentioned files immediately and FULLY**:
-   - Research documents (e.g., `specs/user_auth/research.md`)
+   - Research documents (e.g., `specs/user_auth/research.md` or `specs/user_auth/slices/login_flow/research.md`)
    - Related implementation plans
    - Any JSON/data files mentioned
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
@@ -154,9 +154,11 @@ Once aligned on approach:
 
 After structure approval:
 
-1. **Write the plan** to `specs/<description>/plan.md` where:
-   - `<description>` is a brief, descriptive name using underscores
-   - Examples: `user_authentication`, `api_error_handling`, `database_migration`
+1. **Write the plan** where:
+   - **Feature-level**: `specs/<feature-name>/plan.md` (e.g., `specs/user_authentication/plan.md`)
+   - **Slice-level**: `specs/<feature-name>/slices/<slice-name>/plan.md` (e.g., `specs/user_authentication/slices/login_flow/plan.md`)
+   - Use slice-level path when planning a specific slice from `specs/<feature-name>/slices/<slice-name>.md`
+   - Use feature-level path when planning the entire feature
 
 2. **Use this template structure**:
 
@@ -267,7 +269,8 @@ After structure approval:
 
 ## References
 
-- Related research: `specs/<description>/research.md`
+- Related research: `specs/<feature-name>/research.md` (or `specs/<feature-name>/slices/<slice-name>/research.md`)
+- Main spec (if this is a slice): `specs/<feature-name>/mainspec.md`
 - Similar implementation: `[file:line]`
 ````
 
@@ -276,7 +279,7 @@ After structure approval:
 1. **Present the draft plan location**:
    ```
    I've created the initial implementation plan at:
-   `specs/<description>/plan.md`
+   `specs/<feature-name>/plan.md` (or `specs/<feature-name>/slices/<slice-name>/plan.md`)
 
    Please review it and let me know:
    - Are the phases properly scoped?

@@ -133,18 +133,20 @@ Organize your specs by feature:
 specs/
 ├── user-authentication/
 │   ├── mainspec.md
-│   ├── login-flow.md
-│   └── password-reset.md
+│   └── slices/
+│       ├── login-flow.md
+│       └── password-reset.md
 ├── course-management/
 │   ├── mainspec.md
-│   ├── course-creation.md
-│   └── course-enrollment.md
+│   └── slices/
+│       ├── course-creation.md
+│       └── course-enrollment.md
 └── spec-driven-dev.md
 ```
 
 **Key principles**:
 - **One `mainspec.md` per feature** - This is your comprehensive specification for the entire feature
-- **Logical slices** - Break the mainspec into smaller, focused specs that are easier for both you and the coding agent to reason about
+- **Logical slices in `/slices` folder** - Break the mainspec into smaller, focused specs in `specs/<feature-name>/slices/` that are easier for both you and the coding agent to reason about
 - **Human-authored** - You write these, not AI
 
 ### Why Logical Slices?
@@ -230,7 +232,7 @@ This gives the AI clear direction while leaving room for good implementation dec
 
 This project implements Spec-Driven Development through a set of slash commands that represent the canonical workflow.
 
-**The workflow starts with a human-written mainspec** (located in `specs/<feature-name>/mainspec.md`). Once you've defined your end state, you identify logical slices. The phase commands then operate on individual slices to research, plan, and implement—keeping context focused.
+**The workflow starts with a human-written mainspec** (located in `specs/<feature-name>/mainspec.md`). Once you've defined your end state, you identify logical slices and create them in `specs/<feature-name>/slices/`. The phase commands then operate on individual slices to research, plan, and implement—keeping context focused.
 
 While you can create specialized commands for specific task types (e.g., UI features), the underlying pattern remains the same.
 
@@ -242,7 +244,7 @@ While you can create specialized commands for specific task types (e.g., UI feat
 
 **Purpose**: Deep exploration and analysis before writing any code.
 
-**Input**: Your human-written spec (e.g., `specs/user-authentication/login-flow.md`)
+**Input**: Your human-written spec (e.g., `specs/user-authentication/slices/login-flow.md`)
 
 **What happens**:
 - Reads your spec to understand what you want to build
@@ -339,7 +341,7 @@ Before opening a coding agent session, **you write the spec**:
 - What success looks like
 - What constraints exist
 
-Start by creating `specs/<feature-name>/mainspec.md` to define your end state. Then reverse-engineer logical slices from it. These human-written specs drive everything else.
+Start by creating `specs/<feature-name>/mainspec.md` to define your end state. Then reverse-engineer logical slices from it and place them in `specs/<feature-name>/slices/`. These human-written specs drive everything else.
 
 ### 2. Review Your Specs, Then Review Plans
 

@@ -68,9 +68,11 @@ Then wait for the user's research query.
    - Answer the user's specific questions with concrete evidence
 
 5. **Generate research document:**
-   - Create research document at `specs/<description>/research.md` where:
-     - `<description>` is a brief, descriptive name for the research topic using underscores
-     - Examples: `user_authentication_flow`, `api_error_handling`, `database_schema_design`
+   - Create research document where:
+     - **Feature-level**: `specs/<feature-name>/research.md` (e.g., `specs/user_authentication/research.md`)
+     - **Slice-level**: `specs/<feature-name>/slices/<slice-name>/research.md` (e.g., `specs/user_authentication/slices/login_flow/research.md`)
+     - Use slice-level path when researching a specific slice from `specs/<feature-name>/slices/<slice-name>.md`
+     - Use feature-level path when researching the entire feature
    - Structure the document as:
 
 ```markdown
@@ -105,7 +107,7 @@ Then wait for the user's research query.
 
 6. **Present findings:**
    - Present a concise summary of findings to the user
-   - Include the path to the research document: `specs/<description>/research.md`
+   - Include the path to the research document (e.g., `specs/user_authentication/research.md` or `specs/user_authentication/slices/login_flow/research.md`)
    - Include key file references for easy navigation
    - Ask if they have follow-up questions or need clarification
 
