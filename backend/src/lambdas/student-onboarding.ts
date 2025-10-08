@@ -1,4 +1,16 @@
 import { SNSEvent, SNSHandler } from 'aws-lambda';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+    convertEmptyValues: false,
+  },
+});
+
+const STUDENTS_TABLE_NAME = process.env.STUDENTS_TABLE_NAME!;
 
 interface StudentOnboardingMessage {
   userId: string;
@@ -11,38 +23,38 @@ interface StudentOnboardingMessage {
 export const handler: SNSHandler = async (event: SNSEvent) => {
   console.log('Student Onboarding Lambda triggered:', JSON.stringify(event, null, 2));
 
-  const API_ENDPOINT = process.env.API_ENDPOINT!;
-
   for (const record of event.Records) {
     try {
       const message: StudentOnboardingMessage = JSON.parse(record.Sns.Message);
       console.log('Processing student onboarding:', message);
 
-      // Call Student API to create student record
-      const response = await fetch(`${API_ENDPOINT}/api/students`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: message.userId,
-          email: message.email,
-          name: message.name,
-          signUpMethod: message.signUpMethod,
-          enrolledCourses: [],
-        }),
-      });
+      const now = new Date().toISOString();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Student API returned ${response.status}: ${errorText}`
-        );
+      // Create student record directly in DynamoDB
+      await docClient.send(
+        new PutCommand({
+          TableName: STUDENTS_TABLE_NAME,
+          Item: {
+            userId: message.userId,
+            email: message.email,
+            name: message.name,
+            signUpMethod: message.signUpMethod,
+            enrolledCourses: [],
+            createdAt: now,
+            updatedAt: now,
+          },
+          ConditionExpression: 'attribute_not_exists(userId)', // Prevent duplicates
+        })
+      );
+
+      console.log('Successfully created student record for:', message.email);
+    } catch (error: any) {
+      // If student already exists, log but don't fail
+      if (error.name === 'ConditionalCheckFailedException') {
+        console.log('Student already exists:', record.Sns.Message);
+        continue;
       }
 
-      const student = await response.json();
-      console.log('Successfully created student record:', student);
-    } catch (error) {
       console.error('Error processing student onboarding:', error);
       // Throw error to trigger SNS retry and eventually send to DLQ
       throw error;

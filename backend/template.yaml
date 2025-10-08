@@ -26,6 +26,7 @@ Resources:
   # Cognito User Pool
   LearnerMaxUserPool:
     Type: AWS::Cognito::UserPool
+    DependsOn: PostConfirmationInvokePermission
     Properties:
       UserPoolName: !Sub learnermax-${Environment}
       AutoVerifiedAttributes:
@@ -224,7 +225,6 @@ Resources:
       FunctionName: !Ref PostConfirmationFunction
       Action: lambda:InvokeFunction
       Principal: cognito-idp.amazonaws.com
-      SourceArn: !GetAtt LearnerMaxUserPool.Arn
 
   # Student Onboarding Lambda Function
   StudentOnboardingFunction:
@@ -240,7 +240,10 @@ Resources:
       Description: Processes student onboarding events from SNS
       Environment:
         Variables:
-          API_ENDPOINT: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+          STUDENTS_TABLE_NAME: !Ref StudentsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StudentsTable
       DeadLetterQueue:
         Type: SQS
         TargetArn: !GetAtt StudentOnboardingDLQ.Arn
