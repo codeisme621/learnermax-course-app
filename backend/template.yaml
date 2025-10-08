@@ -4,9 +4,252 @@ Description: >-
 Transform:
 - AWS::Serverless-2016-10-31
 
+Parameters:
+  Environment:
+    Type: String
+    Default: preview
+    AllowedValues: [preview, prod]
+    Description: Environment name (preview or prod)
+
+  GoogleOAuthSecretArn:
+    Type: String
+    Default: arn:aws:secretsmanager:us-east-1:853219709625:secret:learnermax/google-oauth-15o5Q2
+    Description: ARN of Secrets Manager secret containing Google OAuth credentials
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, prod]
+  IsPreview: !Not [!Equals [!Ref Environment, prod]]
+
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
+  # Cognito User Pool
+  LearnerMaxUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub learnermax-${Environment}
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+        - Name: name
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      LambdaConfig:
+        PostConfirmation: !GetAtt PostConfirmationFunction.Arn
+      UserPoolTags:
+        Environment: !Ref Environment
+        Project: LearnerMax
+
+  # Cognito User Pool Domain
+  LearnerMaxUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub learnermax-${Environment}-${AWS::AccountId}
+      UserPoolId: !Ref LearnerMaxUserPool
+
+  # Google Identity Provider
+  LearnerMaxGoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref LearnerMaxUserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Sub '{{resolve:secretsmanager:${GoogleOAuthSecretArn}:SecretString:client_id}}'
+        client_secret: !Sub '{{resolve:secretsmanager:${GoogleOAuthSecretArn}:SecretString:client_secret}}'
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
+  # Cognito User Pool Client
+  LearnerMaxUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: LearnerMaxGoogleIdentityProvider
+    Properties:
+      ClientName: !Sub learnermax-client-${Environment}
+      UserPoolId: !Ref LearnerMaxUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+        - Google
+      CallbackURLs:
+        - !If
+          - IsProd
+          - https://learnermax.com/api/auth/callback/cognito
+          - !Sub https://preview-${Environment}.learnermax.vercel.app/api/auth/callback/cognito
+        - http://localhost:3000/api/auth/callback/cognito
+      LogoutURLs:
+        - !If
+          - IsProd
+          - https://learnermax.com
+          - !Sub https://preview-${Environment}.learnermax.vercel.app
+        - http://localhost:3000
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      PreventUserExistenceErrors: ENABLED
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+
+  # DynamoDB Students Table
+  StudentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub learnermax-students-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # DynamoDB Courses Table
+  CoursesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub learnermax-courses-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: courseId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: courseId
+          KeyType: HASH
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # SNS Topic for Student Onboarding
+  StudentOnboardingTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub learnermax-student-onboarding-${Environment}
+      DisplayName: Student Onboarding Events
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # Dead Letter Queue for Student Onboarding
+  StudentOnboardingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub learnermax-student-onboarding-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # PostConfirmation Lambda Function
+  PostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: dist/lambdas/post-confirmation.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 256
+      Timeout: 10
+      Description: Cognito PostConfirmation trigger - publishes to SNS
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref StudentOnboardingTopic
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt StudentOnboardingTopic.TopicName
+
+  # Grant Cognito permission to invoke PostConfirmation Lambda
+  PostConfirmationInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PostConfirmationFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt LearnerMaxUserPool.Arn
+
+  # Student Onboarding Lambda Function
+  StudentOnboardingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: dist/lambdas/student-onboarding.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Description: Processes student onboarding events from SNS
+      Environment:
+        Variables:
+          API_ENDPOINT: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt StudentOnboardingDLQ.Arn
+      Events:
+        StudentOnboardingSNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref StudentOnboardingTopic
+
   # Express.js API Function using Lambda Web Adapter
   ExpressApiFunction:
     Type: AWS::Serverless::Function
@@ -25,57 +268,43 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           RUST_LOG: info
           PORT: 8080
+          # Application configuration
+          STUDENTS_TABLE_NAME: !Ref StudentsTable
+          COURSES_TABLE_NAME: !Ref CoursesTable
+          COGNITO_USER_POOL_ID: !Ref LearnerMaxUserPool
+          COGNITO_CLIENT_ID: !Ref LearnerMaxUserPoolClient
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StudentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CoursesTable
       Events:
-        HelloEndpoint:
+        RootEndpoint:
           Type: Api
           Properties:
-            Path: /hello
-            Method: GET
+            Path: /{proxy+}
+            Method: ANY
             RestApiId: !Ref ApiGatewayApi
 
-  # API Gateway with API Key authentication
+  # API Gateway with Cognito authorization
   ApiGatewayApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowMethods: "'GET,POST,PATCH,OPTIONS'"
       Auth:
-        ApiKeyRequired: true
-
-  # API Key
-  ApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    DependsOn:
-      - ApiGatewayApiProdStage
-    Properties:
-      Name: !Sub "${AWS::StackName}-api-key"
-      Description: API Key for LearnerMax Course Backend
-      Enabled: true
-      StageKeys:
-        - RestApiId: !Ref ApiGatewayApi
-          StageName: Prod
-
-  # Usage Plan
-  UsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    DependsOn:
-      - ApiGatewayApiProdStage
-    Properties:
-      UsagePlanName: !Sub "${AWS::StackName}-usage-plan"
-      Description: Usage plan for LearnerMax Course Backend
-      ApiStages:
-        - ApiId: !Ref ApiGatewayApi
-          Stage: Prod
-
-  # Link API Key to Usage Plan
-  UsagePlanKey:
-    Type: AWS::ApiGateway::UsagePlanKey
-    Properties:
-      KeyId: !Ref ApiKey
-      KeyType: API_KEY
-      UsagePlanId: !Ref UsagePlan
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt LearnerMaxUserPool.Arn
+            Identity:
+              Header: Authorization
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
@@ -94,12 +323,49 @@ Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for Prod stage
     Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-  ApiKeyId:
-    Description: API Key ID
-    Value: !Ref ApiKey
+
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref LearnerMaxUserPool
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolId
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref LearnerMaxUserPoolClient
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolClientId
+
+  UserPoolDomain:
+    Description: Cognito Hosted UI Domain
+    Value: !Sub https://learnermax-${Environment}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com
+
+  CognitoIssuerUrl:
+    Description: Cognito Issuer URL for NextAuth
+    Value: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${LearnerMaxUserPool}
+
+  StudentsTableName:
+    Description: DynamoDB Students Table Name
+    Value: !Ref StudentsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-StudentsTable
+
+  CoursesTableName:
+    Description: DynamoDB Courses Table Name
+    Value: !Ref CoursesTable
+    Export:
+      Name: !Sub ${AWS::StackName}-CoursesTable
+
+  StudentOnboardingTopicArn:
+    Description: SNS Topic ARN for Student Onboarding
+    Value: !Ref StudentOnboardingTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-StudentOnboardingTopicArn
+
   ExpressApiFunction:
     Description: Express API Lambda Function ARN
     Value: !GetAtt ExpressApiFunction.Arn
+
   ExpressApiFunctionIamRole:
     Description: Implicit IAM Role created for Express API function
     Value: !GetAtt ExpressApiFunctionRole.Arn
