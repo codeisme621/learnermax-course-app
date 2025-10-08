@@ -1,8 +1,14 @@
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { PostConfirmationTriggerEvent, PostConfirmationTriggerHandler } from 'aws-lambda';
 
-const snsClient = new SNSClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN!;
+let snsClient: SNSClient;
+
+const getSnsClient = () => {
+  if (!snsClient) {
+    snsClient = new SNSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+  }
+  return snsClient;
+};
 
 interface StudentOnboardingMessage {
   userId: string;
@@ -17,8 +23,11 @@ export const handler: PostConfirmationTriggerHandler = async (
 ) => {
   console.log('PostConfirmation event:', JSON.stringify(event, null, 2));
 
+  const topicArn = process.env.SNS_TOPIC_ARN!;
+  const client = getSnsClient();
+
   try {
-    const { userPoolId, userName, request } = event;
+    const { userName, request } = event;
     const userAttributes = request.userAttributes;
 
     // Determine sign-up method
@@ -37,9 +46,9 @@ export const handler: PostConfirmationTriggerHandler = async (
     console.log('Publishing student onboarding event:', message);
 
     // Publish to SNS topic
-    await snsClient.send(
+    await client.send(
       new PublishCommand({
-        TopicArn: SNS_TOPIC_ARN,
+        TopicArn: topicArn,
         Message: JSON.stringify(message),
         Subject: 'New Student Onboarding',
         MessageAttributes: {

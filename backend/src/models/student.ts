@@ -66,7 +66,7 @@ export const updateStudent = async (
 ): Promise<Student> => {
   const updateExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
-  const expressionAttributeValues: Record<string, any> = {};
+  const expressionAttributeValues: Record<string, string | string[]> = {};
 
   // Build update expression dynamically
   if (updates.name !== undefined) {

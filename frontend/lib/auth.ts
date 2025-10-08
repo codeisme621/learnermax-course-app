@@ -35,7 +35,7 @@ export const {
       client: {
         token_endpoint_auth_method: 'none',
       },
-      checks: ['state', 'nonce'],
+      checks: ['state'],
       issuer: process.env.COGNITO_ISSUER_URL,
       authorization: {
         url: `https://${cognitoDomain}/oauth2/authorize`,
@@ -53,7 +53,7 @@ export const {
       userinfo: {
         url: `https://${cognitoDomain}/oauth2/userInfo`,
       },
-      profile(profile: CognitoProfile, tokens: any) {
+      profile(profile: CognitoProfile, tokens: { access_token?: string; id_token?: string; refresh_token?: string }) {
         return {
           id: profile['cognito:username'], // Cognito username
           email: profile.email,
@@ -63,7 +63,7 @@ export const {
           refreshToken: tokens.refresh_token,
         };
       },
-    } as any,
+    },
     Credentials({
       id: 'cognito-credentials',
       name: 'Email and Password',

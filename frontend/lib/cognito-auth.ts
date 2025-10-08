@@ -51,7 +51,7 @@ export async function signInWithCognito(
       idToken: idToken,
       refreshToken: response.AuthenticationResult.RefreshToken || '',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cognito sign-in error:', error);
     return null;
   }

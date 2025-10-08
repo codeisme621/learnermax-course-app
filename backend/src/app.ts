@@ -30,9 +30,11 @@ app.get('/hello', (req: Request, res: Response) => {
 
 app.use('/api/students', studentRoutes);
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// Start server (only in production, not during tests)
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
 
 export default app;

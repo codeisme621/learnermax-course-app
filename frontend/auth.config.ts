@@ -20,11 +20,17 @@ export const authConfig = {
     async jwt({ token, user, account }) {
       // Initial sign in
       if (user && account) {
+        interface UserWithTokens {
+          accessToken?: string;
+          idToken?: string;
+          refreshToken?: string;
+        }
+        const userWithTokens = user as UserWithTokens;
         return {
           ...token,
-          accessToken: (user as any).accessToken,
-          idToken: (user as any).idToken,
-          refreshToken: (user as any).refreshToken,
+          accessToken: userWithTokens.accessToken,
+          idToken: userWithTokens.idToken,
+          refreshToken: userWithTokens.refreshToken,
           userId: user.id,
         };
       }

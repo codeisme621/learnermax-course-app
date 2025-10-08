@@ -1,11 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GoogleSignInButton } from '../GoogleSignInButton';
+import { signInWithGoogle } from '@/app/actions/auth';
 
-const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+// Mock the auth action
+jest.mock('@/app/actions/auth');
 
 describe('GoogleSignInButton', () => {
-  afterEach(() => {
-    consoleLogSpy.mockClear();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   it('renders Google sign in button', () => {
@@ -13,10 +15,10 @@ describe('GoogleSignInButton', () => {
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
   });
 
-  it('handles click event', () => {
+  it('handles click event', async () => {
     render(<GoogleSignInButton />);
     const button = screen.getByRole('button', { name: /continue with google/i });
     fireEvent.click(button);
-    expect(consoleLogSpy).toHaveBeenCalledWith('Google sign in clicked');
+    expect(signInWithGoogle).toHaveBeenCalled();
   });
 });

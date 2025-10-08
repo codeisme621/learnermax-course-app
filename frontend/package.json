@@ -88,7 +88,7 @@
       }
     },
     "transform": {
-      "^.+\\.(ts|tsx)$": [
+      "^.+\\.(ts|tsx|js|jsx)$": [
         "@swc/jest",
         {
           "jsc": {
@@ -104,6 +104,9 @@
           }
         }
       ]
-    }
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(next-auth|@auth)/)"
+    ]
   }
 }

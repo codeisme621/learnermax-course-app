@@ -7,9 +7,23 @@ const router: Router = express.Router();
 
 // Helper to get user ID from API Gateway authorizer context
 // API Gateway Cognito Authorizer puts claims in requestContext.authorizer.claims
+interface ApiGatewayRequest extends Request {
+  apiGateway?: {
+    event?: {
+      requestContext?: {
+        authorizer?: {
+          claims?: {
+            sub?: string;
+          };
+        };
+      };
+    };
+  };
+}
+
 const getUserIdFromContext = (req: Request): string | null => {
   // Lambda Web Adapter passes API Gateway context through headers
-  const authorizerContext = (req as any).apiGateway?.event?.requestContext?.authorizer?.claims;
+  const authorizerContext = (req as ApiGatewayRequest).apiGateway?.event?.requestContext?.authorizer?.claims;
   return authorizerContext?.sub || null;
 };
 
@@ -23,9 +37,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     const student = await createStudent(validatedData);
 
     res.status(201).json(student);
-  } catch (error: any) {
-    if (error.name === 'ZodError') {
-      res.status(400).json({ error: 'Invalid request body', details: error.errors });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      res.status(400).json({ error: 'Invalid request body', details: (error as any).errors });
       return;
     }
 
@@ -84,9 +98,9 @@ router.patch('/:userId', async (req: Request, res: Response): Promise<void> => {
     const updatedStudent = await updateStudent(userId, validatedData);
 
     res.status(200).json(updatedStudent);
-  } catch (error: any) {
-    if (error.name === 'ZodError') {
-      res.status(400).json({ error: 'Invalid request body', details: error.errors });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      res.status(400).json({ error: 'Invalid request body', details: (error as any).errors });
       return;
     }
 

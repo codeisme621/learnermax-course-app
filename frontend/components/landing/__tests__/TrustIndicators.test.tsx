@@ -2,7 +2,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { TrustIndicators } from '../TrustIndicators';
 
 // Mock framer motion to avoid async rendering issues in tests
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 jest.mock('motion/react', () => ({
   motion: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -44,7 +44,8 @@ describe('PostConfirmation Lambda', () => {
     expect(snsMock.calls()).toHaveLength(1);
 
     const publishCall = snsMock.call(0);
-    const message = JSON.parse(publishCall.args[0].input.Message!);
+    const input = publishCall.args[0].input as { Message?: string };
+    const message = JSON.parse(input.Message!);
 
     expect(message).toMatchObject({
       userId: 'user-123',
@@ -81,7 +82,8 @@ describe('PostConfirmation Lambda', () => {
     await handler(event, mockContext, mockCallback);
 
     const publishCall = snsMock.call(0);
-    const message = JSON.parse(publishCall.args[0].input.Message!);
+    const input2 = publishCall.args[0].input as { Message?: string };
+    const message = JSON.parse(input2.Message!);
 
     expect(message.signUpMethod).toBe('google');
   });

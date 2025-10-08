@@ -123,7 +123,7 @@ export function VerifyEmailForm() {
           </div>
           <h2 className="text-2xl font-bold mb-2">Check Your Email</h2>
           <p className="text-sm text-muted-foreground">
-            We've sent a verification code to
+            We&apos;ve sent a verification code to
           </p>
           <p className="text-sm font-medium mt-1">{email}</p>
         </div>
@@ -167,7 +167,7 @@ export function VerifyEmailForm() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground mb-2">
-            Didn't receive the code?
+            Didn&apos;t receive the code?
           </p>
           <Button
             type="button"

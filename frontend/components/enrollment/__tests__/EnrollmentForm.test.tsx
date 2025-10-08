@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EnrollmentForm } from '../EnrollmentForm';
+import { signUp } from '@/lib/cognito';
 
 // Mock framer motion to avoid async rendering issues in tests
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 jest.mock('motion/react', () => ({
   motion: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,12 +10,12 @@ jest.mock('motion/react', () => ({
   },
 }));
 
-// Mock console.log to verify form submission
-const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+// Mock cognito functions
+jest.mock('@/lib/cognito');
 
 describe('EnrollmentForm', () => {
-  afterEach(() => {
-    consoleLogSpy.mockClear();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   it('renders form fields', () => {
@@ -51,7 +51,10 @@ describe('EnrollmentForm', () => {
     expect(passwordInput.value).toBe('password123');
   });
 
-  it('handles form submission', () => {
+  it('handles form submission', async () => {
+    const mockSignUp = signUp as jest.MockedFunction<typeof signUp>;
+    mockSignUp.mockResolvedValue({ success: true });
+
     render(<EnrollmentForm />);
 
     const nameInput = screen.getByLabelText(/full name/i);
@@ -65,10 +68,12 @@ describe('EnrollmentForm', () => {
     const form = screen.getByRole('button', { name: /create account/i }).closest('form');
     if (form) {
       fireEvent.submit(form);
-      expect(consoleLogSpy).toHaveBeenCalledWith('Form submitted:', {
-        name: 'John Doe',
-        email: 'john@example.com',
-        password: 'password123',
+      await waitFor(() => {
+        expect(mockSignUp).toHaveBeenCalledWith({
+          name: 'John Doe',
+          email: 'john@example.com',
+          password: 'password123',
+        });
       });
     }
   });

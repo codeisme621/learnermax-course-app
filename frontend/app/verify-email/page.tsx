@@ -19,7 +19,7 @@ export default function VerifyEmailPage() {
               Verify Your Email
             </h1>
             <p className="text-lg text-muted-foreground">
-              We've sent a verification code to your email address
+              We&apos;ve sent a verification code to your email address
             </p>
           </div>
 

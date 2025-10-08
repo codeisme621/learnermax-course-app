@@ -73,11 +73,11 @@ export const signUp = async ({
           }
         : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Sign up error:', error);
     return {
       success: false,
-      error: error.message || 'Failed to sign up',
+      error: error instanceof Error ? error.message : 'Failed to sign up',
     };
   }
 };
@@ -98,11 +98,11 @@ export const confirmSignUp = async ({
     return {
       success: true,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Confirmation error:', error);
     return {
       success: false,
-      error: error.message || 'Failed to confirm sign up',
+      error: error instanceof Error ? error.message : 'Failed to confirm sign up',
     };
   }
 };
@@ -121,11 +121,11 @@ export const resendConfirmationCode = async (
     return {
       success: true,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Resend code error:', error);
     return {
       success: false,
-      error: error.message || 'Failed to resend confirmation code',
+      error: error instanceof Error ? error.message : 'Failed to resend confirmation code',
     };
   }
 };

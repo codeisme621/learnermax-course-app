@@ -2,15 +2,20 @@ import { SNSEvent, SNSHandler } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client, {
-  marshallOptions: {
-    removeUndefinedValues: true,
-    convertEmptyValues: false,
-  },
-});
+let docClient: DynamoDBDocumentClient;
 
-const STUDENTS_TABLE_NAME = process.env.STUDENTS_TABLE_NAME!;
+const getDocClient = () => {
+  if (!docClient) {
+    const client = new DynamoDBClient({});
+    docClient = DynamoDBDocumentClient.from(client, {
+      marshallOptions: {
+        removeUndefinedValues: true,
+        convertEmptyValues: false,
+      },
+    });
+  }
+  return docClient;
+};
 
 interface StudentOnboardingMessage {
   userId: string;
@@ -23,6 +28,9 @@ interface StudentOnboardingMessage {
 export const handler: SNSHandler = async (event: SNSEvent) => {
   console.log('Student Onboarding Lambda triggered:', JSON.stringify(event, null, 2));
 
+  const tableName = process.env.STUDENTS_TABLE_NAME!;
+  const client = getDocClient();
+
   for (const record of event.Records) {
     try {
       const message: StudentOnboardingMessage = JSON.parse(record.Sns.Message);
@@ -31,9 +39,9 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
       const now = new Date().toISOString();
 
       // Create student record directly in DynamoDB
-      await docClient.send(
+      await client.send(
         new PutCommand({
-          TableName: STUDENTS_TABLE_NAME,
+          TableName: tableName,
           Item: {
             userId: message.userId,
             email: message.email,
@@ -48,9 +56,9 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
       );
 
       console.log('Successfully created student record for:', message.email);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If student already exists, log but don't fail
-      if (error.name === 'ConditionalCheckFailedException') {
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
         console.log('Student already exists:', record.Sns.Message);
         continue;
       }
