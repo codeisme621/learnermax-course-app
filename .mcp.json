@@ -13,6 +13,7 @@
         "@playwright/mcp@latest",
         "--browser",
         "chromium",
+        "--isolated",
         "--executable-path",
         "/usr/bin/chromium-browser"
       ]

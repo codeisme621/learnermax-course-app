@@ -1,11 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { signInWithGoogle } from '@/app/actions/auth';
 
 export function GoogleSignInButton() {
-  const handleGoogleSignIn = () => {
-    // Placeholder - will be implemented with actual OAuth later
-    console.log('Google sign in clicked');
+  const handleGoogleSignIn = async () => {
+    await signInWithGoogle();
   };
 
   return (

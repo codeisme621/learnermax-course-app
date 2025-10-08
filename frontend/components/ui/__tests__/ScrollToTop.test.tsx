@@ -2,9 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ScrollToTop } from '../ScrollToTop';
 
 // Mock framer motion
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 jest.mock('motion/react', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   motion: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,

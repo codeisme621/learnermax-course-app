@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,19 +9,44 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { motion } from 'motion/react';
-import { Mail, User, Lock } from 'lucide-react';
+import { Mail, User, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { signUp } from '@/lib/cognito';
 
 export function EnrollmentForm() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder - will be implemented later
-    console.log('Form submitted:', formData);
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await signUp({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+      });
+
+      if (!result.success) {
+        setError(result.error || 'Failed to create account');
+        setIsLoading(false);
+        return;
+      }
+
+      // Redirect to verification page with email
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+    } catch (err) {
+      console.error('Sign up error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,8 +131,22 @@ export function EnrollmentForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            Create Account
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating Account...
+              </>
+            ) : (
+              'Create Account'
+            )}
           </Button>
         </form>
 

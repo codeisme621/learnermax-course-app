@@ -3,7 +3,6 @@ import { HeroSection } from '../HeroSection';
 import { mockCourse } from '@/lib/mock-data/course';
 
 // Mock framer motion to avoid async rendering issues in tests
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 jest.mock('motion/react', () => ({
   motion: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
