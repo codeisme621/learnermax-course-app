@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SignInForm } from '@/components/auth/SignInForm';
@@ -23,7 +24,9 @@ export default function SignInPage() {
             </p>
           </div>
 
-          <SignInForm />
+          <Suspense fallback={<div className="text-center">Loading...</div>}>
+            <SignInForm />
+          </Suspense>
         </div>
       </main>
       <Footer />

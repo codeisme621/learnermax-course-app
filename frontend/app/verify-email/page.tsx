@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { VerifyEmailForm } from '@/components/enrollment/VerifyEmailForm';
@@ -23,7 +24,9 @@ export default function VerifyEmailPage() {
             </p>
           </div>
 
-          <VerifyEmailForm />
+          <Suspense fallback={<div className="text-center">Loading...</div>}>
+            <VerifyEmailForm />
+          </Suspense>
         </div>
       </main>
       <Footer />
