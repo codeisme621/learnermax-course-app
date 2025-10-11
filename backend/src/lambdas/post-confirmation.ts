@@ -1,5 +1,10 @@
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { PostConfirmationTriggerEvent, PostConfirmationTriggerHandler } from 'aws-lambda';
+import { createLogger } from '../lib/logger.js';
+import { createMetrics, MetricUnit } from '../lib/metrics.js';
+
+const logger = createLogger('PostConfirmationFunction');
+const metrics = createMetrics('LearnerMax/Backend', 'PostConfirmationFunction');
 
 let snsClient: SNSClient;
 
@@ -21,7 +26,13 @@ interface StudentOnboardingMessage {
 export const handler: PostConfirmationTriggerHandler = async (
   event: PostConfirmationTriggerEvent
 ) => {
-  console.log('PostConfirmation event:', JSON.stringify(event, null, 2));
+  const startTime = Date.now();
+
+  logger.info('PostConfirmation event received', {
+    userName: event.userName,
+    userPoolId: event.userPoolId,
+    triggerSource: event.triggerSource,
+  });
 
   const topicArn = process.env.SNS_TOPIC_ARN!;
   const client = getSnsClient();
@@ -43,7 +54,11 @@ export const handler: PostConfirmationTriggerHandler = async (
       timestamp: new Date().toISOString(),
     };
 
-    console.log('Publishing student onboarding event:', message);
+    logger.info('Publishing student onboarding event', {
+      userId: message.userId,
+      email: message.email,
+      signUpMethod: message.signUpMethod,
+    });
 
     // Publish to SNS topic
     await client.send(
@@ -64,13 +79,32 @@ export const handler: PostConfirmationTriggerHandler = async (
       })
     );
 
-    console.log('Successfully published to SNS');
+    logger.info('Successfully published to SNS', {
+      userId: message.userId,
+      topicArn,
+    });
+
+    // Technical Metrics: SNS Publish Success
+    // Note: AWS provides NumberOfMessagesPublished in AWS/SNS namespace
+    // We track this for operation-level success tracking
+    metrics.addMetric('SNSPublishSuccess', MetricUnit.Count, 1);
 
     return event; // Return event to complete Cognito flow
   } catch (error) {
-    console.error('Error in PostConfirmation Lambda:', error);
+    logger.error('Error in PostConfirmation Lambda', {
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Technical Metrics: SNS Publish Failure
+    metrics.addMetric('SNSPublishFailure', MetricUnit.Count, 1);
+
     // Don't throw - we don't want to block user sign-up
     // Error will be logged in CloudWatch for investigation
     return event;
+  } finally {
+    // Publish all metrics
+    // Note: Lambda execution time is automatically tracked by AWS as "Duration" metric in AWS/Lambda namespace
+    metrics.publishStoredMetrics();
   }
 };

@@ -18,7 +18,7 @@ export function Header() {
 
         <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild>
-            <Link href="/enroll?courseid=course-001">Sign In</Link>
+            <Link href="/signin">Sign In</Link>
           </Button>
           <Button asChild>
             <Link href="/enroll?courseid=course-001">Enroll Now</Link>

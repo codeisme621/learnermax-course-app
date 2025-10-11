@@ -1,0 +1,63 @@
+# More information about the configuration file can be found here:
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+version = 0.1
+
+[preview.global.parameters]
+stack_name = "learnermax-course-app-preview"
+
+[preview.build.parameters]
+cached = true
+parallel = true
+
+[preview.validate.parameters]
+lint = true
+
+[preview.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+resolve_s3 = true
+parameter_overrides = [
+  "GoogleOAuthSecretArn=arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:YOUR_SECRET_NAME"
+]
+
+[preview.package.parameters]
+resolve_s3 = true
+
+[preview.sync.parameters]
+watch = true
+
+[preview.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[preview.local_start_lambda.parameters]
+warm_containers = "EAGER"
+
+[prod.global.parameters]
+stack_name = "learnermax-course-app-prod"
+
+[prod.build.parameters]
+cached = true
+parallel = true
+
+[prod.validate.parameters]
+lint = true
+
+[prod.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+parameter_overrides = [
+  "GoogleOAuthSecretArn=arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:YOUR_SECRET_NAME"
+]
+
+[prod.package.parameters]
+resolve_s3 = true
+
+[prod.sync.parameters]
+watch = true
+
+[prod.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[prod.local_start_lambda.parameters]
+warm_containers = "EAGER"
