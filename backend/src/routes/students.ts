@@ -2,7 +2,9 @@ import express, { Request, Response, Router } from 'express';
 import { createStudent, getStudentByUserId, updateStudent } from '../models/student.js';
 import { createStudentSchema, updateStudentSchema } from '../schemas/student.js';
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
+import { createLogger } from '../lib/logger.js';
 
+const logger = createLogger('ExpressApiFunction');
 const router: Router = express.Router();
 
 // Helper to get user ID from API Gateway authorizer context
@@ -48,7 +50,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    console.error('Error creating student:', error);
+    logger.error('Error creating student', {
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -74,7 +79,11 @@ router.get('/:userId', async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json(student);
   } catch (error) {
-    console.error('Error fetching student:', error);
+    logger.error('Error fetching student', {
+      userId: req.params.userId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -104,7 +113,11 @@ router.patch('/:userId', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    console.error('Error updating student:', error);
+    logger.error('Error updating student', {
+      userId: req.params.userId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

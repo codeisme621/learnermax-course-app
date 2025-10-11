@@ -16,6 +16,11 @@ Parameters:
     Default: arn:aws:secretsmanager:us-east-1:853219709625:secret:learnermax/google-oauth-15o5Q2
     Description: ARN of Secrets Manager secret containing Google OAuth credentials
 
+  AdotLayerArn:
+    Type: String
+    Default: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-30-2:1
+    Description: ARN for AWS Distro for OpenTelemetry (ADOT) Lambda layer
+
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
   IsPreview: !Not [!Equals [!Ref Environment, prod]]
@@ -199,6 +204,57 @@ Resources:
         - Key: Project
           Value: LearnerMax
 
+  # SNS Topic for Observability Alerts
+  ObservabilityAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub learnermax-observability-alerts-${Environment}
+      DisplayName: LearnerMax Observability Alerts
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # CloudWatch Alarm: DLQ Messages
+  StudentOnboardingDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub learnermax-student-onboarding-dlq-alarm-${Environment}
+      AlarmDescription: Alert when messages arrive in Student Onboarding DLQ
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt StudentOnboardingDLQ.QueueName
+      AlarmActions:
+        - !Ref ObservabilityAlertTopic
+      TreatMissingData: notBreaching
+
+  # CloudWatch Alarm: Lambda Errors
+  StudentOnboardingErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub learnermax-student-onboarding-errors-${Environment}
+      AlarmDescription: Alert on Student Onboarding Lambda errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StudentOnboardingFunction
+      AlarmActions:
+        - !Ref ObservabilityAlertTopic
+
   # PostConfirmation Lambda Function
   PostConfirmationFunction:
     Type: AWS::Serverless::Function
@@ -214,6 +270,10 @@ Resources:
       Environment:
         Variables:
           SNS_TOPIC_ARN: !Ref StudentOnboardingTopic
+          # ADOT Auto-instrumentation
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
+      Layers:
+        - !Ref AdotLayerArn
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt StudentOnboardingTopic.TopicName
@@ -241,6 +301,10 @@ Resources:
       Environment:
         Variables:
           STUDENTS_TABLE_NAME: !Ref StudentsTable
+          # ADOT Auto-instrumentation
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
+      Layers:
+        - !Ref AdotLayerArn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref StudentsTable
@@ -279,6 +343,8 @@ Resources:
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
+        # ADOT Layer
+        - !Ref AdotLayerArn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref StudentsTable
@@ -322,6 +388,128 @@ Resources:
       ResourceGroupName:
         Ref: ApplicationResourceGroup
       AutoConfigurationEnabled: 'true'
+
+  # CloudWatch Dashboard for Observability
+  ObservabilityDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub LearnerMax-Observability-${Environment}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "UserRegistrationSuccess"],
+                  [".", "UserRegistrationFailure"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "User Registrations (Business Metric)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Errors", "FunctionName", "${PostConfirmationFunction}"],
+                  ["...", "${StudentOnboardingFunction}"],
+                  ["...", "${ExpressApiFunction}"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Lambda Errors (Technical Metric)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Duration", "FunctionName", "${PostConfirmationFunction}"],
+                  ["...", "${StudentOnboardingFunction}"],
+                  ["...", "${ExpressApiFunction}"]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "Lambda Duration (Latency)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${StudentOnboardingDLQ.QueueName}"]
+                ],
+                "period": 60,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Dead Letter Queue Messages",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "DynamoDBPutSuccess"],
+                  [".", "DynamoDBPutFailure"],
+                  [".", "DuplicateUserDetected"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "DynamoDB Operations",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "SNSPublishSuccess"],
+                  [".", "SNSPublishFailure"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "SNS Publishing",
+                "yAxis": {"left": {"min": 0}}
+              }
+            }
+          ]
+        }
+
 Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for Prod stage
@@ -372,6 +560,13 @@ Outputs:
   ExpressApiFunctionIamRole:
     Description: Implicit IAM Role created for Express API function
     Value: !GetAtt ExpressApiFunctionRole.Arn
+
+  DashboardUrl:
+    Description: CloudWatch Dashboard URL for Observability
+    Value: !Sub https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ObservabilityDashboard}
+    Export:
+      Name: !Sub ${AWS::StackName}-DashboardUrl
+
 # # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
