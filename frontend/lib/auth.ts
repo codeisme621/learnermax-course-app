@@ -14,8 +14,7 @@ interface CognitoProfile {
 }
 
 // Get Cognito domain from environment
-const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN ||
-  `learnermax-preview-853219709625.auth.${process.env.COGNITO_REGION || 'us-east-1'}.amazoncognito.com`;
+const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN;
 
 export const {
   handlers: { GET, POST },

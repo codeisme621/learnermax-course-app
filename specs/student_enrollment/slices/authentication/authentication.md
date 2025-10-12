@@ -300,9 +300,9 @@ All resources in `backend/template.yaml`:
 ### Cognito + Google Federation Setup
 1. Create Google OAuth credentials in Google Cloud Console. We will store in Secrets manager and expect you to use secret manager in sam template.
  {
-         "ARN": "arn:aws:secretsmanager:us-east-1:853219709625:secret:learnermax/google-oauth-15o5Q2",
+         "ARN": "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:learnermax/google-oauth-XXXXXX",
          "Name": "learnermax/google-oauth",
-         "VersionId": "59341a65-cb66-4549-b3af-973c1e80348c"
+         "VersionId": "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
      }
 Keys: client_id and client_secret
 

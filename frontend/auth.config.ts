@@ -54,8 +54,7 @@ export const authConfig = {
 
       // Token expired - refresh it
       try {
-        const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN ||
-          `learnermax-preview-853219709625.auth.${process.env.COGNITO_REGION || 'us-east-1'}.amazoncognito.com`;
+        const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN;
 
         const response = await fetch(
           `https://${cognitoDomain}/oauth2/token`,
