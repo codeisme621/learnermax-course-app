@@ -1,0 +1,18 @@
+# Enrollment into course
+
+## Background:
+We have completed authentication.  Now we need to find the best patterns of enrolling users into a course.  For example, If I have a site that has only 1 course, then I would expect a landing page talking about that course and when a user clicks enroll, then he is signed up (already done functionally we have this capability) and today we record his email and how he signed up (social or plain email).  However, I think we can also capture at this point the course he wanted to enroll in.  In this example there is only 1 course so technically we could hard code the courseId.  However, what if later down the line we wanted to have multiple courses?  Then depending on the course he clicks we should record that course id, so this would have to be dynamic.  Also what if we had paid courses?  And some free courses.  Well when the customer clicks enroll in a paid course we should likely take thier email (or social login) first then very next page he is taken too is asking for money (using stripe or something).  If the user in this sceanrio doesnt want to pay, at least we have his email and can email that person as an abandon cart campaign.  Also, what if we have multiple courses but user is signed up for just one.  When he is logged in he should see the course he has but also the courses he has availble for purchases or just enroll (if free).  Also, a free course might be a mini course that is setup to be a marketing tatic that leads to a paid course, so at the end, the user is aked to enroll in the paid course.  Actually, even paid courses may have this "next" course suggestions.
+Long stor short, this platform should support many different configurations, but not all at once.  We should plan and think deeply on how to structure our code in a way where adding all these different behaviors / scenarios is "easy" and has a clear extension point.   
+
+## User Story - SPIKE
+In this spike story, we need to look at our existing code (auth.js, next.js, cognito, express, dynamodb, etc) and ask ourselves how do I make a system where these different behaviors / scenarios are easy to add.  We wont implement these scenarios right now, but when we do implement our first scenerio: Free single course , we shouldnt do it in a way that isnt extendable to the other configurations / behavaviors we talked about in the background section.  We should research low level proven patterns e.g. in Gang of Four patterns for our domain and service layers.  We should also research at a higher level abstraction the different patterns that we can use that is well supported and practiced in our current tech stack: express, auth.js, cognito, aws in general, nextjs, etc.
+Furthermore, we should think thru on the UX experience espicially when it comes to page flow.  The user will go to differnet pages within the app depending on the scenarios supported at the time.  Lets ensure this user flow makes sense and is best practice
+
+
+
+## Deliverables
+A detailed report that has no fluff.  I want to be able to walk away with understanding how we can enable these features / scnearios / cofnig in future, even if we are not implmenting now.  Should be very easy to add later.
+
+Should have concrete actions for todays scneario: Free single course. But again, def should detail how it can be extend to the other scenarios using proven patterns, etc.
+
+A user flow along with the patterns.  Want to see the User flow in each scneario and relate it back to the patterns we established that would allow easy extendability.
