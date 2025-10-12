@@ -86,7 +86,7 @@ Parameters:
 
   GoogleOAuthSecretArn:
     Type: String
-    Default: arn:aws:secretsmanager:us-east-1:853219709625:secret:learnermax/google-oauth-15o5Q2
+    Default: arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:learnermax/google-oauth-XXXXXX
     Description: ARN of Secrets Manager secret containing Google OAuth credentials
 
 Conditions:

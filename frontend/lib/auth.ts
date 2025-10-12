@@ -14,8 +14,7 @@ interface CognitoProfile {
 }
 
 // Get Cognito domain from environment
-const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN ||
-  `learnermax-preview-853219709625.auth.${process.env.COGNITO_REGION || 'us-east-1'}.amazoncognito.com`;
+const cognitoDomain = process.env.COGNITO_USER_POOL_DOMAIN;
 
 export const {
   handlers: { GET, POST },
@@ -29,16 +28,14 @@ export const {
     {
       id: 'cognito',
       name: 'Cognito',
-      type: 'oauth',
+      type: 'oidc',
       clientId: process.env.COGNITO_CLIENT_ID,
       clientSecret: '', // Not needed for public clients
       client: {
         token_endpoint_auth_method: 'none',
       },
-       options: {
-        checks: ['state', 'nonce'],
-      },
       issuer: process.env.COGNITO_ISSUER_URL,
+      checks: ['state', 'nonce'],
       authorization: {
         url: `https://${cognitoDomain}/oauth2/authorize`,
         params: {
@@ -46,14 +43,10 @@ export const {
           client_id: process.env.COGNITO_CLIENT_ID,
           identity_provider: 'Google',
           scope: 'openid email profile',
-          redirect_uri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/callback/cognito`,
         },
       },
       token: {
         url: `https://${cognitoDomain}/oauth2/token`,
-      },
-      userinfo: {
-        url: `https://${cognitoDomain}/oauth2/userInfo`,
       },
       profile(profile: CognitoProfile, tokens: { access_token?: string; id_token?: string; refresh_token?: string }) {
         return {

@@ -11,6 +11,10 @@ Parameters:
     AllowedValues: [preview, prod]
     Description: Environment name (preview or prod)
 
+  FrontendDomain:
+    Type: String
+    Description: Frontend domain for OAuth callbacks (e.g., https://www.learnermax.com)
+
   GoogleOAuthSecretArn:
     Type: String
     Description: ARN of Secrets Manager secret containing Google OAuth credentials
@@ -50,7 +54,7 @@ Resources:
         - Name: email
           AttributeDataType: String
           Required: true
-          Mutable: false
+          Mutable: true
         - Name: name
           AttributeDataType: String
           Required: true
@@ -105,16 +109,10 @@ Resources:
         - COGNITO
         - Google
       CallbackURLs:
-        - !If
-          - IsProd
-          - https://learnermax.com/api/auth/callback/cognito
-          - !Sub https://preview-${Environment}.learnermax.vercel.app/api/auth/callback/cognito
+        - !Sub ${FrontendDomain}/api/auth/callback/cognito
         - http://localhost:3000/api/auth/callback/cognito
       LogoutURLs:
-        - !If
-          - IsProd
-          - https://learnermax.com
-          - !Sub https://preview-${Environment}.learnermax.vercel.app
+        - !Ref FrontendDomain
         - http://localhost:3000
       AllowedOAuthFlows:
         - code
