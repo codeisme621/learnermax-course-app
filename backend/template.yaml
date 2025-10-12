@@ -177,6 +177,51 @@ Resources:
         - Key: Project
           Value: LearnerMax
 
+  # DynamoDB Education Table (Single-Table Design)
+  EducationTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub learnermax-education-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
   # SNS Topic for Student Onboarding
   StudentOnboardingTopic:
     Type: AWS::SNS::Topic
@@ -298,6 +343,7 @@ Resources:
       Environment:
         Variables:
           STUDENTS_TABLE_NAME: !Ref StudentsTable
+          EDUCATION_TABLE_NAME: !Ref EducationTable
           # ADOT Auto-instrumentation
           AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
       Layers:
@@ -305,6 +351,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref StudentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EducationTable
       DeadLetterQueue:
         Type: SQS
         TargetArn: !GetAtt StudentOnboardingDLQ.Arn
@@ -335,6 +383,7 @@ Resources:
           # Application configuration
           STUDENTS_TABLE_NAME: !Ref StudentsTable
           COURSES_TABLE_NAME: !Ref CoursesTable
+          EDUCATION_TABLE_NAME: !Ref EducationTable
           COGNITO_USER_POOL_ID: !Ref LearnerMaxUserPool
           COGNITO_CLIENT_ID: !Ref LearnerMaxUserPoolClient
       Layers:
@@ -347,6 +396,8 @@ Resources:
             TableName: !Ref StudentsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CoursesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EducationTable
       Events:
         RootEndpoint:
           Type: Api
