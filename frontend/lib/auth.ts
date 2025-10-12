@@ -35,7 +35,7 @@ export const {
         token_endpoint_auth_method: 'none',
       },
       issuer: process.env.COGNITO_ISSUER_URL,
-      checks: ['state'],
+      checks: ['state', 'nonce'],
       authorization: {
         url: `https://${cognitoDomain}/oauth2/authorize`,
         params: {
