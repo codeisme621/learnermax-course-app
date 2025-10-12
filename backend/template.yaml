@@ -50,7 +50,7 @@ Resources:
         - Name: email
           AttributeDataType: String
           Required: true
-          Mutable: false
+          Mutable: true
         - Name: name
           AttributeDataType: String
           Required: true
