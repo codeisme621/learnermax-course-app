@@ -35,6 +35,7 @@ export const courseRepository = {
     if (!result.Item) return undefined;
 
     // Extract course data (remove DynamoDB keys)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { PK, SK, GSI1PK, GSI1SK, entityType, ...courseData } = result.Item;
     return courseData as Course;
   },
@@ -52,6 +53,7 @@ export const courseRepository = {
     );
 
     return (result.Items || []).map(item => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { PK, SK, GSI1PK, GSI1SK, entityType, ...courseData } = item;
       return courseData as Course;
     });

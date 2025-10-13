@@ -34,6 +34,7 @@ export const studentRepository = {
 
     if (!result.Item) return undefined;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { PK, SK, GSI1PK, GSI1SK, entityType, ...studentData } = result.Item;
     return studentData as Student;
   },
@@ -53,6 +54,7 @@ export const studentRepository = {
     if (!result.Items || result.Items.length === 0) return undefined;
 
     const item = result.Items[0];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { PK, SK, GSI1PK, GSI1SK, entityType, ...studentData } = item;
     return studentData as Student;
   },
@@ -60,7 +62,7 @@ export const studentRepository = {
   async update(userId: string, updates: Partial<Student>): Promise<void> {
     const updateExpressions: string[] = [];
     const attributeNames: Record<string, string> = {};
-    const attributeValues: Record<string, any> = {};
+    const attributeValues: Record<string, unknown> = {};
 
     Object.entries(updates).forEach(([key, value], index) => {
       updateExpressions.push(`#attr${index} = :val${index}`);

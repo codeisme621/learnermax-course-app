@@ -1,0 +1,31 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-student-onboarding:test-subscription-id",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "test-message-id-001",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-student-onboarding",
+        "Subject": "New Student Onboarding",
+        "Message": "{\"userId\":\"TEST-USER-EMAIL-001\",\"email\":\"test.email.001@learnermax-test.com\",\"name\":\"Test Email User 001\",\"signUpMethod\":\"email\",\"timestamp\":\"2025-01-12T10:00:00.000Z\"}",
+        "Timestamp": "2025-01-12T10:00:00.000Z",
+        "SignatureVersion": "1",
+        "Signature": "test-signature",
+        "SigningCertUrl": "https://sns.us-east-1.amazonaws.com/test-cert.pem",
+        "UnsubscribeUrl": "https://sns.us-east-1.amazonaws.com/test-unsubscribe",
+        "MessageAttributes": {
+          "userId": {
+            "Type": "String",
+            "Value": "TEST-USER-EMAIL-001"
+          },
+          "signUpMethod": {
+            "Type": "String",
+            "Value": "email"
+          }
+        }
+      }
+    }
+  ]
+}

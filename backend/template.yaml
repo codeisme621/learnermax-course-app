@@ -130,53 +130,6 @@ Resources:
         IdToken: hours
         RefreshToken: days
 
-  # DynamoDB Students Table
-  StudentsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub learnermax-students-${Environment}
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: userId
-          AttributeType: S
-        - AttributeName: email
-          AttributeType: S
-      KeySchema:
-        - AttributeName: userId
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: email-index
-          KeySchema:
-            - AttributeName: email
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: LearnerMax
-
-  # DynamoDB Courses Table
-  CoursesTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub learnermax-courses-${Environment}
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: courseId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: courseId
-          KeyType: HASH
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: LearnerMax
-
   # DynamoDB Education Table (Single-Table Design)
   EducationTable:
     Type: AWS::DynamoDB::Table
@@ -342,15 +295,12 @@ Resources:
       Description: Processes student onboarding events from SNS
       Environment:
         Variables:
-          STUDENTS_TABLE_NAME: !Ref StudentsTable
           EDUCATION_TABLE_NAME: !Ref EducationTable
           # ADOT Auto-instrumentation
           AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
       Layers:
         - !Ref AdotLayerArn
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref StudentsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
       DeadLetterQueue:
@@ -381,8 +331,6 @@ Resources:
           RUST_LOG: info
           PORT: 8080
           # Application configuration
-          STUDENTS_TABLE_NAME: !Ref StudentsTable
-          COURSES_TABLE_NAME: !Ref CoursesTable
           EDUCATION_TABLE_NAME: !Ref EducationTable
           COGNITO_USER_POOL_ID: !Ref LearnerMaxUserPool
           COGNITO_CLIENT_ID: !Ref LearnerMaxUserPoolClient
@@ -392,10 +340,6 @@ Resources:
         # ADOT Layer
         - !Ref AdotLayerArn
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref StudentsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CoursesTable
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
       Events:
@@ -582,18 +526,6 @@ Outputs:
   CognitoIssuerUrl:
     Description: Cognito Issuer URL for NextAuth
     Value: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${LearnerMaxUserPool}
-
-  StudentsTableName:
-    Description: DynamoDB Students Table Name
-    Value: !Ref StudentsTable
-    Export:
-      Name: !Sub ${AWS::StackName}-StudentsTable
-
-  CoursesTableName:
-    Description: DynamoDB Courses Table Name
-    Value: !Ref CoursesTable
-    Export:
-      Name: !Sub ${AWS::StackName}-CoursesTable
 
   StudentOnboardingTopicArn:
     Description: SNS Topic ARN for Student Onboarding

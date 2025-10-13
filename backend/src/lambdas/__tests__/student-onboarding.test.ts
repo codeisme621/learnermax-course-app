@@ -12,7 +12,7 @@ describe('Student Onboarding Lambda', () => {
 
   beforeEach(() => {
     ddbMock.reset();
-    process.env.STUDENTS_TABLE_NAME = 'test-students-table';
+    process.env.EDUCATION_TABLE_NAME = 'test-education-table';
   });
 
   it('should create student record in DynamoDB', async () => {
@@ -52,13 +52,16 @@ describe('Student Onboarding Lambda', () => {
     expect(ddbMock.calls()).toHaveLength(1);
     const putCall = ddbMock.call(0);
     const input = putCall.args[0].input as { TableName?: string; Item?: unknown };
-    expect(input.TableName).toBe('test-students-table');
+    expect(input.TableName).toBe('test-education-table');
     expect(input.Item).toMatchObject({
+      PK: 'USER#user-123',
+      SK: 'METADATA',
+      entityType: 'USER',
       userId: 'user-123',
       email: 'test@example.com',
       name: 'Test User',
       signUpMethod: 'email',
-      enrolledCourses: [],
+      emailVerified: true,
     });
   });
 
