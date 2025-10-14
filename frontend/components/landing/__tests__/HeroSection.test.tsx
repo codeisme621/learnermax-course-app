@@ -2,6 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { HeroSection } from '../HeroSection';
 import { mockCourse } from '@/lib/mock-data/course';
 
+// Mock next/navigation
+const mockPush = jest.fn();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 // Mock framer motion to avoid async rendering issues in tests
 jest.mock('motion/react', () => ({
   motion: {
@@ -11,6 +19,10 @@ jest.mock('motion/react', () => ({
 }));
 
 describe('HeroSection', () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+  });
+
   it('renders course title and subtitle', () => {
     render(<HeroSection course={mockCourse} />);
     expect(screen.getByText(mockCourse.title)).toBeInTheDocument();
@@ -19,7 +31,7 @@ describe('HeroSection', () => {
 
   it('renders enroll CTA button', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('link', { name: /enroll now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /enroll now/i })).toBeInTheDocument();
   });
 
   it('renders course stats', () => {

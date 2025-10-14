@@ -3,8 +3,17 @@
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
+  const router = useRouter();
+
+  const handleEnrollClick = () => {
+    // Store hardcoded courseId as per spec
+    sessionStorage.setItem('pendingEnrollmentCourseId', 'TEST-COURSE-001');
+    router.push('/enroll');
+  };
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -20,8 +29,8 @@ export function Header() {
           <Button variant="ghost" asChild>
             <Link href="/signin">Sign In</Link>
           </Button>
-          <Button asChild>
-            <Link href="/enroll?courseid=course-001">Enroll Now</Link>
+          <Button onClick={handleEnrollClick}>
+            Enroll Now
           </Button>
         </nav>
       </div>

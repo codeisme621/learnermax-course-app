@@ -2,10 +2,18 @@
 
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 
 export function CtaSection() {
+  const router = useRouter();
+
+  const handleGetStartedClick = () => {
+    // Store hardcoded courseId as per spec
+    sessionStorage.setItem('pendingEnrollmentCourseId', 'TEST-COURSE-001');
+    router.push('/enroll');
+  };
+
   return (
     <section className="py-20 lg:py-32 bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10">
       <div className="container mx-auto px-4">
@@ -25,10 +33,8 @@ export function CtaSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
-              <Link href="/enroll?courseid=course-001">
-                Get Started <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
+            <Button size="lg" onClick={handleGetStartedClick}>
+              Get Started <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button size="lg" variant="outline">
               Contact Us
