@@ -62,7 +62,6 @@ Landing Page → Click "Enroll Now" → /enroll?courseid=course-001
 2. **ES6 Modules**: All imports must use `.js` extension (e.g., `'./enrollment.repository.js'`)
 3. **Middleware Limitation**: Can only check authentication, not enrollment (need page-level checks)
 4. **SessionStorage Timing**: Must store `pendingEnrollment` before sign-in redirect
-5. **Backward Compatibility**: Must update both new Enrollment table AND existing `Student.enrolledCourses` array
 
 ## Desired End State
 
@@ -81,8 +80,8 @@ Landing Page → Click "Enroll Now" → /enroll?courseid=course-001
 
 **Data Integrity:**
 - Enrollment record exists in new `EducationTable` with adjacency list pattern
-- `Student.enrolledCourses` array updated for backward compatibility
 - Idempotent enrollment (duplicate attempts return existing enrollment)
+- GSI1 enables bidirectional queries (user's courses, course's students)
 
 **Architecture Validation:**
 - Strategy pattern implemented (FreeEnrollmentStrategy ready for extension)
@@ -140,11 +139,15 @@ curl http://localhost:8080/api/enrollments/check/course-001 \
 ### Architecture Decisions
 
 **1. Single-Table DynamoDB Design (Adjacency List Pattern)**
-- Use new `learnermax-education-${Environment}` table
+- Use new `learnermax-education-${Environment}` table exclusively
 - Store users, courses, and enrollments in single table
 - Enable bidirectional queries: "get user's courses" and "get course's students"
-- Pattern: `PK=USER#userId, SK=COURSE#courseId` for enrollments
+- Access patterns:
+  - Users: `PK=USER#userId, SK=METADATA`
+  - Courses: `PK=COURSE#courseId, SK=METADATA`
+  - Enrollments: `PK=USER#userId, SK=COURSE#courseId`
 - GSI1 for reverse queries: `GSI1PK=COURSE#courseId, GSI1SK=USER#userId`
+- GSI1 also enables: `GSI1PK=USER#userId, GSI1SK=METADATA` for user lookups by email
 
 **2. Strategy Pattern for Enrollment Types**
 - Interface: `EnrollmentStrategy` with `enroll(userId, courseId)` method
@@ -152,7 +155,7 @@ curl http://localhost:8080/api/enrollments/check/course-001 \
 - Future: `PaidEnrollmentStrategy` (returns Stripe checkout URL)
 - Service selects strategy based on `course.pricingModel`
 
-**3. Feature-Based Backend Structure**
+**3. Feature-Based Backend Structure (Complete Migration)**
 ```
 backend/src/features/
   enrollment/
@@ -165,9 +168,15 @@ backend/src/features/
       enrollment-strategy.interface.ts
       free-enrollment.strategy.ts
   courses/
-    course.repository.ts
+    course.repository.ts      # Migrated to use EducationTable
     course.service.ts
+    course.routes.ts          # New feature-based routes
     course.types.ts
+  students/
+    student.repository.ts     # Migrated to use EducationTable
+    student.service.ts
+    student.routes.ts         # Migrated from src/routes/students.ts
+    student.types.ts
 ```
 
 **4. React Server Components + Server Actions Pattern**
@@ -182,10 +191,10 @@ backend/src/features/
 
 ---
 
-## Phase 1: Infrastructure Setup
+## Phase 1: Infrastructure Setup & Data Migration
 
 ### Overview
-Create the DynamoDB table for enrollments and recreate missing course repository files. This establishes the data foundation for all enrollment operations.
+Create the single `EducationTable` that will replace the existing `StudentsTable` and `CoursesTable`. Migrate existing data, update all environment variables, and prepare for old table removal.
 
 ### Changes Required
 
@@ -211,6 +220,8 @@ Add new table definition:
           AttributeType: S
         - AttributeName: GSI1SK
           AttributeType: S
+        - AttributeName: email
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -225,19 +236,34 @@ Add new table definition:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
 ```
+
+**Note**: The `email-index` GSI maintains compatibility with existing student lookups by email.
 
 #### 2. Lambda Environment Variables
 
 **File**: `backend/template.yaml`
 **Location**: Line 336 (ExpressApiFunction environment variables)
 
-Add:
+Replace existing table environment variables with:
 
 ```yaml
 EDUCATION_TABLE_NAME: !Ref EducationTable
+# Legacy variables removed: STUDENTS_TABLE_NAME, COURSES_TABLE_NAME
+```
+
+**Also update StudentOnboardingFunction** (Line ~400):
+```yaml
+EDUCATION_TABLE_NAME: !Ref EducationTable
+# Legacy variables removed: STUDENTS_TABLE_NAME
 ```
 
 #### 3. Lambda IAM Permissions
@@ -245,14 +271,20 @@ EDUCATION_TABLE_NAME: !Ref EducationTable
 **File**: `backend/template.yaml`
 **Location**: Line 344 (ExpressApiFunction policies)
 
-Add:
+Replace existing DynamoDB policies with:
 
 ```yaml
 - DynamoDBCrudPolicy:
     TableName: !Ref EducationTable
 ```
 
-#### 4. Course Repository (Recreate from Spec)
+**Also update StudentOnboardingFunction policies**:
+```yaml
+- DynamoDBCrudPolicy:
+    TableName: !Ref EducationTable
+```
+
+#### 4. Course Repository (Migrated to Single-Table)
 
 **File**: `backend/src/features/courses/course.types.ts` (new)
 
@@ -276,31 +308,225 @@ export interface Course {
 
 ```typescript
 import { docClient } from '../../lib/dynamodb.js';
-import { GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import type { Course } from './course.types.js';
 
-const TABLE_NAME = process.env.COURSES_TABLE_NAME!;
+const TABLE_NAME = process.env.EDUCATION_TABLE_NAME!;
 
 export const courseRepository = {
+  async create(course: Course): Promise<void> {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          PK: `COURSE#${course.courseId}`,
+          SK: 'METADATA',
+          GSI1PK: 'COURSE',
+          GSI1SK: `COURSE#${course.courseId}`,
+          entityType: 'COURSE',
+          ...course
+        }
+      })
+    );
+  },
+
   async get(courseId: string): Promise<Course | undefined> {
     const result = await docClient.send(
       new GetCommand({
         TableName: TABLE_NAME,
-        Key: { courseId }
+        Key: {
+          PK: `COURSE#${courseId}`,
+          SK: 'METADATA'
+        }
       })
     );
-    return result.Item as Course | undefined;
+
+    if (!result.Item) return undefined;
+
+    // Extract course data (remove DynamoDB keys)
+    const { PK, SK, GSI1PK, GSI1SK, entityType, ...courseData } = result.Item;
+    return courseData as Course;
   },
 
   async getAll(): Promise<Course[]> {
     const result = await docClient.send(
-      new ScanCommand({
-        TableName: TABLE_NAME
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: 'GSI1',
+        KeyConditionExpression: 'GSI1PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': 'COURSE'
+        }
       })
     );
-    return (result.Items || []) as Course[];
+
+    return (result.Items || []).map(item => {
+      const { PK, SK, GSI1PK, GSI1SK, entityType, ...courseData } = item;
+      return courseData as Course;
+    });
   }
 };
+```
+
+#### 5. Student Repository (Migrated to Single-Table)
+
+**File**: `backend/src/features/students/student.types.ts` (new)
+
+```typescript
+export interface Student {
+  userId: string;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**File**: `backend/src/features/students/student.repository.ts` (new)
+
+```typescript
+import { docClient } from '../../lib/dynamodb.js';
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import type { Student } from './student.types.js';
+
+const TABLE_NAME = process.env.EDUCATION_TABLE_NAME!;
+
+export const studentRepository = {
+  async create(student: Student): Promise<void> {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          PK: `USER#${student.userId}`,
+          SK: 'METADATA',
+          GSI1PK: `USER#${student.userId}`,
+          GSI1SK: 'METADATA',
+          entityType: 'USER',
+          email: student.email, // For email-index GSI
+          ...student
+        }
+      })
+    );
+  },
+
+  async get(userId: string): Promise<Student | undefined> {
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `USER#${userId}`,
+          SK: 'METADATA'
+        }
+      })
+    );
+
+    if (!result.Item) return undefined;
+
+    const { PK, SK, GSI1PK, GSI1SK, entityType, ...studentData } = result.Item;
+    return studentData as Student;
+  },
+
+  async getByEmail(email: string): Promise<Student | undefined> {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: 'email-index',
+        KeyConditionExpression: 'email = :email',
+        ExpressionAttributeValues: {
+          ':email': email
+        }
+      })
+    );
+
+    if (!result.Items || result.Items.length === 0) return undefined;
+
+    const item = result.Items[0];
+    const { PK, SK, GSI1PK, GSI1SK, entityType, ...studentData } = item;
+    return studentData as Student;
+  },
+
+  async update(userId: string, updates: Partial<Student>): Promise<void> {
+    const updateExpressions: string[] = [];
+    const attributeNames: Record<string, string> = {};
+    const attributeValues: Record<string, any> = {};
+
+    Object.entries(updates).forEach(([key, value], index) => {
+      updateExpressions.push(`#attr${index} = :val${index}`);
+      attributeNames[`#attr${index}`] = key;
+      attributeValues[`:val${index}`] = value;
+    });
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `USER#${userId}`,
+          SK: 'METADATA'
+        },
+        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: attributeValues
+      })
+    );
+  }
+};
+```
+
+#### 6. Student Onboarding Lambda Migration
+
+**File**: `backend/src/lambdas/student-onboarding.ts`
+**Location**: Line 33 (DynamoDB table name)
+
+Change from:
+```typescript
+const TABLE_NAME = process.env.STUDENTS_TABLE_NAME!;
+```
+
+To:
+```typescript
+const TABLE_NAME = process.env.EDUCATION_TABLE_NAME!;
+```
+
+**Location**: Line 52 (PutCommand for student creation)
+
+Change from:
+```typescript
+await docClient.send(
+  new PutCommand({
+    TableName: TABLE_NAME,
+    Item: {
+      userId,
+      email,
+      name,
+      emailVerified: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  })
+);
+```
+
+To:
+```typescript
+await docClient.send(
+  new PutCommand({
+    TableName: TABLE_NAME,
+    Item: {
+      PK: `USER#${userId}`,
+      SK: 'METADATA',
+      GSI1PK: `USER#${userId}`,
+      GSI1SK: 'METADATA',
+      entityType: 'USER',
+      email,
+      userId,
+      name,
+      emailVerified: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  })
+);
 ```
 
 ### Success Criteria
@@ -316,13 +542,16 @@ export const courseRepository = {
 - [ ] SAM template validates: `cd backend && sam validate`
 - [ ] SAM build succeeds: `cd backend && sam build`
 - [ ] Course repository files exist in `backend/src/features/courses/`
-- [ ] Education table defined in `backend/template.yaml` with GSI1
+- [ ] Student repository files exist in `backend/src/features/students/`
+- [ ] Education table defined in `backend/template.yaml` with GSI1 and email-index
+- [ ] All table environment variables updated to `EDUCATION_TABLE_NAME`
 
 #### Preview Deployment Validation:
 - [ ] Backend deploys successfully: `./scripts/deploy-preview-backend.sh`
-- [ ] EducationTable created in DynamoDB console
-- [ ] Lambda has `EDUCATION_TABLE_NAME` environment variable
-- [ ] Lambda has DynamoDB permissions for EducationTable
+- [ ] EducationTable created in DynamoDB console with 2 GSIs
+- [ ] Lambda has `EDUCATION_TABLE_NAME` environment variable (not STUDENTS_TABLE_NAME or COURSES_TABLE_NAME)
+- [ ] Lambda has DynamoDB permissions for EducationTable only
+- [ ] StudentOnboarding Lambda updated to use EducationTable
 - [ ] Backend logs show no errors: `cat scripts/.sam-logs.log`
 
 ---
@@ -436,7 +665,6 @@ export interface EnrollmentStrategy {
 import type { EnrollmentStrategy } from './enrollment-strategy.interface.js';
 import type { EnrollmentResult } from '../enrollment.types.js';
 import { enrollmentRepository } from '../enrollment.repository.js';
-import { getStudentByUserId, updateStudent } from '../../../models/student.js';
 import { createLogger } from '../../../lib/logger.js';
 
 const logger = createLogger('FreeEnrollmentStrategy');
@@ -453,19 +681,8 @@ export class FreeEnrollmentStrategy implements EnrollmentStrategy {
       completed: false
     };
 
-    // Create enrollment record
+    // Create enrollment record in EducationTable
     await enrollmentRepository.create(enrollment);
-
-    // Update student enrolledCourses array (backward compatibility)
-    const student = await getStudentByUserId(userId);
-    if (student) {
-      const enrolledCourses = student.enrolledCourses || [];
-      if (!enrolledCourses.includes(courseId)) {
-        await updateStudent(userId, {
-          enrolledCourses: [...enrolledCourses, courseId]
-        });
-      }
-    }
 
     logger.info('Free enrollment completed', { userId, courseId });
 
@@ -624,21 +841,203 @@ router.get('/check/:courseId', async (req: Request, res: Response) => {
 export default router;
 ```
 
-#### 7. Register Enrollment Routes
+#### 7. Student Routes (Migrate to Feature-Based)
+
+**File**: `backend/src/features/students/student.service.ts` (new)
+
+```typescript
+import { studentRepository } from './student.repository.js';
+import { createLogger } from '../../lib/logger.js';
+import type { Student } from './student.types.js';
+
+const logger = createLogger('StudentService');
+
+export class StudentService {
+  async getStudent(userId: string): Promise<Student | undefined> {
+    return await studentRepository.get(userId);
+  }
+
+  async getStudentByEmail(email: string): Promise<Student | undefined> {
+    return await studentRepository.getByEmail(email);
+  }
+
+  async updateStudent(userId: string, updates: Partial<Student>): Promise<void> {
+    await studentRepository.update(userId, updates);
+    logger.info('Student updated', { userId, updates });
+  }
+}
+
+export const studentService = new StudentService();
+```
+
+**File**: `backend/src/features/students/student.routes.ts` (new - migrated from `src/routes/students.ts`)
+
+```typescript
+import express from 'express';
+import type { Request, Response, Router } from 'express';
+import { studentService } from './student.service.js';
+import { createLogger } from '../../lib/logger.js';
+
+interface ApiGatewayRequest extends Request {
+  apiGateway?: {
+    event?: {
+      requestContext?: {
+        authorizer?: {
+          claims?: {
+            sub?: string;
+          };
+        };
+      };
+    };
+  };
+}
+
+function getUserIdFromContext(req: Request): string | null {
+  const apiGatewayReq = req as ApiGatewayRequest;
+  return apiGatewayReq.apiGateway?.event?.requestContext?.authorizer?.claims?.sub || null;
+}
+
+const router: Router = express.Router();
+const logger = createLogger('StudentRoutes');
+
+// GET /api/students/me - Get current student profile
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdFromContext(req);
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const student = await studentService.getStudent(userId);
+    if (!student) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    res.json(student);
+  } catch (error) {
+    logger.error('Failed to get student', { error });
+    res.status(500).json({ error: 'Failed to get student' });
+  }
+});
+
+// PATCH /api/students/me - Update current student profile
+router.patch('/me', async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdFromContext(req);
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const updates = req.body;
+    await studentService.updateStudent(userId, updates);
+
+    res.json({ message: 'Student updated successfully' });
+  } catch (error) {
+    logger.error('Failed to update student', { error });
+    res.status(500).json({ error: 'Failed to update student' });
+  }
+});
+
+export default router;
+```
+
+#### 8. Course Routes (Feature-Based)
+
+**File**: `backend/src/features/courses/course.service.ts` (new)
+
+```typescript
+import { courseRepository } from './course.repository.js';
+import { createLogger } from '../../lib/logger.js';
+import type { Course } from './course.types.js';
+
+const logger = createLogger('CourseService');
+
+export class CourseService {
+  async getCourse(courseId: string): Promise<Course | undefined> {
+    return await courseRepository.get(courseId);
+  }
+
+  async getAllCourses(): Promise<Course[]> {
+    return await courseRepository.getAll();
+  }
+
+  async createCourse(course: Course): Promise<void> {
+    await courseRepository.create(course);
+    logger.info('Course created', { courseId: course.courseId });
+  }
+}
+
+export const courseService = new CourseService();
+```
+
+**File**: `backend/src/features/courses/course.routes.ts` (new)
+
+```typescript
+import express from 'express';
+import type { Request, Response, Router } from 'express';
+import { courseService } from './course.service.js';
+import { createLogger } from '../../lib/logger.js';
+
+const router: Router = express.Router();
+const logger = createLogger('CourseRoutes');
+
+// GET /api/courses - Get all courses
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const courses = await courseService.getAllCourses();
+    res.json(courses);
+  } catch (error) {
+    logger.error('Failed to get courses', { error });
+    res.status(500).json({ error: 'Failed to get courses' });
+  }
+});
+
+// GET /api/courses/:courseId - Get single course
+router.get('/:courseId', async (req: Request, res: Response) => {
+  try {
+    const { courseId } = req.params;
+    const course = await courseService.getCourse(courseId);
+
+    if (!course) {
+      res.status(404).json({ error: 'Course not found' });
+      return;
+    }
+
+    res.json(course);
+  } catch (error) {
+    logger.error('Failed to get course', { error });
+    res.status(500).json({ error: 'Failed to get course' });
+  }
+});
+
+export default router;
+```
+
+#### 9. Register All Feature-Based Routes
 
 **File**: `backend/src/app.ts`
 **Location**: After line 28 (after route imports)
 
-Add import:
+Replace existing route imports with feature-based imports:
 ```typescript
+// Remove: import studentRoutes from './routes/students.js';
+// Add feature-based imports:
 import enrollmentRoutes from './features/enrollment/enrollment.routes.js';
+import studentRoutes from './features/students/student.routes.js';
+import courseRoutes from './features/courses/course.routes.js';
 ```
 
-**Location**: After line 34 (after students routes)
+**Location**: After line 34 (route registration section)
 
-Add route registration:
+Replace with:
 ```typescript
+// Feature-based routes
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/courses', courseRoutes);
 ```
 
 #### 8. Course Actions (Frontend Server Actions)
@@ -1504,7 +1903,7 @@ Create seed data for testing, write E2E tests for the complete enrollment flow, 
 
 #### 1. Seed Course Data Script
 
-**File**: `backend/scripts/seed-courses.ts` (new)
+**File**: `backend/scripts/seed-courses.ts` (new - updated for single-table)
 
 ```typescript
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -1513,7 +1912,7 @@ import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(client);
 
-const TABLE_NAME = process.env.COURSES_TABLE_NAME || 'learnermax-courses-local';
+const TABLE_NAME = process.env.EDUCATION_TABLE_NAME || 'learnermax-education-local';
 
 const seedCourse = {
   courseId: 'course-001',
@@ -1561,7 +1960,14 @@ async function seedCourses() {
     await docClient.send(
       new PutCommand({
         TableName: TABLE_NAME,
-        Item: seedCourse
+        Item: {
+          PK: `COURSE#${seedCourse.courseId}`,
+          SK: 'METADATA',
+          GSI1PK: 'COURSE',
+          GSI1SK: `COURSE#${seedCourse.courseId}`,
+          entityType: 'COURSE',
+          ...seedCourse
+        }
       })
     );
     console.log('✅ Successfully seeded course:', seedCourse.courseId);
@@ -1754,7 +2160,7 @@ chmod +x scripts/test-enrollment-local.sh
   ```bash
   cd backend
   AWS_REGION=us-east-1 \
-  COURSES_TABLE_NAME=learnermax-courses-preview \
+  EDUCATION_TABLE_NAME=learnermax-education-preview \
   pnpm run seed:courses
   ```
 - [ ] Frontend deployed: `./scripts/deploy-preview-frontend.sh`
@@ -1780,6 +2186,218 @@ chmod +x scripts/test-enrollment-local.sh
    - Attempt to access `/learn/course-001` without authentication
    - Attempt to access `/learn/course-001` without enrollment
    - Try enrolling in same course twice (should be idempotent)
+
+---
+
+## Phase 7: Cleanup & Remove Legacy Infrastructure
+
+### Overview
+Remove old DynamoDB tables, legacy route files, and update all references to complete the migration to single-table design and feature-based architecture.
+
+### Changes Required
+
+#### 1. Remove Old Route Files
+
+**Files to Delete:**
+- `backend/src/routes/students.ts` - Replaced by `src/features/students/student.routes.ts`
+- `backend/src/routes/` directory (if now empty)
+
+**Command:**
+```bash
+cd backend
+rm -f src/routes/students.ts
+# Remove routes directory if empty
+[ -z "$(ls -A src/routes 2>/dev/null)" ] && rm -rf src/routes
+```
+
+#### 2. Remove Old Model Files
+
+**Files to Delete:**
+- `backend/src/models/student.ts` - Replaced by `src/features/students/student.types.ts`
+- `backend/src/models/` directory (if contains only deprecated files)
+
+**Command:**
+```bash
+cd backend
+rm -f src/models/student.ts
+# Check if models directory has other files before removing
+```
+
+#### 3. Remove Old DynamoDB Tables from SAM Template
+
+**File**: `backend/template.yaml`
+
+**Remove these table definitions:**
+
+```yaml
+# Remove StudentsTable (typically around line 140-162)
+StudentsTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: !Sub learnermax-students-${Environment}
+    # ... (entire definition)
+
+# Remove CoursesTable (typically around line 162-178)
+CoursesTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: !Sub learnermax-courses-${Environment}
+    # ... (entire definition)
+```
+
+**Action**: Delete both `StudentsTable` and `CoursesTable` resource definitions entirely.
+
+#### 4. Remove Old Table Outputs from SAM Template
+
+**File**: `backend/template.yaml`
+**Location**: Outputs section (bottom of file)
+
+**Remove:**
+```yaml
+StudentsTableName:
+  Description: "Students DynamoDB table name"
+  Value: !Ref StudentsTable
+
+CoursesTableName:
+  Description: "Courses DynamoDB table name"
+  Value: !Ref CoursesTable
+```
+
+**Add:**
+```yaml
+EducationTableName:
+  Description: "Education DynamoDB table name (single-table design)"
+  Value: !Ref EducationTable
+```
+
+#### 5. Update Documentation
+
+**File**: `backend/README.md` (if exists)
+
+Update any references to:
+- Old table names (`StudentsTable`, `CoursesTable`) → `EducationTable`
+- Old route structure (`src/routes/`) → `src/features/`
+- Old model imports → New feature-based types
+
+**Example changes:**
+```markdown
+# BEFORE:
+- Students stored in `learnermax-students-${env}` table
+- Courses stored in `learnermax-courses-${env}` table
+- Routes in `src/routes/students.ts`
+
+# AFTER:
+- All entities stored in `learnermax-education-${env}` table (single-table design)
+- Routes in `src/features/{feature-name}/{feature-name}.routes.ts`
+- Using adjacency list pattern for efficient queries
+```
+
+#### 6. Clean Up Deployment Scripts (If Needed)
+
+**File**: `scripts/deploy-preview-backend.sh`
+
+Search for and remove any references to:
+- `STUDENTS_TABLE_NAME` environment variable
+- `COURSES_TABLE_NAME` environment variable
+
+Ensure only `EDUCATION_TABLE_NAME` is referenced.
+
+### Database Migration Strategy
+
+**IMPORTANT**: Since you mentioned "no users are on the service", we can safely:
+
+1. **Deploy new infrastructure** with EducationTable
+2. **Seed fresh data** into EducationTable using the updated seed script
+3. **Remove old tables** via CloudFormation update (SAM deploy will delete them)
+
+**No data migration script needed** - this is a clean slate deployment.
+
+**If you had existing data (for future reference):**
+```typescript
+// Migration script would look like:
+// 1. Scan old StudentsTable
+// 2. Transform each item to PK=USER#userId, SK=METADATA format
+// 3. Write to EducationTable
+// 4. Verify all data migrated
+// 5. Delete old tables
+```
+
+### Success Criteria
+
+#### Phase Completion Validation:
+- [ ] All old route files deleted (`src/routes/students.ts`)
+- [ ] All old model files deleted (if deprecated)
+- [ ] `StudentsTable` removed from `backend/template.yaml`
+- [ ] `CoursesTable` removed from `backend/template.yaml`
+- [ ] Only `EducationTable` defined in template
+- [ ] TypeScript compiles: `cd backend && pnpm run build`
+- [ ] SAM validates: `cd backend && sam validate`
+- [ ] No imports reference old paths (verify with grep)
+
+#### Verify No Legacy References:
+```bash
+cd backend
+
+# Should return no results:
+grep -r "STUDENTS_TABLE_NAME" src/
+grep -r "COURSES_TABLE_NAME" src/
+grep -r "from './routes/students" src/
+grep -r "from './models/student" src/
+
+# Should return results (new patterns):
+grep -r "EDUCATION_TABLE_NAME" src/
+grep -r "from './features/" src/
+```
+
+#### Preview Deployment Validation:
+- [ ] Deploy backend: `./scripts/deploy-preview-backend.sh`
+- [ ] Verify in AWS Console:
+  - [ ] `EducationTable` exists with GSI1 and email-index
+  - [ ] `StudentsTable` deleted (no longer exists)
+  - [ ] `CoursesTable` deleted (no longer exists)
+- [ ] Seed course data: `EDUCATION_TABLE_NAME=learnermax-education-preview pnpm run seed:courses`
+- [ ] Test all API endpoints:
+  ```bash
+  # Get courses
+  curl <API_URL>/api/courses
+
+  # Get student profile
+  curl <API_URL>/api/students/me -H "Authorization: Bearer <token>"
+
+  # Create enrollment
+  curl -X POST <API_URL>/api/enrollments \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{"courseId": "course-001"}'
+  ```
+- [ ] Verify all endpoints work correctly with single EducationTable
+- [ ] No errors in logs: `cat scripts/.sam-logs.log`
+
+#### Production Deployment Checklist:
+- [ ] All phases 1-6 completed and tested in preview
+- [ ] E2E tests passing
+- [ ] Manual testing completed
+- [ ] Documentation updated
+- [ ] Ready to deploy to production with `sam deploy --config-env production`
+
+### Rollback Plan
+
+**If something goes wrong during deployment:**
+
+1. **Before deleting old tables** - Keep old tables temporarily:
+   - Don't remove `StudentsTable` and `CoursesTable` from template initially
+   - Deploy with both old and new tables coexisting
+   - Verify everything works with EducationTable
+   - Then remove old tables in subsequent deployment
+
+2. **If errors occur after deletion:**
+   - Redeploy previous SAM template version (revert commit)
+   - Old tables will be recreated (but empty)
+   - Need to restore from backup if data existed
+
+3. **For this implementation (no existing users):**
+   - Rollback is simple: redeploy previous template
+   - No data loss concerns
 
 ---
 
@@ -1867,7 +2485,6 @@ curl http://localhost:8080/api/enrollments/check/course-001 \
 
 **Data Integrity:**
 - [ ] Enrollment record created in EducationTable with correct PK/SK
-- [ ] Student.enrolledCourses array updated
 - [ ] Duplicate enrollment attempts return existing enrollment
 - [ ] GSI1 allows reverse queries (get students enrolled in course)
 
@@ -1892,39 +2509,43 @@ curl http://localhost:8080/api/enrollments/check/course-001 \
 
 ## Migration Notes
 
-### Backward Compatibility
-**Student Model:**
-- Existing `enrolledCourses: string[]` array continues to work
-- New enrollments update BOTH `EducationTable` AND `Student.enrolledCourses`
-- This allows gradual migration of existing code
+### Complete Clean Implementation
+This implementation represents a **complete migration** to single-table design and feature-based architecture. All legacy tables, routes, and models have been removed and replaced with modern patterns.
 
-**Migration Path:**
-1. Phase 1-2: Create new infrastructure (EducationTable, enrollment API)
-2. Phase 3-6: Implement new enrollment flow (writes to both tables)
-3. Future: Migrate existing `Student.enrolledCourses` to EducationTable
-4. Future: Deprecate `Student.enrolledCourses` field
+**What Changed:**
 
-### Data Migration Script (Future)
-```typescript
-// backend/scripts/migrate-enrollments.ts
-async function migrateEnrollments() {
-  const students = await scanAllStudents();
+1. **Database Architecture:**
+   - **DELETED**: `StudentsTable` (old separate table)
+   - **DELETED**: `CoursesTable` (old separate table)
+   - **NEW**: `EducationTable` (single table for all entities)
+   - All data now uses adjacency list pattern with PK/SK and GSI1
 
-  for (const student of students) {
-    for (const courseId of student.enrolledCourses) {
-      await enrollmentRepository.create({
-        userId: student.userId,
-        courseId,
-        enrollmentType: 'free', // Assume free for existing
-        enrolledAt: student.createdAt, // Use student creation date
-        paymentStatus: 'free',
-        progress: 0,
-        completed: false
-      });
-    }
-  }
-}
-```
+2. **Backend Structure:**
+   - **DELETED**: `backend/src/routes/students.ts` (old route structure)
+   - **DELETED**: `backend/src/models/student.ts` (old model structure)
+   - **NEW**: Feature-based architecture in `backend/src/features/`
+     - `features/students/` - Student management
+     - `features/courses/` - Course management
+     - `features/enrollment/` - Enrollment logic
+
+3. **Code Patterns:**
+   - **OLD**: Direct DynamoDB operations with simple keys
+   - **NEW**: Repository pattern with single-table design
+   - **NEW**: Strategy pattern for enrollment types
+   - **NEW**: Service layer for business logic
+
+**Rationale:**
+- Single-table DynamoDB design provides better scalability and query flexibility
+- Enrollment records support rich metadata (payment status, progress, completion)
+- Adjacency list pattern with GSI enables efficient bidirectional queries
+- Strategy pattern supports multiple enrollment types (free, paid, bundles)
+- Feature-based structure improves code organization and maintainability
+
+**No Backward Compatibility:**
+- This is a clean slate implementation
+- All code migrated to new patterns
+- No legacy table dependencies remain
+- Perfect time for clean architecture with no users on the service
 
 ## References
 
@@ -1941,13 +2562,24 @@ async function migrateEnrollments() {
 
 ## Summary
 
-This implementation plan provides a complete roadmap for implementing single free course enrollment in the LearnerMax application. The plan:
+This implementation plan provides a complete roadmap for implementing single free course enrollment while **completely migrating** the LearnerMax application to modern single-table DynamoDB design and feature-based architecture. The plan:
 
-1. **Establishes Infrastructure**: Creates DynamoDB table and recreates missing course files
-2. **Implements Backend API**: Builds enrollment service with Strategy pattern
-3. **Captures Course Intent**: Modifies signup flow to persist courseId
-4. **Integrates Frontend**: Updates dashboard to display enrollments and trigger auto-enrollment
-5. **Protects Course Access**: Creates course player with authentication and enrollment checks
-6. **Validates Implementation**: Provides comprehensive testing strategy
+1. **Migrates to Single-Table Design**: Creates `EducationTable` to replace separate Students and Courses tables
+2. **Implements Feature-Based Architecture**: Migrates all backend code to `src/features/` structure
+3. **Builds Enrollment System**: Implements enrollment service with Strategy pattern
+4. **Captures Course Intent**: Modifies signup flow to persist courseId through authentication
+5. **Integrates Frontend**: Updates dashboard to display enrollments and trigger auto-enrollment
+6. **Protects Course Access**: Creates course player with authentication and enrollment checks
+7. **Removes Legacy Infrastructure**: Deletes old tables, routes, and models completely
+8. **Validates Implementation**: Provides comprehensive testing strategy
 
-The architecture is designed for extensibility - adding paid courses or bundles requires only implementing new strategy classes without modifying existing code. The single-table DynamoDB design scales efficiently for complex queries, and the feature-based backend structure keeps code organized as the platform grows.
+**Key Architectural Improvements:**
+- **Single-table DynamoDB** with adjacency list pattern for efficient queries
+- **Feature-based backend** with clear separation of concerns
+- **Repository pattern** for data access abstraction
+- **Strategy pattern** for extensible enrollment types
+- **No backward compatibility burden** - clean slate implementation
+
+The architecture is designed for extensibility - adding paid courses or bundles requires only implementing new strategy classes without modifying existing code. The single-table design scales efficiently, supporting complex queries with GSI indexes, and the feature-based structure keeps code organized as the platform grows.
+
+**This plan transforms the codebase** from legacy multi-table design to modern single-table architecture while delivering the enrollment feature.

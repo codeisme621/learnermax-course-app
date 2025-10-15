@@ -21,6 +21,8 @@ jest.mock('motion/react', () => ({
 describe('HeroSection', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    // Clear sessionStorage before each test
+    sessionStorage.clear();
   });
 
   it('renders course title and subtitle', () => {
@@ -32,6 +34,16 @@ describe('HeroSection', () => {
   it('renders enroll CTA button', () => {
     render(<HeroSection course={mockCourse} />);
     expect(screen.getByRole('button', { name: /enroll now/i })).toBeInTheDocument();
+  });
+
+  it('stores courseId in sessionStorage and navigates when enroll button clicked', () => {
+    render(<HeroSection course={mockCourse} />);
+    const enrollButton = screen.getByRole('button', { name: /enroll now/i });
+
+    enrollButton.click();
+
+    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe(mockCourse.id);
+    expect(mockPush).toHaveBeenCalledWith('/enroll');
   });
 
   it('renders course stats', () => {

@@ -6,16 +6,26 @@ const logger = createLogger('CourseService');
 
 export class CourseService {
   async getCourse(courseId: string): Promise<Course | undefined> {
-    return await courseRepository.get(courseId);
+    logger.info('[getCourse] Fetching course', { courseId });
+    const course = await courseRepository.get(courseId);
+    logger.info('[getCourse] Result', { courseId, found: !!course });
+    return course;
   }
 
   async getAllCourses(): Promise<Course[]> {
-    return await courseRepository.getAll();
+    logger.info('[getAllCourses] Fetching all courses');
+    const courses = await courseRepository.getAll();
+    logger.info('[getAllCourses] Result', {
+      count: courses.length,
+      courseIds: courses.map(c => c.courseId)
+    });
+    return courses;
   }
 
   async createCourse(course: Course): Promise<void> {
+    logger.info('[createCourse] Creating course', { courseId: course.courseId });
     await courseRepository.create(course);
-    logger.info('Course created', { courseId: course.courseId });
+    logger.info('[createCourse] Course created successfully', { courseId: course.courseId });
   }
 }
 

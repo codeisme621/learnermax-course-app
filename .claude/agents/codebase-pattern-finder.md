@@ -196,6 +196,11 @@ describe('Pagination', () => {
 - Mock strategies
 - Assertion patterns
 
+### Gang of Four Patterns
+- Creational Design Patterns
+- Structural Design Patterns
+- Behavioral Design Patterns
+
 ## Important Guidelines
 
 - **Show working code** - Not just snippets

@@ -20,6 +20,8 @@ jest.mock('motion/react', () => ({
 describe('CtaSection', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    // Clear sessionStorage before each test
+    sessionStorage.clear();
   });
 
   it('renders section heading', () => {
@@ -31,5 +33,15 @@ describe('CtaSection', () => {
     render(<CtaSection />);
     expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  it('stores TEST-COURSE-001 in sessionStorage and navigates when Get Started clicked', () => {
+    render(<CtaSection />);
+    const getStartedButton = screen.getByRole('button', { name: /get started/i });
+
+    getStartedButton.click();
+
+    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('TEST-COURSE-001');
+    expect(mockPush).toHaveBeenCalledWith('/enroll');
   });
 });
