@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "region": "us-east-1",
+  "userPoolId": "us-east-1_TESTPOOL",
+  "userName": "google_123456789_testuser",
+  "callerContext": {
+    "awsSdkVersion": "3.0.0",
+    "clientId": "test-client-id"
+  },
+  "triggerSource": "PostConfirmation_ConfirmSignUp",
+  "request": {
+    "userAttributes": {
+      "sub": "TEST-USER-GOOGLE-001",
+      "email": "test.google.001@learnermax-test.com",
+      "name": "Test Google User 001",
+      "email_verified": "true",
+      "identities": "[{\"userId\":\"123456789\",\"providerName\":\"Google\",\"providerType\":\"Google\",\"issuer\":null,\"primary\":true,\"dateCreated\":1234567890}]"
+    }
+  },
+  "response": {}
+}

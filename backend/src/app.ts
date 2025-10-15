@@ -1,5 +1,7 @@
-import express, { Request, Response, Express } from 'express';
-import studentRoutes from './routes/students.js';
+import express, { Express } from 'express';
+import enrollmentRoutes from './features/enrollment/enrollment.routes.js';
+import studentRoutes from './features/students/student.routes.js';
+import courseRoutes from './features/courses/course.routes.js';
 import { createLogger } from './lib/logger.js';
 
 const logger = createLogger('ExpressApiFunction');
@@ -25,13 +27,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.get('/hello', (req: Request, res: Response) => {
-  logger.info('GET /hello - Hello World endpoint');
-  res.status(200).json({ message: 'hello world' });
-});
-
+// Feature-based routes
+app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api/courses', courseRoutes);
 
 // Start server (only in production, not during tests)
 if (process.env.NODE_ENV !== 'test') {

@@ -35,7 +35,7 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
     recordCount: event.Records.length,
   });
 
-  const tableName = process.env.STUDENTS_TABLE_NAME!;
+  const tableName = process.env.EDUCATION_TABLE_NAME!;
   const client = getDocClient();
 
   for (const record of event.Records) {
@@ -49,20 +49,25 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
 
       const now = new Date().toISOString();
 
-      // Create student record directly in DynamoDB
+      // Create student record in EducationTable using single-table design
       await client.send(
         new PutCommand({
           TableName: tableName,
           Item: {
+            PK: `USER#${message.userId}`,
+            SK: 'METADATA',
+            GSI1PK: `USER#${message.userId}`,
+            GSI1SK: 'METADATA',
+            entityType: 'USER',
+            email: message.email, // For email-index GSI
             userId: message.userId,
-            email: message.email,
             name: message.name,
             signUpMethod: message.signUpMethod,
-            enrolledCourses: [],
+            emailVerified: true,
             createdAt: now,
             updatedAt: now,
           },
-          ConditionExpression: 'attribute_not_exists(userId)', // Prevent duplicates
+          ConditionExpression: 'attribute_not_exists(PK)', // Prevent duplicates
         })
       );
 

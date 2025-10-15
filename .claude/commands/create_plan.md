@@ -141,9 +141,15 @@ Once aligned on approach:
    [1-2 sentence summary]
 
    ## Implementation Phases:
-   1. [Phase name] - [what it accomplishes]
-   2. [Phase name] - [what it accomplishes]
-   3. [Phase name] - [what it accomplishes]
+   1.a [Phase name] - [what it accomplishes]
+   1.b [Validation Phase] - [What it tests]
+   1.c [Manual Review and optional deployment to preview] - [Should we commit code and deploy to preview?]
+   2.a [Phase name] - [what it accomplishes]
+   2.b [Validation Phase] - [What it tests]
+   2.c [Manual Review and optional deployment to preview] - [Should we commit code and deploy to preview?]
+   3.a [Phase name] - [what it accomplishes]
+   3.b [Validation Phase] - [What it tests]
+   3.c [Manual Review and optional deployment to preview] - [Should we commit code and deploy to preview?]
 
    Does this phasing make sense? Should I adjust the order or granularity?
    ```
@@ -190,82 +196,56 @@ After structure approval:
 
 [High-level strategy and reasoning]
 
-## Phase 1: [Descriptive Name]
+## Phase 1.a: [Descriptive Name]
 
 ### Overview
 [What this phase accomplishes]
 
 ### Changes Required:
 
-#### 1. [Component/File Group]
+#### 1.a [Component/File Group]
 **File**: `path/to/file.ext`
 **Changes**: [Summary of changes]
 
 ```[language]
 // Specific code to add/modify
 ```
+## Phase 1.b [Descriptive Name - Validation Tests]
+Run automatic tests first and ensure they pass before continuing:
+**unit test** pnpm run test
+**lint test** pnpm run lint
+**typecheck test** pnpm run typecheck
+**test coverage** pnpm run test:coverage
+
+STOP and have uer Execute manaual tests:
+**manual tests** Document any manual tests needed and STOP and ask user to test. 
+
+## Phase 1.c [Manual Review and optional deployment to preview]
+- STOP and ask user to review code and commit if they want.
+- STOP and ask user if they want to deploy to preview envionrment
 
 ### Success Criteria:
-
-#### Continuous Validation (During Implementation):
-- [ ] Run `pnpm test [file]` after each significant change - all pass
-- [ ] Monitor dev server logs via `pnpm run dev:logs` - no errors
-- [ ] Test API endpoints with curl - correct responses
-- [ ] Check TypeScript compilation - no type errors
-
-#### Phase Completion Validation:
-- [ ] All unit tests pass: `cd backend && pnpm test`
-- [ ] Type checking passes: `pnpm run typecheck`
-- [ ] Linting passes: `pnpm run lint`
-- [ ] Test coverage meets 90% threshold: `pnpm run test:coverage`
-- [ ] Build succeeds: `pnpm run build`
-- [ ] Local dev server runs without errors
-- [ ] API endpoints tested with curl and respond correctly
-
-#### Preview Deployment Validation:
-- [ ] Backend deployed successfully: `./scripts/deploy-preview-backend.sh`
-- [ ] Frontend deployed successfully: `./scripts/deploy-preview-frontend.sh`
-- [ ] E2E tests created in `e2e/tests/[feature-name].spec.ts`
-- [ ] E2E tests pass: `cd e2e && pnpm test`
-- [ ] No errors in backend logs: `scripts/.sam-logs.log`
-- [ ] No errors in frontend logs: `scripts/.vercel-logs.log`
+- [ ] Development Completed? 
+- [ ] All Validation Tests are passing?
+- [ ] Stopped and manually reviewed with user asking to commit and/or deploy to preview?
 
 ---
 
 ## Phase 2: [Descriptive Name]
 
-[Similar structure with both automated and manual success criteria...]
+[Similar structure with same success criteria...]
 
 ---
 
 ## Testing Strategy
-
 ### Unit Tests:
-- [What to test]
-- [Key edge cases]
-
-### Integration Tests:
-- [End-to-end scenarios]
-
-### E2E Tests (Created During Preview Validation):
-- [User flow to test in preview environment]
-- [Integration between frontend and backend]
-- [Critical path testing]
-
-**Note**: E2E tests are written and run against the preview environment after local implementation is complete. This validates the feature in a production-like setting with full stack integration.
+- [Write unit tests as you go when it makes sense]
+- [Test coverage met: run pnpm run test:coverage]
 
 ### Manual Testing Steps:
 1. [Specific step to verify feature]
 2. [Another verification step]
 3. [Edge case to test manually]
-
-## Performance Considerations
-
-[Any performance implications or optimizations needed]
-
-## Migration Notes
-
-[If applicable, how to handle existing data/systems]
 
 ## References
 
@@ -334,21 +314,6 @@ After structure approval:
    - The implementation plan must be complete and actionable
    - Every decision must be made before finalizing the plan
 
-## Success Criteria Guidelines
-
-**Always separate success criteria into two categories:**
-
-1. **Automated Verification** (can be run by execution agents):
-   - Commands that can be run: `pnpm run test`, etc.
-   - Specific files that should exist
-   - Code compilation/type checking
-   - Automated test suites
-
-2. **Manual Verification** (requires human testing):
-   - UI/UX functionality
-   - Performance under real conditions
-   - Edge cases that are hard to automate
-   - User acceptance criteria
 
 ## Common Patterns
 

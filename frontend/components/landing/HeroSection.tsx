@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Users, Award, BookOpen, type LucideIcon } from 'lucide-react';
 import type { CourseData } from '@/lib/mock-data/course';
 
@@ -12,6 +12,15 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ course }: HeroSectionProps) {
+  const router = useRouter();
+
+  const handleEnrollClick = () => {
+    // Store courseId in sessionStorage
+    sessionStorage.setItem('pendingEnrollmentCourseId', course.id);
+    // Navigate to enroll page
+    router.push('/enroll');
+  };
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-muted/50 to-background py-20 lg:py-32">
       <div className="container mx-auto px-4">
@@ -36,10 +45,8 @@ export function HeroSection({ course }: HeroSectionProps) {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-              <Button size="lg" asChild>
-                <Link href={`/enroll?courseid=${course.id}`}>
-                  Enroll Now <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
+              <Button size="lg" onClick={handleEnrollClick}>
+                Enroll Now <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
               <Button size="lg" variant="outline">
                 Watch Video

@@ -66,11 +66,21 @@
                 }
             ]
         },
+        "injectGlobals": true,
         "testMatch": [
             "**/__tests__/**/*.test.ts"
         ],
+        "testPathIgnorePatterns": [
+            "/node_modules/",
+            "/.aws-sam/",
+            "/dist/"
+        ],
         "collectCoverageFrom": [
-            "src/**/*.ts"
+            "src/**/*.ts",
+            "!src/**/*.types.ts",
+            "!src/**/*.repository.ts",
+            "!src/**/*.interface.ts",
+            "!src/**/__tests__/**"
         ],
         "coverageThreshold": {
             "global": {

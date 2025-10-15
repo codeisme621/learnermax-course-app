@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "region": "us-east-1",
+  "userPoolId": "us-east-1_TESTPOOL",
+  "userName": "testuser_email_001",
+  "callerContext": {
+    "awsSdkVersion": "3.0.0",
+    "clientId": "test-client-id"
+  },
+  "triggerSource": "PostConfirmation_ConfirmSignUp",
+  "request": {
+    "userAttributes": {
+      "sub": "TEST-USER-EMAIL-001",
+      "email": "test.email.001@learnermax-test.com",
+      "name": "Test Email User 001",
+      "email_verified": "true"
+    }
+  },
+  "response": {}
+}

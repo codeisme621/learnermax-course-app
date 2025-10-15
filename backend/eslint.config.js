@@ -21,6 +21,14 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '.aws-sam/'],
+    ignores: [
+      'dist/',
+      'node_modules/',
+      '.aws-sam/',
+      'coverage/',
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+    ],
   },
 ];

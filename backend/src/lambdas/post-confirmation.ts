@@ -26,8 +26,6 @@ interface StudentOnboardingMessage {
 export const handler: PostConfirmationTriggerHandler = async (
   event: PostConfirmationTriggerEvent
 ) => {
-  const startTime = Date.now();
-
   logger.info('PostConfirmation event received', {
     userName: event.userName,
     userPoolId: event.userPoolId,

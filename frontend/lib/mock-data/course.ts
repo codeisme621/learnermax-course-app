@@ -34,7 +34,7 @@ export interface CourseData {
 }
 
 export const mockCourse: CourseData = {
-  id: "course-001",
+  id: "TEST-COURSE-001",
   title: "Master Modern Web Development",
   subtitle: "Build production-ready applications with the latest technologies",
   description: "Learn to create scalable, performant web applications using React, Next.js, TypeScript, and modern cloud technologies. This comprehensive course takes you from fundamentals to advanced concepts.",
