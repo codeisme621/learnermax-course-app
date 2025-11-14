@@ -10,17 +10,17 @@ import { getAuthToken } from './auth';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Course data types matching backend structure
-export interface CourseVideo {
-  videoId: string;
+export interface Lesson {
+  lessonId: string;        // Renamed from videoId
   title: string;
   lengthInMins: number;
-  videoPath: string;
+  videoKey: string;        // Renamed from videoPath - S3 object key
 }
 
 export interface CourseModule {
   moduleId: string;
   moduleName: string;
-  videos: CourseVideo[];
+  lessons: Lesson[];       // Renamed from videos
 }
 
 export interface Course {

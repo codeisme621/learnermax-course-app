@@ -1,14 +1,14 @@
-export interface CourseVideo {
-  videoId: string;
+export interface Lesson {
+  lessonId: string;        // Renamed from videoId
   title: string;
   lengthInMins: number;
-  videoPath: string; // S3 path or CDN URL for video player
+  videoKey: string;        // Renamed from videoPath - S3 object key (e.g., "courses/spec-driven-dev-mini/lesson-1.mp4")
 }
 
 export interface CourseModule {
   moduleId: string;
   moduleName: string;
-  videos: CourseVideo[];
+  lessons: Lesson[];       // Renamed from videos
 }
 
 export interface Course {
