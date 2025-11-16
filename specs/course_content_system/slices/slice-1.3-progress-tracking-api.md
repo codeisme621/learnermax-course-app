@@ -78,6 +78,8 @@ Headers: Authorization: Bearer <token>
 
 **Note:** `isCompleted` field NOT included here (frontend merges with progress data client-side)
 
+**Security Note:** The API response MUST NOT include the `videoKey` field. This field is an internal S3 object key used only by the backend to generate signed URLs. The frontend should never see S3 keys - only signed CloudFront URLs returned by the dedicated video URL endpoint below.
+
 **GET /api/lessons/:lessonId/video-url**
 - Returns signed CloudFront URL for a specific lesson video
 - Requires student to be enrolled in the lesson's course (security check)
