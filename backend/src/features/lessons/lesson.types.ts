@@ -4,9 +4,12 @@
  */
 export interface Lesson {
   lessonId: string;        // Unique identifier: "lesson-1", "lesson-2"
+  courseId: string;        // Parent course: "spec-driven-dev-mini"
   title: string;           // Lesson title: "Introduction to Spec-Driven Development"
-  lengthInMins: number;    // Duration in minutes: 15, 30, 45
+  description?: string;    // Optional detailed description
+  lengthInMins?: number;   // Duration in minutes: 15, 30, 45
   videoKey: string;        // S3 object key: "courses/spec-driven-dev-mini/lesson-1.mp4"
+  order: number;           // Display order: 1, 2, 3, 4, 5
 }
 
 /**

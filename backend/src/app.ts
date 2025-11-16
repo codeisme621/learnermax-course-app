@@ -2,6 +2,8 @@ import express, { Express } from 'express';
 import enrollmentRoutes from './features/enrollment/enrollment.routes.js';
 import studentRoutes from './features/students/student.routes.js';
 import courseRoutes from './features/courses/course.routes.js';
+import lessonRoutes from './features/lessons/lesson.routes.js';
+import progressRoutes from './features/progress/progress.routes.js';
 import { createLogger } from './lib/logger.js';
 
 const logger = createLogger('ExpressApiFunction');
@@ -30,7 +32,9 @@ app.use((req, res, next) => {
 // Feature-based routes
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/students', studentRoutes);
-app.use('/api/courses', courseRoutes);
+app.use('/api/courses', courseRoutes);  // Includes /api/courses/:courseId/lessons
+app.use('/api/lessons', lessonRoutes);  // Includes /api/lessons/:lessonId/video-url
+app.use('/api/progress', progressRoutes);  // Includes /api/progress/:courseId and POST /api/progress
 
 // Start server (only in production, not during tests)
 if (process.env.NODE_ENV !== 'test') {
