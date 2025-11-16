@@ -24,6 +24,18 @@ Parameters:
     Default: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-30-2:1
     Description: ARN for AWS Distro for OpenTelemetry (ADOT) Lambda layer
 
+  CloudFrontKeyPairId:
+    Type: String
+    Description: CloudFront key pair ID for signing video URLs (generated via AWS Console)
+
+  CloudFrontPublicKeyId:
+    Type: String
+    Description: CloudFront public key ID for KeyGroup (created via create-public-key API)
+
+  CloudFrontKeyGroupId:
+    Type: String
+    Description: CloudFront key group ID (created manually via create-key-group API)
+
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
   IsPreview: !Not [!Equals [!Ref Environment, prod]]
@@ -174,6 +186,111 @@ Resources:
           Value: !Ref Environment
         - Key: Project
           Value: LearnerMax
+
+  # S3 Bucket for Video Storage
+  VideoStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub learnermax-videos-${Environment}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # CloudFront Origin Access Identity for S3 video access
+  VideoCloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub OAI for learnermax-videos-${Environment}
+
+  # S3 Bucket Policy: Allow only CloudFront OAI to read videos
+  VideoStorageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VideoStorageBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontOAIReadAccess
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt VideoCloudFrontOAI.S3CanonicalUserId
+            Action:
+              - s3:GetObject
+            Resource: !Sub ${VideoStorageBucket.Arn}/*
+
+  # CloudFront Distribution for video delivery
+  VideoCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub LearnerMax Video Distribution - ${Environment}
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: S3VideoOrigin
+            DomainName: !GetAtt VideoStorageBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${VideoCloudFrontOAI}
+        DefaultCacheBehavior:
+          TargetOriginId: S3VideoOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized managed policy
+          ResponseHeadersPolicyId: !Ref VideoResponseHeadersPolicy
+          TrustedKeyGroups:
+            - !Ref CloudFrontKeyGroupId
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+  # CloudFront Response Headers Policy for CORS
+  VideoResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub learnermax-video-cors-${Environment}
+        Comment: CORS policy for video player access from frontend
+        CorsConfig:
+          AccessControlAllowOrigins:
+            Items:
+              - !Ref FrontendDomain
+              - http://localhost:3000
+          AccessControlAllowHeaders:
+            Items:
+              - '*'
+          AccessControlAllowMethods:
+            Items:
+              - GET
+              - HEAD
+              - OPTIONS
+          AccessControlAllowCredentials: false
+          AccessControlExposeHeaders:
+            Items:
+              - Content-Length
+              - Content-Range
+              - ETag
+          OriginOverride: true
 
   # SNS Topic for Student Onboarding
   StudentOnboardingTopic:
@@ -334,6 +451,11 @@ Resources:
           EDUCATION_TABLE_NAME: !Ref EducationTable
           COGNITO_USER_POOL_ID: !Ref LearnerMaxUserPool
           COGNITO_CLIENT_ID: !Ref LearnerMaxUserPoolClient
+          # Video infrastructure configuration
+          CLOUDFRONT_DOMAIN: !GetAtt VideoCloudFrontDistribution.DomainName
+          CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
+          CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
+          VIDEO_URL_EXPIRY_MINUTES: 30
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
@@ -342,6 +464,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
+        - Statement:
+            - Sid: ReadCloudFrontPrivateKey
+              Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:learnermax/cloudfront-private-key-${Environment}-*
       Events:
         RootEndpoint:
           Type: Api
@@ -546,6 +674,24 @@ Outputs:
     Value: !Sub https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ObservabilityDashboard}
     Export:
       Name: !Sub ${AWS::StackName}-DashboardUrl
+
+  VideoStorageBucketName:
+    Description: S3 bucket name for video storage
+    Value: !Ref VideoStorageBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-VideoStorageBucketName
+
+  CloudFrontDistributionDomain:
+    Description: CloudFront distribution domain for video delivery
+    Value: !GetAtt VideoCloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomain
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref VideoCloudFrontDistribution
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionId
 
 # # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

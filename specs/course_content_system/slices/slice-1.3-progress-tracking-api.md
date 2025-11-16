@@ -297,6 +297,22 @@ const schema = z.object({
 - [ ] Signed URLs expire after 30 minutes
 - [ ] Returns both `videoUrl` and `expiresAt` fields
 
+**Environment Configuration (from Slice 1.2):**
+The `VideoUrlProvider` is already configured via Lambda environment variables set up in Slice 1.2. No additional environment setup is needed for video URL generation. The factory function `createVideoUrlProvider()` reads from:
+- `CLOUDFRONT_DOMAIN` - CloudFront distribution domain (auto-populated from stack outputs)
+- `CLOUDFRONT_KEY_PAIR_ID` - Contains Public Key ID for KeyGroups (not legacy Key Pair ID despite the name)
+- `CLOUDFRONT_PRIVATE_KEY_SECRET_NAME` - Secrets Manager secret name (environment-specific: `learnermax/cloudfront-private-key-${Environment}`)
+- `VIDEO_URL_EXPIRY_MINUTES` - URL expiration time (configured as 30 minutes)
+
+**Usage in route handler:**
+```typescript
+import { createVideoUrlProvider } from '../lessons/services/video-url-service.js';
+
+// In GET /api/lessons/:lessonId/video-url handler
+const videoUrlProvider = createVideoUrlProvider(); // Reads from env vars automatically
+const { url, expiresAt } = await videoUrlProvider.generateSignedUrl(lesson.videoKey);
+```
+
 ### Error Handling
 - [ ] 401 if not authenticated
 - [ ] 403 if not enrolled (video URL endpoint)

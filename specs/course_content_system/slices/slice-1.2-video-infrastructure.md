@@ -1,7 +1,7 @@
 # Slice 1.2: Video Infrastructure (AWS)
 
 **Parent Mainspec:** `specs/course_content_system/mainspec.md`
-**Status:** Not Started
+**Status:** ✅ Completed
 **Depends On:** Slice 1.1 (Type System - needs `videoKey` field definition)
 
 ## Objective
@@ -221,9 +221,162 @@ courses/{courseId}/lesson-{order}.mp4
 - Clear organization in S3 console
 
 ## Deviations from Plan
-_(To be filled during implementation)_
 
-Potential considerations:
-- May adjust URL expiry time based on video length analysis
-- May add thumbnail support: `courses/{courseId}/thumbnails/lesson-{order}.jpg`
-- May use CloudFront Functions for simpler auth (if signed URLs prove complex)
+### 1. CloudFront KeyGroups Instead of Legacy Trusted Signers
+**Deviation:** Used modern CloudFront KeyGroups with Public Key ID instead of legacy Key Pair ID approach.
+
+**Original Plan:** Store Key Pair ID in Parameter Store, use it directly for signing.
+
+**Actual Implementation:**
+- Created CloudFront Public Key via `aws cloudfront create-public-key` 
+- Created CloudFront KeyGroup manually via `aws cloudfront create-key-group` 
+- Store Public Key ID in SAM template parameters (not Parameter Store)
+- Environment variable `CLOUDFRONT_KEY_PAIR_ID` actually contains Public Key ID for KeyGroups
+
+**Reason:** AWS recommends KeyGroups as the modern approach. Legacy trusted signers with Key Pair IDs are still supported but KeyGroups offer better key rotation and management.
+
+**Files Changed:**
+- `backend/template.yaml` - Added `CloudFrontPublicKeyId` and `CloudFrontKeyGroupId` parameters
+- `backend/samconfig.toml` - Stores all three IDs (Key Pair, Public Key, KeyGroup)
+
+### 2. Manual KeyGroup and Public Key Creation
+**Deviation:** CloudFront KeyGroup and Public Key created manually via AWS CLI instead of CloudFormation.
+
+**Original Plan:** Define all resources in SAM template.
+
+**Actual Implementation:**
+```bash
+# Created public key from PEM file
+aws cloudfront create-public-key --public-key-config Name=learnermax-video-signing-key-preview,...
+
+# Created key group referencing public key
+aws cloudfront create-key-group --key-group-config Name=learnermax-video-key-group-preview,Items=...,...
+```
+
+**Reason:** CloudFormation deployment failed with "The specified CloudFront public key does not exist in key group" error. CloudFront KeyGroup requires the public key to exist before distribution creation, creating a circular dependency. Manual creation resolved this.
+
+**Impact:** One-time manual setup required per environment. KeyGroup IDs stored in `samconfig.toml` and referenced via parameters.
+
+### 3. CORS Configuration on CloudFront (Not S3)
+**Deviation:** Implemented CORS using CloudFront ResponseHeadersPolicy instead of S3 CORS configuration.
+
+**Original Plan:** Configure CORS on S3 bucket for frontend domain.
+
+**Actual Implementation:**
+- Created `VideoResponseHeadersPolicy` resource in SAM template
+- Configured `Access-Control-Allow-Origin` to include frontend domain + localhost
+- Attached to CloudFront distribution default cache behavior
+
+**Reason:** Since Origin Access Identity (OAI) prevents all direct S3 access, browsers never interact with S3 directly - only through CloudFront. S3 CORS configuration would be ineffective. CloudFront CORS is the correct approach.
+
+**File:** `backend/template.yaml:284-321` (VideoResponseHeadersPolicy resource)
+
+### 4. Dependency Injection for CloudFront Signer (Testability)
+**Deviation:** Added optional `signUrlFn` parameter to `CloudFrontUrlProvider` constructor for dependency injection.
+
+**Original Plan:** Direct import and use of `@aws-sdk/cloudfront-signer`.
+
+**Actual Implementation:**
+```typescript
+constructor(
+  private readonly cloudFrontDomain: string,
+  private readonly keyPairId: string,
+  private readonly privateKeySecretName: string,
+  private readonly urlExpiryMinutes: number,
+  private readonly signUrlFn: typeof getSignedUrl = getSignedUrl, // Dependency injection
+) { ... }
+```
+
+**Reason:** Jest + ESM mocking challenges. Direct mocking of `@aws-sdk/cloudfront-signer` failed due to module immutability. Dependency injection pattern allows tests to inject mock functions while production code uses real implementation.
+
+**Impact:** All 18 unit tests pass without calling real AWS services.
+
+**Files:**
+- `backend/src/features/lessons/services/video-url-service.ts:44`
+- `backend/src/features/lessons/services/__tests__/video-url-service.test.ts:31-42`
+
+### 5. CloudFront Signer Wrapper Module
+**Deviation:** Created wrapper module at `backend/src/lib/cloudfront-signer.ts` instead of using SDK directly.
+
+**Original Plan:** Import `@aws-sdk/cloudfront-signer` directly in service.
+
+**Actual Implementation:**
+```typescript
+// backend/src/lib/cloudfront-signer.ts
+export function getSignedUrl(params: SignedUrlParams): string {
+  return awsGetSignedUrl(params);
+}
+```
+
+**Reason:** Provides abstraction layer for easier mocking and potential future customization. User preference for `lib/` folder location over `infra/`.
+
+**File:** `backend/src/lib/cloudfront-signer.ts`
+
+### 6. Test Utility Script Created
+**Deviation:** Created `backend/src/test-signed-url.ts` for manual testing.
+
+**Original Plan:** Not specified in slice spec.
+
+**Actual Implementation:** Standalone TypeScript script to generate signed URLs for validation.
+
+**Reason:** Needed for end-to-end testing of infrastructure without building full API endpoint (Slice 1.3 work). Useful for debugging and verification during deployment.
+
+**File:** `backend/src/test-signed-url.ts`
+
+### 7. Installed tsx as Dev Dependency
+**Deviation:** Added `tsx` package for running TypeScript scripts.
+
+**Original Plan:** Not specified.
+
+**Reason:** Needed to execute `test-signed-url.ts` directly without compilation step.
+
+**File:** `backend/package.json` - `"tsx": "4.20.6"` in devDependencies
+
+### 8. CloudFront Distribution Domain from Stack Outputs
+**Deviation:** CloudFront domain injected via Lambda environment variable from `!GetAtt` instead of hardcoding.
+
+**Original Plan:** Not explicitly specified.
+
+**Actual Implementation:**
+```yaml
+CLOUDFRONT_DOMAIN: !GetAtt VideoCloudFrontDistribution.DomainName
+```
+
+**Reason:** Eliminates manual configuration. CloudFront domain (e.g., `du0nxa65odbxr.cloudfront.net`) is dynamically retrieved from CloudFormation outputs.
+
+**File:** `backend/template.yaml:455`
+
+## Implementation Notes
+
+### Test Video Validation Results
+- ✅ S3 direct access blocked (403 Forbidden)
+- ✅ Signed URL generation successful
+- ✅ Video accessible via signed CloudFront URL
+- ✅ URL expires after 30 minutes as configured
+- ✅ CORS headers present in CloudFront response
+
+### Private Key Storage
+- Private key stored in Secrets Manager: `learnermax/cloudfront-private-key-preview`
+- Accessed by Lambda via IAM permission: `secretsmanager:GetSecretValue`
+- Cached in Lambda memory for warm start performance
+
+### All Acceptance Criteria Met
+- [x] S3 bucket created with all public access blocked
+- [x] CloudFront distribution created with OAI configured
+- [x] S3 bucket policy restricts access to CloudFront OAI only
+- [x] CloudFront trusted signers enabled (via KeyGroups)
+- [x] SAM template validates successfully
+- [x] CloudFront distribution domain available in stack outputs
+- [x] CloudFront key pair generated (manual one-time setup)
+- [x] Private key stored in AWS Secrets Manager
+- [x] Lambda IAM role has `secretsmanager:GetSecretValue` permission
+- [x] Environment variables configured on Lambda function
+- [x] `video-url-service.ts` implements `VideoUrlProvider` interface
+- [x] Private key fetched from Secrets Manager with in-memory caching
+- [x] Signed URLs expire after 30 minutes
+- [x] Service returns both `url` and `expiresAt` fields
+- [x] Unit tests verify URL structure and expiration logic (18/18 passing)
+- [x] Upload test video to S3: `courses/test-course/lesson-1.mp4`
+- [x] Direct S3 URL returns 403 Forbidden
+- [x] Signed CloudFront URL plays video successfully
+- [x] Unit tests pass for `generateSignedUrl()`
