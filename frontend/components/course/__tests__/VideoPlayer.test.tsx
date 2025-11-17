@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../VideoPlayer';
 import * as lessonsActions from '@/app/actions/lessons';
 import * as progressActions from '@/app/actions/progress';
+import { simulateVideoProgress } from '../videoTestUtils';
 
 // Mock the server actions
 jest.mock('@/app/actions/lessons');
@@ -12,27 +13,10 @@ jest.mock('@/app/actions/progress');
 jest.mock('next/dynamic', () => ({
   __esModule: true,
   default: (fn: () => Promise<any>) => {
-    // Determine which component to return based on the import
-    const mockComponents = {
-      'react-player/lazy': function MockReactPlayer(props: any) {
-        // Expose props for testing
-        if (props.onProgress) {
-          (global as any).__mockOnProgress = props.onProgress;
-        }
-        if (props.progressInterval !== undefined) {
-          (global as any).__mockProgressInterval = props.progressInterval;
-        }
-        if (props.playing !== undefined) {
-          (global as any).__mockPlaying = props.playing;
-        }
-
-        return (
-          <div data-testid="react-player" data-url={props.url}>
-            <div>Mock Video Player</div>
-          </div>
-        );
-      },
-      'react-confetti': function MockConfetti(props: any) {
+    // Mock react-confetti for celebration tests
+    const fnString = fn.toString();
+    if (fnString.includes('react-confetti')) {
+      return function MockConfetti(props: any) {
         return (
           <div
             data-testid="confetti"
@@ -42,16 +26,7 @@ jest.mock('next/dynamic', () => ({
             Confetti Animation
           </div>
         );
-      },
-    };
-
-    // Try to detect which component is being imported
-    const fnString = fn.toString();
-    if (fnString.includes('react-player')) {
-      return mockComponents['react-player/lazy'];
-    }
-    if (fnString.includes('react-confetti')) {
-      return mockComponents['react-confetti'];
+      };
     }
 
     // Fallback: return a generic mock
@@ -67,8 +42,6 @@ describe('VideoPlayer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (global as any).__mockOnProgress = null;
-    (global as any).__mockProgressInterval = null;
   });
 
   describe('Video URL Fetching', () => {
@@ -107,7 +80,7 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
     });
 
@@ -163,7 +136,7 @@ describe('VideoPlayer', () => {
       await user.click(retryButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
     });
 
@@ -189,20 +162,6 @@ describe('VideoPlayer', () => {
   });
 
   describe('Progress Tracking', () => {
-    it('configures onProgress with 30 second interval', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        videoUrl: mockVideoUrl,
-        expiresAt: mockExpiresAt,
-      });
-
-      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
-
-      await waitFor(() => {
-        expect((global as any).__mockProgressInterval).toBe(30000);
-      });
-    });
-
     it('marks lesson complete when 90% watched', async () => {
       const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
       mockGetVideoUrl.mockResolvedValue({
@@ -221,15 +180,13 @@ describe('VideoPlayer', () => {
 
       // Wait for video to load
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate 90% progress
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -254,17 +211,15 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate 90% progress multiple times
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-          onProgress({ played: 0.95, playedSeconds: 190, loadedSeconds: 200 });
-          onProgress({ played: 1.0, playedSeconds: 200, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
+        simulateVideoProgress(videoPlayer, 0.95);
+        simulateVideoProgress(videoPlayer, 1.0);
       });
 
       await waitFor(() => {
@@ -284,15 +239,13 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate 50% progress
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.5, playedSeconds: 100, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.5);
       });
 
       // Wait a bit to ensure it doesn't get called
@@ -325,14 +278,12 @@ describe('VideoPlayer', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -357,14 +308,12 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -391,14 +340,12 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -423,14 +370,12 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -462,14 +407,12 @@ describe('VideoPlayer', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       // Callback is called after 3 second delay
@@ -498,14 +441,12 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -533,7 +474,7 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Mock second call with new URL
@@ -544,10 +485,8 @@ describe('VideoPlayer', () => {
 
       // Simulate progress (triggers expiration check)
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.5, playedSeconds: 100, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.5);
       });
 
       await waitFor(() => {
@@ -579,15 +518,13 @@ describe('VideoPlayer', () => {
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // First attempt at 90%
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
       });
 
       await waitFor(() => {
@@ -596,10 +533,8 @@ describe('VideoPlayer', () => {
 
       // Second attempt at 95% (should retry because first failed)
       await act(async () => {
-        const onProgress = (global as any).__mockOnProgress;
-        if (onProgress) {
-          onProgress({ played: 0.95, playedSeconds: 190, loadedSeconds: 200 });
-        }
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.95);
       });
 
       await waitFor(() => {

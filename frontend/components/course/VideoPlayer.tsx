@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getVideoUrl } from '@/app/actions/lessons';
 import { markLessonComplete } from '@/app/actions/progress';
-
-// Dynamically import react-player to avoid SSR issues
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
 // Dynamically import react-confetti
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
@@ -74,6 +71,9 @@ export function VideoPlayer({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Video element ref for progress tracking
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   // Update dimensions for confetti
   useEffect(() => {
     const updateDimensions = () => {
@@ -102,8 +102,12 @@ export function VideoPlayer({
         const result = await getVideoUrl(lessonId);
 
         if ('error' in result) {
+          console.error('[VideoPlayer] getVideoUrl error:', result.error);
           throw new Error(result.error);
         }
+
+        console.log('[VideoPlayer] Fetched video URL, expires at:', new Date(result.expiresAt * 1000).toISOString());
+        console.log('[VideoPlayer] Video URL:', result.videoUrl);
 
         setVideoUrl(result.videoUrl);
         setExpiresAt(new Date(result.expiresAt * 1000));
@@ -120,16 +124,42 @@ export function VideoPlayer({
     fetchVideo();
   }, [lessonId, onError]);
 
-  // Handle progress updates
-  const handleProgress = useCallback(
-    async (state: { played: number; playedSeconds: number; loadedSeconds: number }) => {
+  // Debug: Log when videoUrl changes
+  useEffect(() => {
+    if (videoUrl) {
+      console.log('[VideoPlayer] Rendering player with URL:', videoUrl);
+      console.log('[VideoPlayer] Loading state:', isLoading);
+      console.log('[VideoPlayer] Error state:', error);
+      console.log('[VideoPlayer] Video error state:', videoError);
+    }
+  }, [videoUrl, isLoading, error, videoError]);
+
+  // Handle progress updates with native video element
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = async () => {
+      console.log('[VideoPlayer] Handle Time update:', video.currentTime);
+      const duration = video.duration;
+      const currentTime = video.currentTime;
+
+      if (!duration || !currentTime) return;
+
+      const played = currentTime / duration;
+
+      console.log('[VideoPlayer] Video played percentage:', played);
+
       // Check if 90% watched and haven't marked complete yet
-      if (state.played >= 0.9 && !hasMarkedComplete && !isMarkingComplete.current) {
+      if (played >= 0.9 && !hasMarkedComplete && !isMarkingComplete.current) {
+
+        console.log('[VideoPlayer] Marking lesson as complete');
         isMarkingComplete.current = true;
         setHasMarkedComplete(true);
 
         try {
           const result = await markLessonComplete(courseId, lessonId);
+          console.log('[VideoPlayer] markLessonComplete result:', result);
 
           if ('error' in result) {
             throw new Error(result.error);
@@ -138,6 +168,7 @@ export function VideoPlayer({
           // Check if course is 100% complete
           if (result.percentage === 100) {
             // Show celebration with confetti
+            console.log('[VideoPlayer] Course 100% complete, showing celebration');
             setShowCelebration(true);
             setTimeout(() => {
               setShowCelebration(false);
@@ -145,6 +176,7 @@ export function VideoPlayer({
             }, 3000);
           } else {
             // Just show simple lesson complete overlay
+            console.log('[VideoPlayer] Lesson complete, showing overlay');
             setShowCompleteOverlay(true);
             setTimeout(() => {
               setShowCompleteOverlay(false);
@@ -176,19 +208,28 @@ export function VideoPlayer({
             } else {
               setVideoUrl(result.videoUrl);
               setExpiresAt(new Date(result.expiresAt * 1000));
+              // Update video src
+              if (video) {
+                video.src = result.videoUrl;
+              }
             }
           } catch (err) {
             console.error('Failed to refresh video URL:', err);
           }
         }
       }
-    },
-    [hasMarkedComplete, courseId, lessonId, expiresAt, onLessonComplete, onCourseComplete]
-  );
+    };
+
+    // Listen to timeupdate events to track progress
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
+  }, [hasMarkedComplete, courseId, lessonId, expiresAt, onLessonComplete, onCourseComplete]);
 
   // Handle video playback errors (codec issues, streaming failures, etc.)
-  const handleVideoError = (error: any) => {
-    console.error('Video playback error:', error);
+  const handleVideoError = (error: any, data?: any) => {
+    console.error('[VideoPlayer] Video playback error:', error);
+    console.error('[VideoPlayer] Error details:', data);
+    console.error('[VideoPlayer] Current video URL:', videoUrl);
     const errorMessage = 'Unable to play this video. Try again or contact support if the issue persists';
     setVideoError(errorMessage);
     onError?.(new Error(errorMessage));
@@ -205,7 +246,7 @@ export function VideoPlayer({
           throw new Error(result.error);
         }
         setVideoUrl(result.videoUrl);
-        setExpiresAt(result.expiresAt);
+        setExpiresAt(new Date(result.expiresAt * 1000));
         setIsLoading(false);
       })
       .catch((err) => {
@@ -246,23 +287,30 @@ export function VideoPlayer({
 
       {/* Video player */}
       {videoUrl && !error && !videoError && (
-        <ReactPlayer
-          url={videoUrl}
-          controls
-          width="100%"
-          height="100%"
-          onProgress={handleProgress}
-          onError={handleVideoError}
-          progressInterval={30000} // Check every 30 seconds (debouncing)
-          playing={autoPlay}
-          config={{
-            file: {
-              attributes: {
-                controlsList: 'nodownload', // Prevent download
-              },
-            },
-          }}
-        />
+        <div className="w-full h-full" data-testid="video-player" data-url={videoUrl}>
+          <video
+            ref={videoRef}
+            key={videoUrl}
+            src={videoUrl}
+            controls
+            controlsList="nodownload"
+            playsInline
+            autoPlay={autoPlay}
+            className="w-full h-full"
+            onLoadedData={() => {
+              console.log('[VideoPlayer] Native video loaded successfully');
+            }}
+            onError={(e) => {
+              console.error('[VideoPlayer] Native video error:', e);
+              handleVideoError(e);
+            }}
+            onPlay={() => {
+              console.log('[VideoPlayer] Native video started playing');
+            }}
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
       )}
 
       {/* Lesson complete overlay (simple checkmark) */}

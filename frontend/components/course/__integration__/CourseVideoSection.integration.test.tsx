@@ -3,46 +3,24 @@
  * Tests critical user flows: video playback, lesson completion, progress updates, and Next Lesson button
  * Uses MSW for network-level mocking, minimal component mocking
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CourseVideoSection } from '../CourseVideoSection';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/app/actions/__integration__/setup';
 import type { LessonResponse } from '@/app/actions/lessons';
 import type { ProgressResponse } from '@/app/actions/progress';
+import { simulateVideoProgress } from '../videoTestUtils';
 
 // Mock auth
 jest.mock('@/app/actions/auth', () => ({
   getAuthToken: jest.fn().mockResolvedValue('mock-jwt-token'),
 }));
 
-// Mock next/dynamic to avoid SSR issues with react-player
+// Mock next/dynamic for react-confetti
 jest.mock('next/dynamic', () => ({
   __esModule: true,
   default: (fn: any, options?: any) => {
-    // For react-player
-    if (fn.toString().includes('react-player')) {
-      return ({ url, onProgress, onError, onEnded }: any) => (
-        <div data-testid="react-player" data-url={url}>
-          Mock Video Player
-          <button
-            data-testid="simulate-progress"
-            onClick={() => onProgress?.({ played: 0.95, playedSeconds: 100, loadedSeconds: 100 })}
-          >
-            Simulate 95% Progress
-          </button>
-          <button
-            data-testid="simulate-ended"
-            onClick={() => onEnded?.()}
-          >
-            Simulate Video End
-          </button>
-          <button data-testid="simulate-error" onClick={() => onError?.(new Error('Video playback error'))}>
-            Simulate Error
-          </button>
-        </div>
-      );
-    }
     // For react-confetti
     if (fn.toString().includes('react-confetti')) {
       return () => <div data-testid="confetti">Confetti</div>;
@@ -120,7 +98,7 @@ describe('CourseVideoSection Integration Tests', () => {
 
       // Video player should load with lesson-2 URL
       await waitFor(() => {
-        const videoPlayer = screen.getByTestId('react-player');
+        const videoPlayer = screen.getByTestId('video-player');
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-2'));
       });
 
@@ -174,12 +152,14 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate lesson completion
-      const progressButton = screen.getByTestId('simulate-progress');
-      await user.click(progressButton);
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.95);
+      });
 
       // Verify getProgress was called and progress was refetched
       await waitFor(() => {
@@ -216,12 +196,14 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate lesson completion
-      const progressButton = screen.getByTestId('simulate-progress');
-      await user.click(progressButton);
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.95);
+      });
 
       // Should log error but not crash
       // await waitFor(() => {
@@ -231,7 +213,7 @@ describe('CourseVideoSection Integration Tests', () => {
       // });
 
       // Component should still be functional
-      expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      expect(screen.getByTestId('video-player')).toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });
@@ -286,7 +268,7 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       expect(screen.queryByText('Up Next')).not.toBeInTheDocument();
@@ -307,7 +289,7 @@ describe('CourseVideoSection Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Introduction to Spec-Driven Development')).toBeInTheDocument();
-        const videoPlayer = screen.getByTestId('react-player');
+        const videoPlayer = screen.getByTestId('video-player');
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-1'));
       });
 
@@ -323,7 +305,7 @@ describe('CourseVideoSection Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Writing Your First Spec')).toBeInTheDocument();
-        const videoPlayer = screen.getByTestId('react-player');
+        const videoPlayer = screen.getByTestId('video-player');
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-2'));
       });
     });
@@ -348,17 +330,19 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
       // Simulate completing the last lesson (would trigger 100%)
       // Note: This just logs for now, will show upsell modal in Phase 3
-      const endedButton = screen.getByTestId('simulate-ended');
-      await user.click(endedButton);
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 1.0); // 100% complete
+      });
 
       // Component should handle course completion
       // For now, it just logs (TODO: premium upsell modal in Phase 3)
-      expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      expect(screen.getByTestId('video-player')).toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });
