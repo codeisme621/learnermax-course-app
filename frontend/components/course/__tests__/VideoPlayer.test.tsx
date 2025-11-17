@@ -1,0 +1,635 @@
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { VideoPlayer } from '../VideoPlayer';
+import * as lessonsActions from '@/app/actions/lessons';
+import * as progressActions from '@/app/actions/progress';
+
+// Mock the server actions
+jest.mock('@/app/actions/lessons');
+jest.mock('@/app/actions/progress');
+
+// Mock next/dynamic to return components immediately (no lazy loading in tests)
+jest.mock('next/dynamic', () => ({
+  __esModule: true,
+  default: (fn: () => Promise<any>) => {
+    // Determine which component to return based on the import
+    const mockComponents = {
+      'react-player/lazy': function MockReactPlayer(props: any) {
+        // Expose props for testing
+        if (props.onProgress) {
+          (global as any).__mockOnProgress = props.onProgress;
+        }
+        if (props.progressInterval !== undefined) {
+          (global as any).__mockProgressInterval = props.progressInterval;
+        }
+        if (props.playing !== undefined) {
+          (global as any).__mockPlaying = props.playing;
+        }
+
+        return (
+          <div data-testid="react-player" data-url={props.url}>
+            <div>Mock Video Player</div>
+          </div>
+        );
+      },
+      'react-confetti': function MockConfetti(props: any) {
+        return (
+          <div
+            data-testid="confetti"
+            data-width={props.width}
+            data-height={props.height}
+          >
+            Confetti Animation
+          </div>
+        );
+      },
+    };
+
+    // Try to detect which component is being imported
+    const fnString = fn.toString();
+    if (fnString.includes('react-player')) {
+      return mockComponents['react-player/lazy'];
+    }
+    if (fnString.includes('react-confetti')) {
+      return mockComponents['react-confetti'];
+    }
+
+    // Fallback: return a generic mock
+    return () => <div>Mock Dynamic Component</div>;
+  },
+}));
+
+describe('VideoPlayer', () => {
+  const mockLessonId = 'lesson-1';
+  const mockCourseId = 'spec-driven-dev-mini';
+  const mockVideoUrl = 'https://cloudfront.example.com/video.mp4';
+  const mockExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (global as any).__mockOnProgress = null;
+    (global as any).__mockProgressInterval = null;
+  });
+
+  describe('Video URL Fetching', () => {
+    it('fetches video URL on mount', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(mockGetVideoUrl).toHaveBeenCalledWith(mockLessonId);
+      });
+    });
+
+    it('shows loading state while fetching video URL', () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 1000))
+      );
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      expect(screen.getByText(/loading video/i)).toBeInTheDocument();
+    });
+
+    it('renders video player after successful URL fetch', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error state when video URL fetch fails', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        error: 'Failed to fetch video URL',
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        // "Failed to fetch" maps to connection error in getUserFriendlyError()
+        expect(screen.getByText(/connection failed/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows retry button on error', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        error: 'Failed to fetch video URL',
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+      });
+    });
+
+    it('refetches video URL when retry button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+
+      // First call fails
+      mockGetVideoUrl.mockResolvedValueOnce({
+        error: 'Network error',
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/connection failed/i)).toBeInTheDocument();
+      });
+
+      // Second call succeeds
+      mockGetVideoUrl.mockResolvedValueOnce({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const retryButton = screen.getByRole('button', { name: /retry/i });
+      await user.click(retryButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+    });
+
+    it('calls onError callback when video fetch fails', async () => {
+      const onError = jest.fn();
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        error: 'Failed to load video',
+      });
+
+      render(
+        <VideoPlayer
+          lessonId={mockLessonId}
+          courseId={mockCourseId}
+          onError={onError}
+        />
+      );
+
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Progress Tracking', () => {
+    it('configures onProgress with 30 second interval', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect((global as any).__mockProgressInterval).toBe(30000);
+      });
+    });
+
+    it('marks lesson complete when 90% watched', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      // Wait for video to load
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      // Simulate 90% progress
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockMarkLessonComplete).toHaveBeenCalledWith(mockCourseId, mockLessonId);
+      });
+    });
+
+    it('does not mark complete twice for same lesson', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      // Simulate 90% progress multiple times
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+          onProgress({ played: 0.95, playedSeconds: 190, loadedSeconds: 200 });
+          onProgress({ played: 1.0, playedSeconds: 200, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockMarkLessonComplete).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does not mark complete before 90% threshold', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      // Simulate 50% progress
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.5, playedSeconds: 100, loadedSeconds: 200 });
+        }
+      });
+
+      // Wait a bit to ensure it doesn't get called
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(mockMarkLessonComplete).not.toHaveBeenCalled();
+    });
+
+    it('calls onLessonComplete callback after marking complete', async () => {
+      const onLessonComplete = jest.fn();
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(
+        <VideoPlayer
+          lessonId={mockLessonId}
+          courseId={mockCourseId}
+          onLessonComplete={onLessonComplete}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(onLessonComplete).toHaveBeenCalled();
+      });
+    });
+
+    it('shows simple lesson complete overlay after marking complete', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/lesson complete/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Course Completion Detection', () => {
+    it('shows celebration when course 100% complete', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 100,
+        completedLessons: 4,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/course complete/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows confetti when course 100% complete', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 100,
+        completedLessons: 4,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confetti')).toBeInTheDocument();
+      });
+    });
+
+    it('calls onCourseComplete callback when course 100% complete', async () => {
+      const onCourseComplete = jest.fn();
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 100,
+        completedLessons: 4,
+        totalLessons: 4,
+      });
+
+      render(
+        <VideoPlayer
+          lessonId={mockLessonId}
+          courseId={mockCourseId}
+          onCourseComplete={onCourseComplete}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      // Callback is called after 3 second delay
+      await waitFor(
+        () => {
+          expect(onCourseComplete).toHaveBeenCalled();
+        },
+        { timeout: 4000 }
+      );
+    });
+
+    it('does not show confetti for partial course completion', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/lesson complete/i)).toBeInTheDocument();
+      });
+
+      // Should not show confetti
+      expect(screen.queryByTestId('confetti')).not.toBeInTheDocument();
+      expect(screen.queryByText(/course complete/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('URL Expiration Handling', () => {
+    it('refetches URL when expiration is less than 2 minutes away', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      const nearExpiryTime = Math.floor(Date.now() / 1000) + 60; // 1 minute from now (Unix timestamp)
+      const newExpiryTime = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now (Unix timestamp)
+
+      // First call returns URL expiring soon
+      mockGetVideoUrl.mockResolvedValueOnce({
+        videoUrl: mockVideoUrl,
+        expiresAt: nearExpiryTime,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      // Mock second call with new URL
+      mockGetVideoUrl.mockResolvedValueOnce({
+        videoUrl: `${mockVideoUrl}?refreshed=true`,
+        expiresAt: newExpiryTime,
+      });
+
+      // Simulate progress (triggers expiration check)
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.5, playedSeconds: 100, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockGetVideoUrl).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('allows retry if marking complete fails', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      // First attempt fails
+      mockMarkLessonComplete.mockResolvedValueOnce({
+        error: 'Network error',
+      });
+      // Second attempt succeeds
+      mockMarkLessonComplete.mockResolvedValueOnce({
+        percentage: 50,
+        completedLessons: 2,
+        totalLessons: 4,
+      });
+
+      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('react-player')).toBeInTheDocument();
+      });
+
+      // First attempt at 90%
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.9, playedSeconds: 180, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockMarkLessonComplete).toHaveBeenCalledTimes(1);
+      });
+
+      // Second attempt at 95% (should retry because first failed)
+      await act(async () => {
+        const onProgress = (global as any).__mockOnProgress;
+        if (onProgress) {
+          onProgress({ played: 0.95, playedSeconds: 190, loadedSeconds: 200 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockMarkLessonComplete).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
+
+  describe('Component Props', () => {
+    it('resets state when lessonId changes', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const { rerender } = render(
+        <VideoPlayer lessonId="lesson-1" courseId={mockCourseId} />
+      );
+
+      await waitFor(() => {
+        expect(mockGetVideoUrl).toHaveBeenCalledWith('lesson-1');
+      });
+
+      // Change lesson
+      rerender(<VideoPlayer lessonId="lesson-2" courseId={mockCourseId} />);
+
+      await waitFor(() => {
+        expect(mockGetVideoUrl).toHaveBeenCalledWith('lesson-2');
+      });
+    });
+  });
+});

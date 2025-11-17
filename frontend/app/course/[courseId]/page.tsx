@@ -1,18 +1,22 @@
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { getCourse } from '@/app/actions/courses';
 import { checkEnrollment } from '@/app/actions/enrollments';
+import { getProgress } from '@/app/actions/progress';
+import { getLessons } from '@/app/actions/lessons';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import Link from 'next/link';
+import { CourseHeader } from '@/components/course/CourseHeader';
+import { CourseVideoSection } from '@/components/course/CourseVideoSection';
+import { LessonListSidebar } from '@/components/course/LessonListSidebar';
+import { MobileLessonMenu } from '@/components/course/MobileLessonMenu';
 import {
-  ArrowLeft,
-  PlayCircle,
-  BookOpen,
+  CourseHeaderSkeleton,
+  LessonListSkeleton,
+} from '@/components/course/skeletons';
+import { determineCurrentLesson } from '@/lib/course-utils';
+import {
   CheckCircle,
-  Lock,
   Clock,
   Award
 } from 'lucide-react';
@@ -21,6 +25,9 @@ import type { Metadata } from 'next';
 interface CoursePageProps {
   params: Promise<{
     courseId: string;
+  }>;
+  searchParams?: Promise<{
+    lesson?: string;
   }>;
 }
 
@@ -41,8 +48,9 @@ export async function generateMetadata({ params }: CoursePageProps): Promise<Met
   };
 }
 
-export default async function CoursePage({ params }: CoursePageProps) {
+export default async function CoursePage({ params, searchParams }: CoursePageProps) {
   const { courseId } = await params;
+  const search = searchParams ? await searchParams : undefined;
 
   // Check authentication
   const session = await auth();
@@ -64,64 +72,66 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   const course = courseResult.course;
 
-  // Mock curriculum data (in real implementation, fetch from backend)
-  const mockModules = [
-    { id: 1, title: 'Introduction to the Course', lessons: 5, completed: 0, duration: '45 min' },
-    { id: 2, title: 'Getting Started', lessons: 8, completed: 0, duration: '1.5 hours' },
-    { id: 3, title: 'Core Concepts', lessons: 12, completed: 0, duration: '2 hours' },
-    { id: 4, title: 'Advanced Topics', lessons: 10, completed: 0, duration: '1.8 hours' },
-    { id: 5, title: 'Final Project', lessons: 6, completed: 0, duration: '3 hours' },
-  ];
+  // Fetch lessons and progress
+  const [lessonsResult, progressResult] = await Promise.all([
+    getLessons(courseId),
+    getProgress(courseId),
+  ]);
+
+  // Handle errors
+  if ('error' in lessonsResult) {
+    redirect('/dashboard?error=lessons-not-found');
+  }
+
+  const lessons = lessonsResult.lessons;
+  const progress = 'error' in progressResult
+    ? {
+        courseId,
+        completedLessons: [],
+        percentage: 0,
+        totalLessons: lessons.length,
+        updatedAt: new Date().toISOString(),
+      }
+    : progressResult;
+
+  // Determine which lesson to display
+  const currentLesson = determineCurrentLesson(lessons, progress, search);
+
+  if (!currentLesson) {
+    redirect('/dashboard?error=no-lessons');
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Link>
-              </Button>
-              <div className="hidden md:block">
-                <h1 className="text-lg font-bold line-clamp-1">{course.name}</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary">
-                <Clock className="w-3 h-3 mr-1" />
-                Self-paced
-              </Badge>
-              <Progress value={0} className="w-24 hidden sm:block" />
-              <span className="text-sm text-muted-foreground hidden sm:inline">0%</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header with Progress */}
+      <Suspense fallback={<CourseHeaderSkeleton />}>
+        <CourseHeader courseId={courseId} />
+      </Suspense>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content Area */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Video Player Placeholder */}
-            <Card className="overflow-hidden">
-              <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-accent/20">
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                  <PlayCircle className="w-20 h-20 text-primary/40" />
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold mb-2">Video Player Coming Soon</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Course content will be available here
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
+          {/* Video Player Section */}
+          <div className="lg:col-span-2">
+            <CourseVideoSection
+              courseId={courseId}
+              initialLesson={currentLesson}
+              lessons={lessons}
+              initialProgress={progress}
+            />
+          </div>
 
-            {/* Course Info */}
+          {/* Lesson List Sidebar (Desktop Only) */}
+          <div className="hidden lg:block lg:col-span-1">
+            <Suspense fallback={<LessonListSkeleton />}>
+              <LessonListSidebar courseId={courseId} />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Course Info Section (below video player) */}
+        <div className="mt-8 grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
             <Card className="p-6">
               <h2 className="text-2xl font-bold mb-4">{course.name}</h2>
               <p className="text-muted-foreground mb-6">{course.description}</p>
@@ -144,75 +154,29 @@ export default async function CoursePage({ params }: CoursePageProps) {
               </div>
             </Card>
 
-            {/* Learning Outcomes Placeholder */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-primary" />
-                What You&apos;ll Learn
-              </h3>
-              {course.learningObjectives && course.learningObjectives.length > 0 ? (
+            {course.learningObjectives && course.learningObjectives.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                  What You&apos;ll Learn
+                </h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {course.learningObjectives.map((objective, index) => (
                     <li key={index}>• {objective}</li>
                   ))}
                 </ul>
-              ) : (
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Course learning outcomes will be displayed here</li>
-                  <li>• Key skills and concepts covered</li>
-                  <li>• Practical applications and projects</li>
-                  <li>• Certification upon completion</li>
-                </ul>
-              )}
-            </Card>
-          </div>
-
-          {/* Sidebar - Curriculum */}
-          <div className="lg:col-span-1">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Course Curriculum
-              </h3>
-
-              <div className="space-y-3">
-                {mockModules.map((module) => (
-                  <div
-                    key={module.id}
-                    className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-medium text-sm line-clamp-2 flex-1">
-                        {module.title}
-                      </h4>
-                      <Lock className="w-4 h-4 text-muted-foreground ml-2 flex-shrink-0" />
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{module.lessons} lessons</span>
-                      <span>•</span>
-                      <span>{module.duration}</span>
-                    </div>
-                    <Progress
-                      value={(module.completed / module.lessons) * 100}
-                      className="h-1 mt-2"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-6 border-t">
-                <div className="text-sm text-muted-foreground">
-                  <p className="font-medium mb-2">Course Progress</p>
-                  <div className="flex items-center justify-between">
-                    <span>0 of {mockModules.reduce((sum, m) => sum + m.lessons, 0)} lessons completed</span>
-                    <span className="font-semibold">0%</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Mobile Lesson Menu (Hamburger) */}
+      <MobileLessonMenu
+        courseId={courseId}
+        lessons={lessons}
+        progress={progress}
+      />
     </div>
   );
 }
