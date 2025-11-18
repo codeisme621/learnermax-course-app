@@ -226,7 +226,7 @@ export function VideoPlayer({
   }, [hasMarkedComplete, courseId, lessonId, expiresAt, onLessonComplete, onCourseComplete]);
 
   // Handle video playback errors (codec issues, streaming failures, etc.)
-  const handleVideoError = (error: any, data?: any) => {
+  const handleVideoError = (error: unknown, data?: unknown) => {
     console.error('[VideoPlayer] Video playback error:', error);
     console.error('[VideoPlayer] Error details:', data);
     console.error('[VideoPlayer] Current video URL:', videoUrl);

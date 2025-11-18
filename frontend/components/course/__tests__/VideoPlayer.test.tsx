@@ -12,11 +12,11 @@ jest.mock('@/app/actions/progress');
 // Mock next/dynamic to return components immediately (no lazy loading in tests)
 jest.mock('next/dynamic', () => ({
   __esModule: true,
-  default: (fn: () => Promise<any>) => {
+  default: (fn: () => Promise<unknown>) => {
     // Mock react-confetti for celebration tests
     const fnString = fn.toString();
     if (fnString.includes('react-confetti')) {
-      return function MockConfetti(props: any) {
+      function MockConfetti(props: { width?: number; height?: number }) {
         return (
           <div
             data-testid="confetti"
@@ -26,11 +26,15 @@ jest.mock('next/dynamic', () => ({
             Confetti Animation
           </div>
         );
-      };
+      }
+      MockConfetti.displayName = 'MockConfetti';
+      return MockConfetti;
     }
 
     // Fallback: return a generic mock
-    return () => <div>Mock Dynamic Component</div>;
+    const GenericMock = () => <div>Mock Dynamic Component</div>;
+    GenericMock.displayName = 'GenericMock';
+    return GenericMock;
   },
 }));
 

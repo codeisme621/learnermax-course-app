@@ -9,9 +9,11 @@ jest.mock('@/app/actions/progress');
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 describe('CourseHeader', () => {
@@ -45,7 +47,7 @@ describe('CourseHeader', () => {
     });
     (progressActions.getProgress as jest.Mock).mockResolvedValue(mockProgress);
 
-    const { container } = render(await CourseHeader({ courseId: 'test-course-123' }));
+    render(await CourseHeader({ courseId: 'test-course-123' }));
 
     expect(screen.getByText('Test Course')).toBeInTheDocument();
   });
@@ -56,7 +58,7 @@ describe('CourseHeader', () => {
     });
     (progressActions.getProgress as jest.Mock).mockResolvedValue(mockProgress);
 
-    const { container } = render(await CourseHeader({ courseId: 'test-course-123' }));
+    render(await CourseHeader({ courseId: 'test-course-123' }));
 
     const backLink = screen.getByRole('link', { name: /back to dashboard/i });
     expect(backLink).toBeInTheDocument();
@@ -69,7 +71,7 @@ describe('CourseHeader', () => {
     });
     (progressActions.getProgress as jest.Mock).mockResolvedValue(mockProgress);
 
-    const { container } = render(await CourseHeader({ courseId: 'test-course-123' }));
+    render(await CourseHeader({ courseId: 'test-course-123' }));
 
     // Check for progress text "2 of 5"
     expect(screen.getByText('2 of 5')).toBeInTheDocument();
@@ -137,7 +139,7 @@ describe('CourseHeader', () => {
       error: 'Failed to fetch progress',
     });
 
-    const { container } = render(await CourseHeader({ courseId: 'test-course-123' }));
+    render(await CourseHeader({ courseId: 'test-course-123' }));
 
     // Should still render course name
     expect(screen.getByText('Test Course')).toBeInTheDocument();

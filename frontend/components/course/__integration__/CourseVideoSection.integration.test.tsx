@@ -4,7 +4,6 @@
  * Uses MSW for network-level mocking, minimal component mocking
  */
 import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { CourseVideoSection } from '../CourseVideoSection';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/app/actions/__integration__/setup';
@@ -20,10 +19,12 @@ jest.mock('@/app/actions/auth', () => ({
 // Mock next/dynamic for react-confetti
 jest.mock('next/dynamic', () => ({
   __esModule: true,
-  default: (fn: any, options?: any) => {
+  default: (fn: () => Promise<unknown>, _options?: unknown) => {
     // For react-confetti
     if (fn.toString().includes('react-confetti')) {
-      return () => <div data-testid="confetti">Confetti</div>;
+      const MockConfetti = () => <div data-testid="confetti">Confetti</div>;
+      MockConfetti.displayName = 'MockConfetti';
+      return MockConfetti;
     }
     // Default: just execute the import function
     return fn();
@@ -32,9 +33,11 @@ jest.mock('next/dynamic', () => ({
 
 // Mock Next.js Link
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 describe('CourseVideoSection Integration Tests', () => {
@@ -125,7 +128,6 @@ describe('CourseVideoSection Integration Tests', () => {
 
   describe('Lesson Completion Flow', () => {
     it('calls getProgress when lesson is completed', async () => {
-      const user = userEvent.setup();
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       // Mock progress API to return updated progress
@@ -176,7 +178,6 @@ describe('CourseVideoSection Integration Tests', () => {
     });
 
     it('handles progress fetch error gracefully after completion', async () => {
-      const user = userEvent.setup();
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       // Mock progress API to return error
@@ -313,7 +314,6 @@ describe('CourseVideoSection Integration Tests', () => {
 
   describe('Course Completion', () => {
     it('logs message when course reaches 100% completion', async () => {
-      const user = userEvent.setup();
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       render(

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { CourseHeaderSkeleton } from '../CourseHeaderSkeleton';
 import { VideoPlayerSkeleton } from '../VideoPlayerSkeleton';
 import { LessonListSkeleton } from '../LessonListSkeleton';

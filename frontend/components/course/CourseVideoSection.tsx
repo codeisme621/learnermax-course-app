@@ -25,7 +25,7 @@ export function CourseVideoSection({
   courseId,
   initialLesson,
   lessons,
-  initialProgress,
+  initialProgress: _initialProgress,
 }: CourseVideoSectionProps) {
   const [currentLesson, setCurrentLesson] = useState<LessonResponse>(initialLesson);
   const [isRefreshingProgress, setIsRefreshingProgress] = useState(false);

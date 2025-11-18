@@ -3,9 +3,11 @@ import { MobileLessonMenu } from '../MobileLessonMenu';
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 describe('MobileLessonMenu', () => {
@@ -100,8 +102,6 @@ describe('MobileLessonMenu', () => {
     // The Sheet content should not be visible initially (or have closed state)
     // Note: The exact implementation depends on how Radix Dialog works
     // It may render the content in the DOM but hidden
-    const sheetTitle = screen.queryByText('Course Lessons');
-
     // If the dialog is closed, the title might not be in the document at all
     // or might be hidden (depending on Radix implementation)
     // We just verify the component renders without error

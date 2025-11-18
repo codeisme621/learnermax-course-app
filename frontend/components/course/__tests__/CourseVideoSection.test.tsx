@@ -3,24 +3,28 @@ import { CourseVideoSection } from '../CourseVideoSection';
 import * as progressActions from '@/app/actions/progress';
 
 // Mock the VideoPlayer component
-jest.mock('../VideoPlayer', () => ({
-  VideoPlayer: ({ lessonId, onLessonComplete, onCourseComplete }: any) => (
+jest.mock('../VideoPlayer', () => {
+  const MockVideoPlayer = ({ lessonId, onLessonComplete, onCourseComplete }: { lessonId: string; onLessonComplete: () => void; onCourseComplete: () => void }) => (
     <div data-testid="video-player">
       <div>Video Player: {lessonId}</div>
       <button onClick={onLessonComplete}>Complete Lesson</button>
       <button onClick={onCourseComplete}>Complete Course</button>
     </div>
-  ),
-}));
+  );
+  MockVideoPlayer.displayName = 'MockVideoPlayer';
+  return { VideoPlayer: MockVideoPlayer };
+});
 
 // Mock progress actions
 jest.mock('@/app/actions/progress');
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 describe('CourseVideoSection', () => {
