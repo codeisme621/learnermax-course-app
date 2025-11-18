@@ -1,0 +1,56 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Backend Express API",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/dist/app.js",
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "8080"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "sourceMaps": true,
+      "preLaunchTask": "backend:build",
+      "outFiles": [
+        "${workspaceFolder}/backend/dist/**/*.js"
+      ]
+    },
+    {
+      "name": "Debug Backend Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/node_modules/.bin/jest",
+      "args": [
+        "--runInBand",
+        "--no-cache"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "NODE_ENV": "test",
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Attach to Running Backend",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}/backend",
+      "remoteRoot": "${workspaceFolder}/backend",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

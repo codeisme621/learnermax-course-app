@@ -1,14 +1,9 @@
-export interface CourseVideo {
-  videoId: string;
-  title: string;
-  lengthInMins: number;
-  videoPath: string; // S3 path or CDN URL for video player
-}
+import { Lesson } from '../lessons/lesson.types.js';
 
 export interface CourseModule {
   moduleId: string;
   moduleName: string;
-  videos: CourseVideo[];
+  lessons: Lesson[];
 }
 
 export interface Course {

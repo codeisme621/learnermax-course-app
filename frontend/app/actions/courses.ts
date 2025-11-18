@@ -7,20 +7,15 @@ import { getAuthToken } from './auth';
  * These actions fetch course data from the backend API
  */
 
+import { Lesson } from './lessons';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Course data types matching backend structure
-export interface CourseVideo {
-  videoId: string;
-  title: string;
-  lengthInMins: number;
-  videoPath: string;
-}
-
 export interface CourseModule {
   moduleId: string;
   moduleName: string;
-  videos: CourseVideo[];
+  lessons: Lesson[];
 }
 
 export interface Course {

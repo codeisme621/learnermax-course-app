@@ -1,0 +1,7 @@
+{
+  "jest.rootPath": "",
+  // One entry per project in your monorepo
+  "jest.virtualFolders": [
+    
+  ]
+}
