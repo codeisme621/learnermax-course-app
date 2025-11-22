@@ -6,14 +6,11 @@ import { checkEnrollment } from '@/app/actions/enrollments';
 import { getProgress } from '@/app/actions/progress';
 import { getLessons } from '@/app/actions/lessons';
 import { Card } from '@/components/ui/card';
-import { CourseHeader } from '@/components/course/CourseHeader';
+import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
 import { LessonListSidebar } from '@/components/course/LessonListSidebar';
 import { MobileLessonMenu } from '@/components/course/MobileLessonMenu';
-import {
-  CourseHeaderSkeleton,
-  LessonListSkeleton,
-} from '@/components/course/skeletons';
+import { LessonListSkeleton } from '@/components/course/skeletons';
 import { determineCurrentLesson } from '@/lib/course-utils';
 import {
   CheckCircle,
@@ -103,12 +100,18 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with Progress */}
-      <Suspense fallback={<CourseHeaderSkeleton />}>
-        <CourseHeader courseId={courseId} />
-      </Suspense>
+      {/* Authenticated Header with Course Progress */}
+      <AuthenticatedHeader
+        variant="course"
+        user={session.user}
+        courseProgress={{
+          percentage: progress.percentage,
+          completedLessons: progress.completedLessons.length,
+          totalLessons: progress.totalLessons,
+        }}
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pt-24">
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Video Player Section */}

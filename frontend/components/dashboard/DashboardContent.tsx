@@ -2,12 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Session } from 'next-auth';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion } from 'motion/react';
-import { LogOut, User, Mail, BookOpen, Loader2, AlertCircle } from 'lucide-react';
-import { signOutAction } from '@/app/actions/auth';
+import { BookOpen, Loader2, AlertCircle } from 'lucide-react';
 import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actions/enrollments';
 import { getAllCourses, type Course } from '@/app/actions/courses';
 import { CourseCard } from './CourseCard';
@@ -21,12 +18,6 @@ export function DashboardContent({ session }: DashboardContentProps) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const userInitials = session.user?.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || 'U';
 
   // Create enrollment lookup map for O(1) checks
   const enrollmentMap = new Map<string, Enrollment>();
@@ -116,41 +107,6 @@ export function DashboardContent({ session }: DashboardContentProps) {
           </p>
         </div>
 
-        {/* User Info Card */}
-        <Card className="p-6 mb-8">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={session.user?.image || undefined} />
-                <AvatarFallback className="text-lg font-semibold">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold mb-1">
-                  {session.user?.name || 'Student'}
-                </h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  {session.user?.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <User className="w-4 h-4" />
-                  User ID: {session.user?.id}
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={signOutAction}
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
-          </div>
-        </Card>
-
         {/* Courses Section */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
@@ -203,18 +159,6 @@ export function DashboardContent({ session }: DashboardContentProps) {
             </div>
           )}
         </div>
-
-        {/* Session Debug Info (dev only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card className="p-6 mt-8 bg-muted/50">
-            <h3 className="font-semibold mb-2 text-sm">
-              Session Info (Development Only)
-            </h3>
-            <pre className="text-xs overflow-auto">
-              {JSON.stringify(session, null, 2)}
-            </pre>
-          </Card>
-        )}
       </motion.div>
     </div>
   );
