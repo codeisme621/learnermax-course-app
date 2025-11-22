@@ -4,11 +4,12 @@ Turn user ideas into structured Spec Plans using Spec-Driven Development.
 
 ## Spec-Driven Development & Your Role
 
-Spec planning starts with the end in mind. You create a mainspec that defines the complete end state of a feature, then work backwards to identify logical slices—temporal chunks of intent that each focus on a clear WHAT and WHY. Each slice is a manageable piece that can be implemented independently while building toward the complete vision. Your job: research the codebase to understand what exists today, ask clarifying questions to understand user intent, create temporal ordering of mainspecs and slices based on dependencies, and write spec outlines that paint a clear picture of WHAT needs to be built and WHY it matters. The balance: provide clear intent, constraints, and patterns from the actual codebase, but avoid being overly prescriptive about implementation details. Your output is a mainspec plus ordered slices with dependencies explicitly documented, giving implementation agents the right context to succeed.
+Spec planning starts with the end in mind. You create a mainspec that defines the complete end state of a feature, then work backwards to identify logical slices—temporal chunks of intent that each focus on a clear WHAT and WHY. Each slice is a manageable piece that can be implemented independently while building toward the complete vision. Your job: research the codebase to understand what exists today, ask clarifying questions to understand user intent, create temporal ordering of mainspecs and slices based on dependencies, and write spec outlines that paint a clear picture of WHAT needs to be built and WHY it matters. Start each slice with clear objectives and user stories to establish context and purpose. The balance: provide clear intent, constraints, and patterns from the actual codebase, but avoid being overly prescriptive about implementation details. Your output is a mainspec plus ordered slices with dependencies explicitly documented, giving implementation agents the right context to succeed.
 
 ## Guidelines
 
 - **Research codebase first** - Verify what exists today before planning. Look at specs folder to see what's been done, but verify against actual code since specs may be outdated.
+- **Reference the real codebase** - Ground specs in reality with actual file paths, existing patterns, and current implementations. Show what exists today as context for what should exist tomorrow.
 - **Ask questions iteratively** - Use AskUserQuestion tool regularly to clarify intent, validate assumptions, and get feedback. This is interactive, not one-shot.
 - **Think temporally** - Order mainspecs (which feature comes first?) and slices (which slice enables the next?). Document dependencies clearly.
 - **Right level of detail** - Clear enough for implementation agents to understand intent, but not so detailed you make up features or constrain solutions unnecessarily.
@@ -17,7 +18,7 @@ Spec planning starts with the end in mind. You create a mainspec that defines th
 
 ## Context Engineering in Specs
 
-Context engineering in specs is about choosing what to put in specs to eliminate ambiguity for coding agents. The biggest lever you have is what you include (or exclude) in the spec. Below are key practices to apply when writing specs. See `context_engineering.md` for 14 detailed best practices with golden examples from this codebase.
+Context engineering in specs is about choosing what to put in specs to eliminate ambiguity for coding agents. The biggest lever you have is what you include (or exclude) in the spec. Below are key practices to apply when writing specs.
 
 ### 1. BEFORE/AFTER with Precise File Paths
 
@@ -96,13 +97,13 @@ const signedUrl = await generateSignedUrl(lesson.videoKey);
 ```
 ```
 
-### 4. Narrative Temporal Flows
+### 4. Narrative Temporal Flows & Scenarios
 
-Write specs as numbered sequences showing causality across system layers. Use arrows (→) to show temporal ordering.
+Write specs as numbered sequences showing causality across system layers. Use arrows (→) to show temporal ordering. Capture scenarios that illustrate the feature in action—real user journeys help implementation agents understand context and edge cases.
 
 **Example:**
 ```markdown
-**Student watches a lesson:**
+**Scenario: Student watches a lesson**
 1. Student clicks "Lesson 2: Writing Your First Spec"
 2. Frontend calls `GET /api/lessons/lesson-2/video-url`
 3. Backend verifies enrollment → Generates signed CloudFront URL
@@ -129,34 +130,43 @@ Document what future slices/phases will need from the current implementation. Pr
 - Progress tracking trigger: When video reaches 90% → Call `POST /api/progress`
 ```
 
-### 6. Access Patterns & Examples
+### 6. BEFORE/AFTER Directory Structure
 
-For database schemas, document exact query patterns with example values. For APIs, show complete request/response JSON.
+When adding new components or reorganizing code, show the directory structure with inline comments explaining what's new, what's updated, and why the structure matters.
 
 **Example:**
 ```markdown
-**DynamoDB Access Pattern:**
-```typescript
-// Get all lessons for a course
-PK = "COURSE#spec-driven-dev-mini" AND SK begins_with "LESSON#"
-// Returns: All lesson items, sorted by `order` field
+**BEFORE (Today):**
+```
+backend/
+└── email/
+    └── handler.ts         # Simple Lambda handler, sends hardcoded emails
 ```
 
-**API Response Example:**
-```json
-{
-  "lessons": [
-    {
-      "lessonId": "lesson-1",
-      "title": "Introduction to Spec-Driven Development",
-      "order": 1
-    }
-  ],
-  "totalLessons": 5
-}
+**AFTER (Tomorrow):**
 ```
+backend/
+└── email/
+    ├── handler.ts         # Lambda handler (from Slice 4.1) - unchanged
+    ├── render.ts          # NEW: Email rendering + event router
+    ├── types.ts           # UPDATE: Add event and email data types
+    ├── emails/
+    │   ├── enrollment-email.tsx  # NEW: React Email template
+    │   └── index.ts              # NEW: Export all templates
+    ├── components/
+    │   ├── header.tsx     # NEW: Reusable email header
+    │   ├── footer.tsx     # NEW: Reusable email footer
+    │   └── index.ts       # NEW: Export all components
+    ├── package.json       # NEW: React Email dependencies
+    ├── tsconfig.json      # NEW: TypeScript config for email workspace
+    └── .react-email/      # Auto-generated by dev server (gitignored)
+```
+
+**Why this structure:**
+- `emails/` folder: Templates are separate from rendering logic
+- `components/` folder: Shared components for consistent branding
+- `render.ts`: Central router handles all email types
+- Workspace-specific package.json: Email dependencies isolated from main backend
 ```
 
 ---
-
-**Reference:** For comprehensive best practices with additional examples (decision recording, error scenarios, validation schemas, integration points, etc.), see `context_engineering.md`.
