@@ -150,9 +150,10 @@ export function DashboardContent({ session }: DashboardContentProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="space-y-8 md:space-y-12"
       >
         {/* Welcome Section */}
-        <div className="mb-8">
+        <div className="mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
             Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
           </h1>
@@ -162,10 +163,10 @@ export function DashboardContent({ session }: DashboardContentProps) {
         </div>
 
         {/* Courses Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
+        <section>
+          <div className="flex items-center gap-3 mb-3 md:mb-4">
             <BookOpen className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">Available Courses</h2>
+            <h2 className="text-xl md:text-2xl font-bold">Available Courses</h2>
           </div>
 
           {/* Loading State */}
@@ -201,7 +202,7 @@ export function DashboardContent({ session }: DashboardContentProps) {
 
           {/* Course Cards Grid */}
           {!isLoading && !error && courses.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <CourseCard
                   key={course.courseId}
@@ -213,26 +214,26 @@ export function DashboardContent({ session }: DashboardContentProps) {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {/* Meetups Section */}
         {!isLoading && meetups.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-6">
+          <section>
+            <div className="flex items-center gap-3 mb-3 md:mb-4">
               <Users className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold">Community Meetups</h2>
+              <h2 className="text-xl md:text-2xl font-bold">Community Meetups</h2>
               <Badge variant="secondary">New</Badge>
             </div>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4 md:mb-6">
               Join our weekly meetups to connect with fellow learners, ask questions, and dive deeper into topics.
             </p>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
               {meetups.map((meetup) => (
                 <MeetupCard key={meetup.meetupId} meetup={meetup} />
               ))}
             </div>
-          </div>
+          </section>
         )}
       </motion.div>
     </div>

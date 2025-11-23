@@ -43,7 +43,7 @@ describe('Dashboard Header Integration', () => {
     render(<AuthenticatedHeader variant="dashboard" user={mockUser} />);
 
     // Header should be visible
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
 
     // Feedback button should be visible
     expect(screen.getByLabelText('Feedback')).toBeInTheDocument();

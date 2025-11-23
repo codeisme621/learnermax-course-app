@@ -43,10 +43,10 @@ describe('MeetupCard', () => {
       expect(screen.queryByText('✅ Registered')).not.toBeInTheDocument();
     });
 
-    it('does not show LIVE NOW badge when not running', () => {
+    it('does not show LIVE badge when not running', () => {
       render(<MeetupCard meetup={mockMeetup} />);
 
-      expect(screen.queryByText(/LIVE NOW/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/LIVE/)).not.toBeInTheDocument();
     });
   });
 
@@ -68,7 +68,7 @@ describe('MeetupCard', () => {
   });
 
   describe('MeetupCard_signedUpAndRunning_showsJoinZoomButton', () => {
-    it('displays LIVE NOW badge when meeting is running', () => {
+    it('displays LIVE badge when meeting is running', () => {
       const runningMeetup: MeetupResponse = {
         ...mockMeetup,
         isRunning: true,
@@ -78,7 +78,7 @@ describe('MeetupCard', () => {
 
       render(<MeetupCard meetup={runningMeetup} />);
 
-      expect(screen.getByText(/LIVE NOW/)).toBeInTheDocument();
+      expect(screen.getByText(/LIVE/)).toBeInTheDocument();
     });
 
     it('displays Join Zoom Meeting button when running and signed up', () => {

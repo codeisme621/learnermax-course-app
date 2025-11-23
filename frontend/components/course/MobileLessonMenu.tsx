@@ -33,7 +33,7 @@ export function MobileLessonMenu({ courseId, lessons, progress, currentLessonId 
       {/* Trigger button (visible only on mobile) */}
       <SheetTrigger asChild>
         <button
-          className="lg:hidden fixed top-4 right-4 z-40 p-2 rounded-md hover:bg-muted transition-colors"
+          className="lg:hidden fixed top-20 right-4 z-50 h-12 w-12 rounded-full bg-background border border-border shadow-lg hover:bg-muted active:bg-muted transition-colors flex items-center justify-center"
           aria-label="Open lesson menu"
         >
           <Menu className="w-6 h-6" />

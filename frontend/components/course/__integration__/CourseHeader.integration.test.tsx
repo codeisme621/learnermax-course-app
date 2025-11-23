@@ -64,10 +64,14 @@ describe('Course AuthenticatedHeader Integration Tests', () => {
       />
     );
 
-    // Progress container should have mobile-hidden classes
-    const progressContainer = screen.getByText('6 of 8 lessons • 75%').parentElement;
-    expect(progressContainer).toHaveClass('hidden');
-    expect(progressContainer).toHaveClass('md:flex');
+    // Desktop progress text should have hidden md:block classes
+    const desktopProgress = screen.getByText('6 of 8 lessons • 75%');
+    expect(desktopProgress).toHaveClass('hidden');
+    expect(desktopProgress).toHaveClass('md:block');
+
+    // Mobile progress text (percentage only) should have md:hidden class
+    const mobileProgress = screen.getByText('75%');
+    expect(mobileProgress).toHaveClass('md:hidden');
   });
 
   it('updates progress when lesson is completed', () => {
@@ -105,7 +109,7 @@ describe('Course AuthenticatedHeader Integration Tests', () => {
     render(<AuthenticatedHeader variant="course" user={mockUser} />);
 
     // Should not crash, header should still render
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
 
     // Progress should not be shown
     expect(screen.queryByText(/lessons/i)).not.toBeInTheDocument();
@@ -121,7 +125,7 @@ describe('Course AuthenticatedHeader Integration Tests', () => {
     );
 
     // Logo
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
 
     // Feedback button
     expect(screen.getByLabelText('Feedback')).toBeInTheDocument();

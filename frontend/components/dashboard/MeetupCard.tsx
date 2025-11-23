@@ -66,32 +66,32 @@ export function MeetupCard({ meetup }: MeetupCardProps) {
 
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardContent className="p-6">
+      <CardContent className="p-4 md:p-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-2 flex-1">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-2 mb-4">
+          <div className="flex items-start gap-2">
             {meetup.isRunning && (
-              <Badge variant="destructive" className="animate-pulse">
-                🔴 LIVE NOW
+              <Badge variant="destructive" className="animate-pulse text-xs">
+                🔴 LIVE
               </Badge>
             )}
-            <h3 className="text-xl font-semibold">{meetup.title}</h3>
+            <h3 className="text-base md:text-xl font-semibold">{meetup.title}</h3>
           </div>
           {isSignedUp && !meetup.isRunning && (
-            <Badge variant="secondary" className="ml-2">✅ Registered</Badge>
+            <Badge variant="secondary" className="text-xs">✅ Registered</Badge>
           )}
         </div>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-xs md:text-sm text-muted-foreground mb-4 line-clamp-3">
           {meetup.description}
         </p>
 
-        {/* Metadata */}
+        {/* Metadata - Stack on mobile */}
         <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>
+          <div className="flex items-center gap-2 text-xs md:text-sm">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="truncate">
               {meetup.isRunning ? (
                 <>Happening now! Ends at {formatDate(new Date(new Date(meetup.nextOccurrence).getTime() + meetup.duration * 60000).toISOString())}</>
               ) : (
@@ -99,35 +99,35 @@ export function MeetupCard({ meetup }: MeetupCardProps) {
               )}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 text-xs md:text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span>{meetup.duration} minutes</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 text-xs md:text-sm">
+            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span>Host: {meetup.hostName}</span>
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button - Full width, large tap target */}
         {meetup.isRunning && isSignedUp && meetup.zoomLink ? (
           <Button
             onClick={handleJoinZoom}
-            className="w-full"
+            className="w-full h-11 md:h-10"
             size="lg"
           >
             <Video className="mr-2 h-5 w-5" />
             Join Zoom Meeting
           </Button>
         ) : isSignedUp ? (
-          <div className="text-sm text-muted-foreground text-center p-3 bg-muted rounded-md">
+          <div className="text-xs md:text-sm text-muted-foreground text-center p-3 bg-muted rounded-md">
             You&apos;re registered! Calendar invite sent to your email.
           </div>
         ) : (
           <Button
             onClick={handleSignup}
             variant="outline"
-            className="w-full"
+            className="w-full h-11 md:h-10"
             disabled={isLoading}
           >
             {isLoading ? 'Signing up...' : 'Sign Up for Meetup'}

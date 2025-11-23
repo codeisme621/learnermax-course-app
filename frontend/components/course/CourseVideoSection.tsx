@@ -67,7 +67,7 @@ export function CourseVideoSection({
   const nextLesson = getNextLesson(lessons, currentLesson.lessonId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Video player - no title here, it's in the sidebar */}
       <VideoPlayer
         lessonId={currentLesson.lessonId}
@@ -78,16 +78,16 @@ export function CourseVideoSection({
 
       {/* Next Lesson button */}
       {nextLesson && (
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-          <div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-muted rounded-lg">
+          <div className="flex-1">
             <p className="text-sm text-muted-foreground">Up Next</p>
             <p className="font-medium">{nextLesson.title}</p>
             {nextLesson.lengthInMins && (
               <p className="text-xs text-muted-foreground">{nextLesson.lengthInMins} min</p>
             )}
           </div>
-          <Link href={`/course/${courseId}?lesson=${nextLesson.lessonId}`}>
-            <Button>
+          <Link href={`/course/${courseId}?lesson=${nextLesson.lessonId}`} className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
               Next Lesson <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
@@ -98,7 +98,7 @@ export function CourseVideoSection({
       {currentLesson.description && (
         <div className="p-4 bg-muted rounded-lg">
           <h3 className="font-semibold mb-2">About this lesson</h3>
-          <p className="text-muted-foreground">{currentLesson.description}</p>
+          <p className="text-sm text-muted-foreground">{currentLesson.description}</p>
         </div>
       )}
 

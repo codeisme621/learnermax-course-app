@@ -82,25 +82,37 @@ export function AuthenticatedHeader({
         animate={{ y: 0, opacity: 1 }}
         className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border"
       >
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          {/* Logo */}
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between gap-2">
+          {/* Logo - Responsive */}
           <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-            <div className="text-2xl font-bold text-primary">LearnerMax</div>
+            <div className="text-xl md:text-2xl font-bold text-primary">
+              <span className="hidden md:inline">LearnWithRico</span>
+              <span className="md:hidden">LWR</span>
+            </div>
           </Link>
 
-          {/* Course Progress (course variant only, hidden on mobile) */}
+          {/* Course Progress - Only in course variant */}
           {variant === 'course' && courseProgress && (
-            <div className="hidden md:flex items-center gap-4 flex-1 max-w-md">
-              <div className="text-sm font-medium whitespace-nowrap">
+            <div className="flex items-center gap-2 flex-1 max-w-xs md:max-w-md mx-2">
+              {/* Hide full text on mobile, show on tablet+ */}
+              <div className="hidden md:block text-sm font-medium whitespace-nowrap">
                 {courseProgress.completedLessons} of {courseProgress.totalLessons} lessons • {courseProgress.percentage}%
               </div>
-              <div className="flex-1">
-                <Progress value={courseProgress.percentage} className="h-2" />
+              {/* Show only percentage on mobile */}
+              <div className="md:hidden text-xs font-medium">
+                {courseProgress.percentage}%
+              </div>
+              {/* Progress bar - always visible */}
+              <div className="flex-1 bg-secondary rounded-full h-2">
+                <div
+                  className="bg-primary rounded-full h-2 transition-all"
+                  style={{ width: `${courseProgress.percentage}%` }}
+                />
               </div>
             </div>
           )}
 
-          {/* Right side: Feedback + Profile */}
+          {/* Actions - Icons only on mobile */}
           <nav className="flex items-center gap-2 flex-shrink-0">
             {/* Feedback Button */}
             <Button
@@ -108,6 +120,7 @@ export function AuthenticatedHeader({
               size="icon"
               onClick={handleFeedbackClick}
               aria-label="Feedback"
+              className="h-9 w-9"
             >
               <MessageCircle className="h-5 w-5" />
             </Button>
@@ -115,8 +128,8 @@ export function AuthenticatedHeader({
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full" aria-label="User menu">
+                  <Avatar className="h-9 w-9">
                     <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
                   </Avatar>
                 </Button>

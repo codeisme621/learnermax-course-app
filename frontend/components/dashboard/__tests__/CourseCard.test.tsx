@@ -200,7 +200,7 @@ describe('CourseCard', () => {
       render(<CourseCard course={mockCourse} enrollment={mockEnrollment} progress={mockProgress} />);
 
       expect(screen.getByText('Progress')).toBeInTheDocument();
-      expect(screen.getByText('3 of 5 lessons • 60%')).toBeInTheDocument();
+      expect(screen.getByText('3/5 • 60%')).toBeInTheDocument();
     });
 
     it('renders_enrolledCourse_withoutProgress_hidesProgressSection', () => {
@@ -218,7 +218,7 @@ describe('CourseCard', () => {
       };
       render(<CourseCard course={mockCourse} enrollment={mockEnrollment} progress={zeroProgress} />);
 
-      expect(screen.getByText('0 of 5 lessons • 0%')).toBeInTheDocument();
+      expect(screen.getByText('0/5 • 0%')).toBeInTheDocument();
     });
 
     it('displays 100% progress correctly', () => {
@@ -229,7 +229,7 @@ describe('CourseCard', () => {
       };
       render(<CourseCard course={mockCourse} enrollment={mockEnrollment} progress={completeProgress} />);
 
-      expect(screen.getByText('5 of 5 lessons • 100%')).toBeInTheDocument();
+      expect(screen.getByText('5/5 • 100%')).toBeInTheDocument();
     });
   });
 

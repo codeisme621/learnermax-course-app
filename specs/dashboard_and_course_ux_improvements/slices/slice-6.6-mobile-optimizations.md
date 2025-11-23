@@ -34,7 +34,7 @@ Following Tailwind CSS conventions:
 **Desktop Header:**
 ```
 ┌───────────────────────────────────────────────────────────┐
-│ [Logo: LearnerMax]    [Progress Bar]    [Feedback] [Profile ▼]│
+│ [Logo: LearnWithRico]    [Progress Bar]    [Feedback] [Profile ▼]│
 └───────────────────────────────────────────────────────────┘
 ```
 
@@ -43,12 +43,12 @@ Following Tailwind CSS conventions:
 **Mobile Header (<768px):**
 ```
 ┌────────────────────────────────────────────┐
-│ [LM]     [Progress: 60%]    [📧] [👤]     │
+│ [LWR]     [Progress: 60%]    [📧] [👤]     │
 └────────────────────────────────────────────┘
 ```
 
 **Changes:**
-1. **Logo**: Abbreviated to "LM" or icon only (save space)
+1. **Logo**: Abbreviated to "LWR" or icon only (save space)
 2. **Progress text**: Hide full text, show only percentage
 3. **Progress bar**: Maintain visual bar (most important feedback)
 4. **Icons**: Use icons only (no text labels)
@@ -63,8 +63,8 @@ export function AuthenticatedHeader({ variant, user, courseProgress }: Authentic
         {/* Logo - Responsive */}
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="text-xl md:text-2xl font-bold text-primary">
-            <span className="hidden sm:inline">LearnerMax</span>
-            <span className="sm:hidden">LM</span>
+            <span className="hidden sm:inline">LearnWithRico</span>
+            <span className="sm:hidden">LWR</span>
           </div>
         </Link>
 

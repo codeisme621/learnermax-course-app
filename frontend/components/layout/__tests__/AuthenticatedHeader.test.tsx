@@ -42,7 +42,7 @@ describe('AuthenticatedHeader', () => {
   it('renders dashboard variant without progress', () => {
     render(<AuthenticatedHeader variant="dashboard" user={mockUser} />);
 
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
     expect(screen.queryByText(/lessons/i)).not.toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('AuthenticatedHeader', () => {
       />
     );
 
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
     expect(screen.getByText('3 of 5 lessons • 60%')).toBeInTheDocument();
   });
 
@@ -110,7 +110,7 @@ describe('AuthenticatedHeader', () => {
   it('logo links to dashboard', () => {
     render(<AuthenticatedHeader variant="dashboard" user={mockUser} />);
 
-    const logo = screen.getByText('LearnerMax').closest('a');
+    const logo = screen.getByText('LearnWithRico').closest('a');
     expect(logo).toHaveAttribute('href', '/dashboard');
   });
 
@@ -129,9 +129,14 @@ describe('AuthenticatedHeader', () => {
       />
     );
 
-    const progressContainer = screen.getByText('3 of 5 lessons • 60%').parentElement;
-    expect(progressContainer).toHaveClass('hidden');
-    expect(progressContainer).toHaveClass('md:flex');
+    // Desktop progress text should have hidden md:block classes
+    const desktopProgress = screen.getByText('3 of 5 lessons • 60%');
+    expect(desktopProgress).toHaveClass('hidden');
+    expect(desktopProgress).toHaveClass('md:block');
+
+    // Mobile progress text (percentage only) should have md:hidden class
+    const mobileProgress = screen.getByText('60%');
+    expect(mobileProgress).toHaveClass('md:hidden');
   });
 
   it('shows progress on desktop for course variant', () => {

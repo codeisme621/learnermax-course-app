@@ -50,14 +50,14 @@ export function LessonList({
               href={`/course/${courseId}?lesson=${lesson.lessonId}`}
               aria-current={isCurrent ? 'page' : undefined}
               className={cn(
-                'block p-3 rounded-lg transition-colors',
+                'block p-4 rounded-lg transition-colors',
                 isCurrent && [
                   'bg-primary/10',
                   'border-l-4',
                   'border-primary',
                   'font-semibold',
                 ],
-                !isCurrent && 'hover:bg-muted',
+                !isCurrent && 'hover:bg-muted active:bg-muted',
                 isCompleted && !isCurrent && 'bg-muted/50'
               )}
             >

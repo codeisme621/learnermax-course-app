@@ -6,7 +6,7 @@ import { Footer } from '@/components/layout/Footer';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
 
 export const metadata: Metadata = {
-  title: 'Dashboard - LearnerMax',
+  title: 'Dashboard - LearnWithRico',
   description: 'Your learning dashboard',
 };
 
@@ -20,8 +20,8 @@ export default async function DashboardPage() {
   return (
     <>
       <AuthenticatedHeader variant="dashboard" user={session.user} />
-      <main className="min-h-screen pt-20 py-12 bg-muted/30">
-        <div className="container mx-auto px-4">
+      <main className="min-h-screen pt-20 pb-12 px-4 md:px-6 lg:px-8 bg-muted/30">
+        <div className="container mx-auto">
           <DashboardContent session={session} />
         </div>
       </main>

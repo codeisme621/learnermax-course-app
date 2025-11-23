@@ -71,7 +71,7 @@ describe('DashboardContent Integration Tests', () => {
       // Verify live progress is displayed for enrolled course
       // The enrolled course (spec-driven-dev-mini) should show progress from the Progress API
       await waitFor(() => {
-        expect(screen.getByText('1 of 3 lessons • 33%')).toBeInTheDocument();
+        expect(screen.getByText('1/3 • 33%')).toBeInTheDocument();
       });
 
       // Verify progress bar is rendered
@@ -320,8 +320,8 @@ describe('DashboardContent Integration Tests', () => {
         expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
       });
 
-      // Verify LIVE NOW badge is visible
-      expect(screen.getByText(/LIVE NOW/)).toBeInTheDocument();
+      // Verify LIVE badge is visible
+      expect(screen.getByText(/LIVE/)).toBeInTheDocument();
 
       // Verify Join Zoom Meeting button is visible
       const joinButton = screen.getByRole('button', { name: /Join Zoom Meeting/i });
