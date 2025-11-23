@@ -105,8 +105,8 @@ describe('CourseVideoSection Integration Tests', () => {
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-2'));
       });
 
-      // Lesson title should be displayed
-      expect(screen.getByText('Writing Your First Spec')).toBeInTheDocument();
+      // Note: Lesson title is now in the sidebar, not in CourseVideoSection
+      // We just verify the video loads correctly
     });
 
     it('displays lesson description when available', async () => {
@@ -289,9 +289,10 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Introduction to Spec-Driven Development')).toBeInTheDocument();
         const videoPlayer = screen.getByTestId('video-player');
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-1'));
+        // Verify lesson description is shown
+        expect(screen.getByText('Learn the basics of spec-driven development')).toBeInTheDocument();
       });
 
       // Switch to lesson 2
@@ -305,9 +306,10 @@ describe('CourseVideoSection Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Writing Your First Spec')).toBeInTheDocument();
         const videoPlayer = screen.getByTestId('video-player');
         expect(videoPlayer).toHaveAttribute('data-url', expect.stringContaining('lesson-2'));
+        // Verify lesson description updated
+        expect(screen.getByText('Hands-on practice writing specifications')).toBeInTheDocument();
       });
     });
   });

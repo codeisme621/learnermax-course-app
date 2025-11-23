@@ -80,7 +80,8 @@ describe('LessonListSidebar', () => {
     const lesson1Link = Array.from(links).find(link =>
       link.textContent?.includes('1. Introduction')
     );
-    expect(lesson1Link?.querySelector('.text-green-500')).toBeInTheDocument();
+    // Check for the check-circle-icon test-id (our new structure uses data-testid)
+    expect(lesson1Link?.querySelector('[data-testid="check-circle-icon"]')).toBeInTheDocument();
   });
 
   it('should show Resume badge for lastAccessedLesson if not completed', async () => {

@@ -66,7 +66,7 @@ describe('CourseVideoSection', () => {
     jest.clearAllMocks();
   });
 
-  it('should render lesson title', () => {
+  it('should render lesson description (title is in sidebar now)', () => {
     render(
       <CourseVideoSection
         courseId="test-course"
@@ -76,7 +76,9 @@ describe('CourseVideoSection', () => {
       />
     );
 
-    expect(screen.getByText('Introduction')).toBeInTheDocument();
+    // Lesson title is now in the sidebar, not in CourseVideoSection
+    // Check for description instead
+    expect(screen.getByText('Welcome to the course')).toBeInTheDocument();
   });
 
   it('should render VideoPlayer with correct lessonId', () => {
@@ -257,7 +259,11 @@ describe('CourseVideoSection', () => {
       />
     );
 
-    expect(screen.getByText('Introduction')).toBeInTheDocument();
+    // Check video player shows lesson-1
+    expect(screen.getByText('Video Player: lesson-1')).toBeInTheDocument();
+    // Lesson title is no longer rendered (it's in the sidebar now)
+    // Check for lesson description instead
+    expect(screen.getByText('Welcome to the course')).toBeInTheDocument();
 
     // Change initialLesson
     rerender(
@@ -269,7 +275,9 @@ describe('CourseVideoSection', () => {
       />
     );
 
-    expect(screen.getByText('Getting Started')).toBeInTheDocument();
+    // Verify video player updated
     expect(screen.getByText('Video Player: lesson-2')).toBeInTheDocument();
+    // Lesson 2 has no description in mock data, so just verify the next lesson button shows lesson-3
+    expect(screen.getByText('Advanced Topics')).toBeInTheDocument(); // Next lesson title
   });
 });

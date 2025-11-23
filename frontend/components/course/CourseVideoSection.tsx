@@ -67,11 +67,8 @@ export function CourseVideoSection({
   const nextLesson = getNextLesson(lessons, currentLesson.lessonId);
 
   return (
-    <div className="lg:col-span-2 space-y-6">
-      {/* Lesson title */}
-      <h2 className="text-2xl font-bold">{currentLesson.title}</h2>
-
-      {/* Video player */}
+    <div className="space-y-6">
+      {/* Video player - no title here, it's in the sidebar */}
       <VideoPlayer
         lessonId={currentLesson.lessonId}
         courseId={courseId}

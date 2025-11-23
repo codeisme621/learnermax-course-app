@@ -17,6 +17,7 @@ interface MobileLessonMenuProps {
   courseId: string;
   lessons: LessonResponse[];
   progress: ProgressResponse;
+  currentLessonId?: string;
 }
 
 /**
@@ -24,7 +25,7 @@ interface MobileLessonMenuProps {
  * Only visible on mobile (lg:hidden)
  * Client component that manages drawer state
  */
-export function MobileLessonMenu({ courseId, lessons, progress }: MobileLessonMenuProps) {
+export function MobileLessonMenu({ courseId, lessons, progress, currentLessonId }: MobileLessonMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -50,6 +51,7 @@ export function MobileLessonMenu({ courseId, lessons, progress }: MobileLessonMe
             courseId={courseId}
             lessons={lessons}
             progress={progress}
+            currentLessonId={currentLessonId}
             isMobile
           />
         </div>

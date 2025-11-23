@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { getCourse } from '@/app/actions/courses';
 import { checkEnrollment } from '@/app/actions/enrollments';
@@ -8,9 +7,7 @@ import { getLessons } from '@/app/actions/lessons';
 import { Card } from '@/components/ui/card';
 import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
-import { LessonListSidebar } from '@/components/course/LessonListSidebar';
-import { MobileLessonMenu } from '@/components/course/MobileLessonMenu';
-import { LessonListSkeleton } from '@/components/course/skeletons';
+import { CollapsibleLessonSidebar } from '@/components/course/CollapsibleLessonSidebar';
 import { determineCurrentLesson } from '@/lib/course-utils';
 import {
   CheckCircle,
@@ -98,6 +95,12 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
     redirect('/dashboard?error=no-lessons');
   }
 
+  // Auto-redirect to last accessed lesson if no query param and target is not first lesson
+  const requestedLesson = search?.lesson;
+  if (!requestedLesson && lessons.length > 0 && currentLesson.lessonId !== lessons[0]?.lessonId) {
+    redirect(`/course/${courseId}?lesson=${currentLesson.lessonId}`);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Authenticated Header with Course Progress */}
@@ -111,75 +114,68 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
         }}
       />
 
-      <div className="container mx-auto px-4 py-8 pt-24">
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Video Player Section */}
-          <div className="lg:col-span-2">
+      {/* Main Layout: Flexbox with Left Sidebar */}
+      <main className="flex">
+        {/* Left Sidebar: Collapsible Lesson Navigation */}
+        <CollapsibleLessonSidebar
+          course={course}
+          lessons={lessons}
+          currentLessonId={currentLesson.lessonId}
+          progress={progress}
+        />
+
+        {/* Main Content: Video Player and Course Info */}
+        <div className="flex-1 pt-20 pb-12">
+          <div className="container mx-auto px-4">
+            {/* Video Player Section */}
             <CourseVideoSection
               courseId={courseId}
               initialLesson={currentLesson}
               lessons={lessons}
               initialProgress={progress}
             />
-          </div>
 
-          {/* Lesson List Sidebar (Desktop Only) */}
-          <div className="hidden lg:block lg:col-span-1">
-            <Suspense fallback={<LessonListSkeleton />}>
-              <LessonListSidebar courseId={courseId} />
-            </Suspense>
-          </div>
-        </div>
-
-        {/* Course Info Section (below video player) */}
-        <div className="mt-8 grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">{course.name}</h2>
-              <p className="text-muted-foreground mb-6">{course.description}</p>
-
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Award className="w-4 h-4 text-primary" />
-                  <span>All Levels</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>Self-paced</span>
-                </div>
-                {course.instructor && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Instructor:</span>
-                    <span className="font-medium">{course.instructor}</span>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {course.learningObjectives && course.learningObjectives.length > 0 && (
+            {/* Course Info Section (below video player) */}
+            <div className="mt-8 space-y-6">
               <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-primary" />
-                  What You&apos;ll Learn
-                </h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  {course.learningObjectives.map((objective, index) => (
-                    <li key={index}>• {objective}</li>
-                  ))}
-                </ul>
+                <h2 className="text-2xl font-bold mb-4">{course.name}</h2>
+                <p className="text-muted-foreground mb-6">{course.description}</p>
+
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Award className="w-4 h-4 text-primary" />
+                    <span>All Levels</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span>Self-paced</span>
+                  </div>
+                  {course.instructor && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Instructor:</span>
+                      <span className="font-medium">{course.instructor}</span>
+                    </div>
+                  )}
+                </div>
               </Card>
-            )}
+
+              {course.learningObjectives && course.learningObjectives.length > 0 && (
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    What You&apos;ll Learn
+                  </h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {course.learningObjectives.map((objective, index) => (
+                      <li key={index}>• {objective}</li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Lesson Menu (Hamburger) */}
-      <MobileLessonMenu
-        courseId={courseId}
-        lessons={lessons}
-        progress={progress}
-      />
+      </main>
     </div>
   );
 }
