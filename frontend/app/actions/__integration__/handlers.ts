@@ -5,8 +5,48 @@
 import { http, HttpResponse } from 'msw';
 import type { LessonResponse, VideoUrlResponse } from '../lessons';
 import type { ProgressResponse } from '../progress';
+import type { Course } from '../courses';
+import type { Enrollment } from '../enrollments';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// Mock course data
+export const mockCourses: Course[] = [
+  {
+    courseId: 'spec-driven-dev-mini',
+    name: 'Spec Driven Development Course',
+    description: 'Learn to write specs that guide implementation',
+    instructor: 'Rico Martinez',
+    pricingModel: 'free',
+    imageUrl: '/courses/spec-driven-dev.jpg',
+    learningObjectives: ['Write clear specs', 'Guide AI implementation'],
+    curriculum: [],
+  },
+  {
+    courseId: 'context-engineering',
+    name: 'Context Engineering Fundamentals',
+    description: 'Master the art of context engineering for AI',
+    instructor: 'Rico Martinez',
+    pricingModel: 'paid',
+    price: 49.99,
+    imageUrl: '/courses/context-eng.jpg',
+    learningObjectives: ['Understand context windows', 'Optimize AI interactions'],
+    curriculum: [],
+  },
+];
+
+// Mock enrollment data
+export const mockEnrollments: Enrollment[] = [
+  {
+    userId: 'test-user-123',
+    courseId: 'spec-driven-dev-mini',
+    enrollmentType: 'free',
+    enrolledAt: '2025-01-13T12:00:00.000Z',
+    paymentStatus: 'free',
+    progress: 33, // Static value (not used anymore)
+    completed: false,
+  },
+];
 
 // Mock lesson data (with completion status for integration tests)
 export const mockLessons: LessonResponse[] = [
@@ -40,6 +80,16 @@ export const mockLessons: LessonResponse[] = [
 
 // Default handlers for successful responses
 export const handlers = [
+  // GET /api/courses - Get all courses
+  http.get(`${API_URL}/api/courses`, () => {
+    return HttpResponse.json(mockCourses); // Return array directly
+  }),
+
+  // GET /api/enrollments - Get user enrollments
+  http.get(`${API_URL}/api/enrollments`, () => {
+    return HttpResponse.json(mockEnrollments); // Return array directly
+  }),
+
   // GET /api/courses/:courseId/lessons
   http.get(`${API_URL}/api/courses/:courseId/lessons`, ({ params }) => {
     const { courseId } = params;

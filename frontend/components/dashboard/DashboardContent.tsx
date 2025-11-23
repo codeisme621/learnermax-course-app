@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { BookOpen, Loader2, AlertCircle } from 'lucide-react';
 import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actions/enrollments';
 import { getAllCourses, type Course } from '@/app/actions/courses';
+import { getProgress, type ProgressResponse } from '@/app/actions/progress';
 import { CourseCard } from './CourseCard';
 
 interface DashboardContentProps {
@@ -16,6 +17,7 @@ interface DashboardContentProps {
 export function DashboardContent({ session }: DashboardContentProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [progressMap, setProgressMap] = useState<Map<string, ProgressResponse>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +62,35 @@ export function DashboardContent({ session }: DashboardContentProps) {
         const enrollmentsResult = await getUserEnrollments();
         if (enrollmentsResult) {
           setEnrollments(enrollmentsResult);
+
+          // Step 4: Fetch progress for each enrolled course in parallel
+          console.log('Fetching progress for enrolled courses:', enrollmentsResult.length);
+          const progressPromises = enrollmentsResult.map((enrollment) =>
+            getProgress(enrollment.courseId).then((result) => [enrollment.courseId, result] as const)
+          );
+
+          const progressEntries = await Promise.all(progressPromises);
+
+          // Filter out errors and create Map
+          const validProgressEntries = progressEntries.filter(
+            ([courseId, result]) => {
+              if ('error' in result) {
+                console.warn('Failed to fetch progress for course', { courseId, error: result.error });
+                return false;
+              }
+              return true;
+            }
+          ) as [string, ProgressResponse][];
+
+          const newProgressMap = new Map(validProgressEntries);
+          setProgressMap(newProgressMap);
+
+          console.log('Dashboard data loaded', {
+            coursesCount: courses.length,
+            enrollmentsCount: enrollmentsResult.length,
+            progressFetchedCount: newProgressMap.size,
+            progressFailedCount: enrollmentsResult.length - newProgressMap.size,
+          });
         }
         // Note: enrollment fetch failure is not critical, just means empty enrollments
 
@@ -83,6 +114,12 @@ export function DashboardContent({ session }: DashboardContentProps) {
       const updatedEnrollments = await getUserEnrollments();
       if (updatedEnrollments) {
         setEnrollments(updatedEnrollments);
+
+        // Fetch progress for the newly enrolled course
+        const progressResult = await getProgress(courseId);
+        if (!('error' in progressResult)) {
+          setProgressMap((prev) => new Map(prev).set(courseId, progressResult));
+        }
       }
     } else {
       // Error will be shown in CourseCard component
@@ -153,6 +190,7 @@ export function DashboardContent({ session }: DashboardContentProps) {
                   key={course.courseId}
                   course={course}
                   enrollment={enrollmentMap.get(course.courseId)}
+                  progress={progressMap.get(course.courseId)}
                   onEnroll={handleEnroll}
                 />
               ))}

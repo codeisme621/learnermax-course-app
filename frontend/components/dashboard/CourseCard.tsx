@@ -6,16 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, Award, Loader2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import type { Course } from '@/app/actions/courses';
 import type { Enrollment } from '@/app/actions/enrollments';
+import type { ProgressResponse } from '@/app/actions/progress';
 
 interface CourseCardProps {
   course: Course;
   enrollment?: Enrollment; // Present if user is enrolled
+  progress?: ProgressResponse; // Live progress from Progress API
   onEnroll?: (courseId: string) => Promise<void>; // Callback for enrollment action
 }
 
-export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
+export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCardProps) {
   const router = useRouter();
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,12 +40,25 @@ export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
     }
   };
 
-  const handleContinueCourse = () => {
-    router.push(`/course/${course.courseId}`);
+  const handleCardClick = () => {
+    if (isEnrolled) {
+      router.push(`/course/${course.courseId}`);
+    } else if (onEnroll && !isEnrolling) {
+      handleEnrollClick();
+    }
   };
 
-  return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+  // Enrolled courses: wrap in Link for better accessibility
+  // Non-enrolled courses: use onClick handler
+  const cardContent = (
+    <Card
+      className={`overflow-hidden transition-all duration-200 ${
+        isEnrolled || onEnroll
+          ? 'hover:shadow-lg hover:border-primary/50 hover:scale-[1.02] cursor-pointer focus:ring-2 focus:ring-primary focus:ring-offset-2'
+          : ''
+      }`}
+      onClick={!isEnrolled ? handleCardClick : undefined}
+    >
       {/* Course Thumbnail */}
       <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20">
         <div className="absolute inset-0 flex items-center justify-center">
@@ -88,33 +104,28 @@ export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
         {/* Enrolled State */}
         {isEnrolled && enrollment && (
           <div className="space-y-3">
-            {/* Progress Bar */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{enrollment.progress}%</span>
+            {/* Live Progress (only show if progress data available) */}
+            {progress && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="font-medium">
+                    {progress.completedLessons.length} of {progress.totalLessons} lessons • {progress.percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2">
+                  <div
+                    className="bg-primary rounded-full h-2 transition-all duration-500"
+                    style={{ width: `${progress.percentage}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary rounded-full h-2 transition-all"
-                  style={{ width: `${enrollment.progress}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Enrollment Date */}
             <p className="text-xs text-muted-foreground">
               Enrolled {new Date(enrollment.enrolledAt).toLocaleDateString()}
             </p>
-
-            {/* Continue Button */}
-            <Button
-              onClick={handleContinueCourse}
-              className="w-full"
-              size="lg"
-            >
-              Continue Course
-            </Button>
           </div>
         )}
 
@@ -136,38 +147,27 @@ export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
               </div>
             )}
 
-            {/* Enroll Button */}
-            <Button
-              onClick={handleEnrollClick}
-              disabled={isEnrolling || !onEnroll}
-              className="w-full"
-              size="lg"
-            >
-              {isEnrolling ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enrolling...
-                </>
-              ) : (
-                'Enroll Now'
-              )}
-            </Button>
-
-            {/* Retry Button (if error) */}
-            {error && (
-              <Button
-                onClick={handleEnrollClick}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={isEnrolling}
-              >
-                Try Again
-              </Button>
+            {/* Loading State */}
+            {isEnrolling && (
+              <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enrolling...
+              </div>
             )}
           </div>
         )}
       </div>
     </Card>
   );
+
+  // Wrap enrolled courses in Link for proper navigation
+  if (isEnrolled) {
+    return (
+      <Link href={`/course/${course.courseId}`} className="block">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }
