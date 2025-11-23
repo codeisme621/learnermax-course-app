@@ -7,6 +7,7 @@ import type { LessonResponse, VideoUrlResponse } from '../lessons';
 import type { ProgressResponse } from '../progress';
 import type { Course } from '../courses';
 import type { Enrollment } from '../enrollments';
+import type { MeetupResponse } from '../meetups';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -77,6 +78,23 @@ export const mockLessons: LessonResponse[] = [
     isCompleted: false,
   },
 ];
+
+// Mock meetup data
+export const mockMeetups: MeetupResponse[] = [
+  {
+    meetupId: 'spec-driven-dev-weekly',
+    title: 'Spec Driven Development',
+    description: 'Weekly discussion on spec-driven workflows, best practices, and Q&A',
+    nextOccurrence: '2025-01-25T16:00:00.000Z', // Saturday 10 AM CST
+    isRunning: false,
+    isSignedUp: false,
+    duration: 60,
+    hostName: 'Rico Martinez',
+  },
+];
+
+// Track meetup signups in memory (for integration tests)
+export const meetupSignups = new Set<string>();
 
 // Default handlers for successful responses
 export const handlers = [
@@ -231,5 +249,35 @@ export const handlers = [
       totalLessons: 3,
       updatedAt: new Date().toISOString(),
     } as ProgressResponse);
+  }),
+
+  // GET /api/meetups - Get all meetups with signup status
+  http.get(`${API_URL}/api/meetups`, () => {
+    // Return meetups with signup status based on meetupSignups set
+    const meetupsWithStatus = mockMeetups.map((meetup) => ({
+      ...meetup,
+      isSignedUp: meetupSignups.has(meetup.meetupId),
+    }));
+
+    return HttpResponse.json(meetupsWithStatus);
+  }),
+
+  // POST /api/meetups/:meetupId/signup - Sign up for a meetup
+  http.post(`${API_URL}/api/meetups/:meetupId/signup`, ({ params }) => {
+    const { meetupId } = params as { meetupId: string };
+
+    // Check if meetup exists
+    const meetupExists = mockMeetups.some((m) => m.meetupId === meetupId);
+    if (!meetupExists) {
+      return HttpResponse.json(
+        { error: 'Meetup not found' },
+        { status: 404 }
+      );
+    }
+
+    // Add to signups set
+    meetupSignups.add(meetupId);
+
+    return HttpResponse.json({ success: true });
   }),
 ];

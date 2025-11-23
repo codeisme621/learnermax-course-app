@@ -3,7 +3,7 @@
  * This file is loaded via setupFilesAfterEnv for integration tests only
  */
 import { setupServer } from 'msw/node';
-import { handlers } from './handlers';
+import { handlers, meetupSignups } from './handlers';
 
 // Create MSW server instance
 export const server = setupServer(...handlers);
@@ -19,6 +19,8 @@ beforeAll(() => {
 // This ensures test isolation
 afterEach(() => {
   server.resetHandlers();
+  // Reset meetup signups between tests
+  meetupSignups.clear();
 });
 
 // Clean up after all tests

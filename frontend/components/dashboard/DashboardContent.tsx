@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Session } from 'next-auth';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
-import { BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen, Loader2, AlertCircle, Users } from 'lucide-react';
 import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actions/enrollments';
 import { getAllCourses, type Course } from '@/app/actions/courses';
 import { getProgress, type ProgressResponse } from '@/app/actions/progress';
+import { getMeetups, type MeetupResponse } from '@/app/actions/meetups';
 import { CourseCard } from './CourseCard';
+import { MeetupCard } from './MeetupCard';
 
 interface DashboardContentProps {
   session: Session;
@@ -18,6 +21,7 @@ export function DashboardContent({ session }: DashboardContentProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [progressMap, setProgressMap] = useState<Map<string, ProgressResponse>>(new Map());
+  const [meetups, setMeetups] = useState<MeetupResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,16 +54,21 @@ export function DashboardContent({ session }: DashboardContentProps) {
           sessionStorage.removeItem('pendingEnrollmentCourseId');
         }
 
-        // Step 2: Fetch all courses
-        const coursesResult = await getAllCourses();
+        // Step 2: Fetch all dashboard data in parallel
+        const [coursesResult, enrollmentsResult, meetupsResult] = await Promise.all([
+          getAllCourses(),
+          getUserEnrollments(),
+          getMeetups(),
+        ]);
+
+        // Handle courses
         if ('courses' in coursesResult) {
           setCourses(coursesResult.courses);
         } else {
           setError('Failed to load courses');
         }
 
-        // Step 3: Fetch user enrollments
-        const enrollmentsResult = await getUserEnrollments();
+        // Handle enrollments
         if (enrollmentsResult) {
           setEnrollments(enrollmentsResult);
 
@@ -92,7 +101,15 @@ export function DashboardContent({ session }: DashboardContentProps) {
             progressFailedCount: enrollmentsResult.length - newProgressMap.size,
           });
         }
-        // Note: enrollment fetch failure is not critical, just means empty enrollments
+
+        // Handle meetups (non-critical - fail gracefully)
+        if (Array.isArray(meetupsResult)) {
+          setMeetups(meetupsResult);
+          console.log('Meetups loaded successfully', { count: meetupsResult.length });
+        } else if (meetupsResult && 'error' in meetupsResult) {
+          console.error('Failed to load meetups (continuing anyway):', meetupsResult.error);
+          // Don't set error state - meetups are non-critical
+        }
 
       } catch (err) {
         console.error('Dashboard initialization error:', err);
@@ -197,6 +214,26 @@ export function DashboardContent({ session }: DashboardContentProps) {
             </div>
           )}
         </div>
+
+        {/* Meetups Section */}
+        {!isLoading && meetups.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Users className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">Community Meetups</h2>
+              <Badge variant="secondary">New</Badge>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              Join our weekly meetups to connect with fellow learners, ask questions, and dive deeper into topics.
+            </p>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {meetups.map((meetup) => (
+                <MeetupCard key={meetup.meetupId} meetup={meetup} />
+              ))}
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
