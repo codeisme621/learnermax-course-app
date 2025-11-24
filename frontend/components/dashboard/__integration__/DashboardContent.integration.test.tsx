@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { DashboardContent } from '../DashboardContent';
 import { server } from '@/app/actions/__integration__/setup';
 import { http, HttpResponse } from 'msw';
-import { mockMeetups, meetupSignups } from '@/app/actions/__integration__/handlers';
+import { mockMeetups, meetupSignups, resetStudentState } from '@/app/actions/__integration__/handlers';
 import type { Session } from 'next-auth';
 import type { MeetupResponse } from '@/app/actions/meetups';
 
@@ -53,6 +53,8 @@ describe('DashboardContent Integration Tests', () => {
     mockPush.mockClear();
     // Clear sessionStorage before each test
     sessionStorage.clear();
+    // Reset student state before each test
+    resetStudentState();
   });
 
   describe('fetchesProgressForAllEnrolledCourses_displaysLiveProgress', () => {
@@ -341,6 +343,135 @@ describe('DashboardContent Integration Tests', () => {
       expect(mockPush).not.toHaveBeenCalled();
 
       mockWindowOpen.mockRestore();
+    });
+  });
+
+  describe('Premium Course Integration Tests', () => {
+    it('fetches student profile on mount and passes to premium cards', async () => {
+      render(<DashboardContent session={mockSession} />);
+
+      // Wait for loading to finish
+      await waitFor(() => {
+        expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
+      });
+
+      // Verify premium course is displayed
+      expect(screen.getByText('Advanced Spec-Driven Development Mastery')).toBeInTheDocument();
+      expect(screen.getByText('COMING SOON')).toBeInTheDocument();
+
+      // Verify Join Early Access button is shown (student not interested yet)
+      expect(screen.getByRole('button', { name: /join early access/i })).toBeInTheDocument();
+    });
+
+    it('renders PremiumCourseCard for coming soon courses', async () => {
+      render(<DashboardContent session={mockSession} />);
+
+      // Wait for loading to finish
+      await waitFor(() => {
+        expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
+      });
+
+      // Verify premium course card is rendered with correct elements
+      expect(screen.getByText('Advanced Spec-Driven Development Mastery')).toBeInTheDocument();
+      expect(screen.getByText('COMING SOON')).toBeInTheDocument();
+      expect(screen.getByText('6-8 hours')).toBeInTheDocument();
+      expect(screen.getByText(/Master advanced spec-driven development techniques/)).toBeInTheDocument();
+    });
+
+    it('renders regular CourseCard for available courses', async () => {
+      render(<DashboardContent session={mockSession} />);
+
+      // Wait for loading to finish
+      await waitFor(() => {
+        expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
+      });
+
+      // Verify non-premium courses are rendered with CourseCard
+      expect(screen.getByText('Spec Driven Development Course')).toBeInTheDocument();
+      expect(screen.getByText('Context Engineering Fundamentals')).toBeInTheDocument();
+
+      // Verify these don't have "COMING SOON" badge
+      const comingSoonBadges = screen.getAllByText('COMING SOON');
+      expect(comingSoonBadges).toHaveLength(1); // Only the premium course
+    });
+
+    it('handles early access signup success - button changes to checkmark', async () => {
+      const user = userEvent.setup();
+
+      render(<DashboardContent session={mockSession} />);
+
+      // Wait for loading to finish
+      await waitFor(() => {
+        expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
+      });
+
+      // Find and click the Join Early Access button
+      const joinButton = screen.getByRole('button', { name: /join early access/i });
+      expect(joinButton).toBeInTheDocument();
+
+      await user.click(joinButton);
+
+      // Wait for loading state to appear (may be very fast)
+      await waitFor(() => {
+        expect(screen.getByText('Signing up...')).toBeInTheDocument();
+      }, { timeout: 100 }).catch(() => {
+        // Loading state might be too fast to catch, that's okay
+      });
+
+      // Wait for success state
+      await waitFor(() => {
+        expect(screen.getByText("You're on the early access list")).toBeInTheDocument();
+      });
+
+      // Verify button no longer exists
+      expect(screen.queryByRole('button', { name: /join early access/i })).not.toBeInTheDocument();
+
+      // Verify no error message displayed
+      expect(screen.queryByText('Failed to sign up. Please try again.')).not.toBeInTheDocument();
+    });
+
+    it('handles early access signup failure - shows generic error message', async () => {
+      const user = userEvent.setup();
+
+      // Override early access handler to return error
+      server.use(
+        http.post(`${API_URL}/api/students/early-access`, () => {
+          return HttpResponse.json(
+            { success: false, error: 'Network error' },
+            { status: 500 }
+          );
+        })
+      );
+
+      render(<DashboardContent session={mockSession} />);
+
+      // Wait for loading to finish
+      await waitFor(() => {
+        expect(screen.queryByText('Loading courses...')).not.toBeInTheDocument();
+      });
+
+      // Find and click the Join Early Access button
+      const joinButton = screen.getByRole('button', { name: /join early access/i });
+      await user.click(joinButton);
+
+      // Wait for loading state to appear (may be very fast)
+      await waitFor(() => {
+        expect(screen.getByText('Signing up...')).toBeInTheDocument();
+      }, { timeout: 100 }).catch(() => {
+        // Loading state might be too fast to catch, that's okay
+      });
+
+      // Wait for error state
+      await waitFor(() => {
+        expect(screen.getByText('Failed to sign up. Please try again.')).toBeInTheDocument();
+      });
+
+      // Verify button returns to original state (not disabled)
+      expect(screen.getByRole('button', { name: /join early access/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /join early access/i })).not.toBeDisabled();
+
+      // Verify success message NOT displayed
+      expect(screen.queryByText("You're on the early access list")).not.toBeInTheDocument();
     });
   });
 });

@@ -28,6 +28,9 @@ export interface Course {
   imageUrl: string;
   learningObjectives: string[];
   curriculum: CourseModule[];
+  comingSoon?: boolean;
+  estimatedDuration?: string;
+  totalLessons?: number | null;
 }
 
 /**

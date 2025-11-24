@@ -10,7 +10,9 @@ import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actio
 import { getAllCourses, type Course } from '@/app/actions/courses';
 import { getProgress, type ProgressResponse } from '@/app/actions/progress';
 import { getMeetups, type MeetupResponse } from '@/app/actions/meetups';
+import { getStudent, type Student } from '@/app/actions/students';
 import { CourseCard } from './CourseCard';
+import { PremiumCourseCard } from './PremiumCourseCard';
 import { MeetupCard } from './MeetupCard';
 
 interface DashboardContentProps {
@@ -22,7 +24,9 @@ export function DashboardContent({ session }: DashboardContentProps) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [progressMap, setProgressMap] = useState<Map<string, ProgressResponse>>(new Map());
   const [meetups, setMeetups] = useState<MeetupResponse[]>([]);
+  const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStudent, setIsLoadingStudent] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Create enrollment lookup map for O(1) checks
@@ -55,11 +59,24 @@ export function DashboardContent({ session }: DashboardContentProps) {
         }
 
         // Step 2: Fetch all dashboard data in parallel
-        const [coursesResult, enrollmentsResult, meetupsResult] = await Promise.all([
+        console.log('[DashboardContent] Fetching student profile');
+        const [coursesResult, enrollmentsResult, meetupsResult, studentResult] = await Promise.all([
           getAllCourses(),
           getUserEnrollments(),
           getMeetups(),
+          getStudent(),
         ]);
+
+        // Handle student profile
+        if (studentResult) {
+          setStudent(studentResult);
+          console.log('[DashboardContent] Student profile loaded', {
+            interestedInPremium: studentResult.interestedInPremium,
+          });
+        } else {
+          console.warn('[DashboardContent] Failed to fetch student profile');
+        }
+        setIsLoadingStudent(false);
 
         // Handle courses
         if ('courses' in coursesResult) {
@@ -204,13 +221,22 @@ export function DashboardContent({ session }: DashboardContentProps) {
           {!isLoading && !error && courses.length > 0 && (
             <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
-                <CourseCard
-                  key={course.courseId}
-                  course={course}
-                  enrollment={enrollmentMap.get(course.courseId)}
-                  progress={progressMap.get(course.courseId)}
-                  onEnroll={handleEnroll}
-                />
+                course.comingSoon ? (
+                  <PremiumCourseCard
+                    key={course.courseId}
+                    course={course}
+                    isInterestedInPremium={student?.interestedInPremium || false}
+                    isLoadingStudent={isLoadingStudent}
+                  />
+                ) : (
+                  <CourseCard
+                    key={course.courseId}
+                    course={course}
+                    enrollment={enrollmentMap.get(course.courseId)}
+                    progress={progressMap.get(course.courseId)}
+                    onEnroll={handleEnroll}
+                  />
+                )
               ))}
             </div>
           )}

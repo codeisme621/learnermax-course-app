@@ -8,6 +8,7 @@ import type { ProgressResponse } from '../progress';
 import type { Course } from '../courses';
 import type { Enrollment } from '../enrollments';
 import type { MeetupResponse } from '../meetups';
+import type { Student } from '../students';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -33,6 +34,23 @@ export const mockCourses: Course[] = [
     imageUrl: '/courses/context-eng.jpg',
     learningObjectives: ['Understand context windows', 'Optimize AI interactions'],
     curriculum: [],
+  },
+  {
+    courseId: 'premium-spec-course',
+    name: 'Advanced Spec-Driven Development Mastery',
+    description: 'Master advanced spec-driven development techniques with real-world case studies',
+    instructor: 'Rico Romero',
+    pricingModel: 'paid',
+    price: 19900,
+    imageUrl: '/courses/premium-spec.jpg',
+    learningObjectives: [
+      'Design complex multi-feature specifications',
+      'Implement advanced context engineering patterns',
+    ],
+    curriculum: [],
+    comingSoon: true,
+    estimatedDuration: '6-8 hours',
+    totalLessons: null,
   },
 ];
 
@@ -95,6 +113,30 @@ export const mockMeetups: MeetupResponse[] = [
 
 // Track meetup signups in memory (for integration tests)
 export const meetupSignups = new Set<string>();
+
+// Mock student data
+export let mockStudent: Student = {
+  studentId: 'student-test-123',
+  userId: 'test-user-123',
+  email: 'test@example.com',
+  name: 'Test User',
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-01T00:00:00Z',
+  interestedInPremium: false,
+};
+
+// Helper to reset student state (for tests)
+export function resetStudentState() {
+  mockStudent = {
+    studentId: 'student-test-123',
+    userId: 'test-user-123',
+    email: 'test@example.com',
+    name: 'Test User',
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    interestedInPremium: false,
+  };
+}
 
 // Default handlers for successful responses
 export const handlers = [
@@ -279,5 +321,32 @@ export const handlers = [
     meetupSignups.add(meetupId);
 
     return HttpResponse.json({ success: true });
+  }),
+
+  // GET /api/students/me - Get current student profile
+  http.get(`${API_URL}/api/students/me`, () => {
+    return HttpResponse.json(mockStudent);
+  }),
+
+  // POST /api/students/early-access - Sign up for early access
+  http.post(`${API_URL}/api/students/early-access`, async ({ request }) => {
+    const body = (await request.json()) as { courseId: string };
+
+    // Update mock student
+    mockStudent = {
+      ...mockStudent,
+      interestedInPremium: true,
+      premiumInterestDate: new Date().toISOString(),
+    };
+
+    return HttpResponse.json({
+      success: true,
+      message: "You're on the early access list!",
+      student: {
+        studentId: mockStudent.studentId,
+        interestedInPremium: true,
+        premiumInterestDate: mockStudent.premiumInterestDate,
+      },
+    });
   }),
 ];
