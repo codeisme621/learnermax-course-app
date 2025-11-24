@@ -42,7 +42,7 @@ describe('VideoPlayer', () => {
   const mockLessonId = 'lesson-1';
   const mockCourseId = 'spec-driven-dev-mini';
   const mockVideoUrl = 'https://cloudfront.example.com/video.mp4';
-  const mockExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+  const mockExpiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now (Unix timestamp)
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -175,9 +175,11 @@ describe('VideoPlayer', () => {
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
       mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -207,9 +209,11 @@ describe('VideoPlayer', () => {
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
       mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -268,9 +272,11 @@ describe('VideoPlayer', () => {
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
       mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(
@@ -304,9 +310,11 @@ describe('VideoPlayer', () => {
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
       mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -326,87 +334,21 @@ describe('VideoPlayer', () => {
     });
   });
 
-  describe('Course Completion Detection', () => {
-    it('shows celebration when course 100% complete', async () => {
+  describe('Last Lesson Behavior', () => {
+    it('calls onReadyToComplete when last lesson reaches 90%', async () => {
+      const onReadyToComplete = jest.fn();
       const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
       mockGetVideoUrl.mockResolvedValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
-      });
-
-      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
-      mockMarkLessonComplete.mockResolvedValue({
-        percentage: 100,
-        completedLessons: 4,
-        totalLessons: 4,
-      });
-
-      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('video-player')).toBeInTheDocument();
-      });
-
-      await act(async () => {
-        const videoPlayer = screen.getByTestId('video-player');
-        simulateVideoProgress(videoPlayer, 0.9);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/course complete/i)).toBeInTheDocument();
-      });
-    });
-
-    it('shows confetti when course 100% complete', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        videoUrl: mockVideoUrl,
-        expiresAt: mockExpiresAt,
-      });
-
-      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
-      mockMarkLessonComplete.mockResolvedValue({
-        percentage: 100,
-        completedLessons: 4,
-        totalLessons: 4,
-      });
-
-      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('video-player')).toBeInTheDocument();
-      });
-
-      await act(async () => {
-        const videoPlayer = screen.getByTestId('video-player');
-        simulateVideoProgress(videoPlayer, 0.9);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('confetti')).toBeInTheDocument();
-      });
-    });
-
-    it('calls onCourseComplete callback when course 100% complete', async () => {
-      const onCourseComplete = jest.fn();
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        videoUrl: mockVideoUrl,
-        expiresAt: mockExpiresAt,
-      });
-
-      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
-      mockMarkLessonComplete.mockResolvedValue({
-        percentage: 100,
-        completedLessons: 4,
-        totalLessons: 4,
       });
 
       render(
         <VideoPlayer
           lessonId={mockLessonId}
           courseId={mockCourseId}
-          onCourseComplete={onCourseComplete}
+          isLastLesson={true}
+          onReadyToComplete={onReadyToComplete}
         />
       );
 
@@ -419,13 +361,79 @@ describe('VideoPlayer', () => {
         simulateVideoProgress(videoPlayer, 0.9);
       });
 
-      // Callback is called after 3 second delay
-      await waitFor(
-        () => {
-          expect(onCourseComplete).toHaveBeenCalled();
-        },
-        { timeout: 4000 }
+      await waitFor(() => {
+        expect(onReadyToComplete).toHaveBeenCalled();
+      });
+    });
+
+    it('does not auto-complete when last lesson reaches 90%', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+
+      render(
+        <VideoPlayer
+          lessonId={mockLessonId}
+          courseId={mockCourseId}
+          isLastLesson={true}
+        />
       );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
+      });
+
+      // Wait a bit to ensure markLessonComplete is not called
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(mockMarkLessonComplete).not.toHaveBeenCalled();
+    });
+
+    it('auto-completes non-last lessons at 90%', async () => {
+      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      mockGetVideoUrl.mockResolvedValue({
+        videoUrl: mockVideoUrl,
+        expiresAt: mockExpiresAt,
+      });
+
+      const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+      mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
+        percentage: 50,
+        completedLessons: ['lesson-1', 'lesson-2'],
+        totalLessons: 4,
+        updatedAt: new Date().toISOString(),
+      });
+
+      render(
+        <VideoPlayer
+          lessonId={mockLessonId}
+          courseId={mockCourseId}
+          isLastLesson={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoProgress(videoPlayer, 0.9);
+      });
+
+      await waitFor(() => {
+        expect(mockMarkLessonComplete).toHaveBeenCalledWith(mockCourseId, mockLessonId);
+      });
     });
 
     it('does not show confetti for partial course completion', async () => {
@@ -437,9 +445,11 @@ describe('VideoPlayer', () => {
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
       mockMarkLessonComplete.mockResolvedValue({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -514,9 +524,11 @@ describe('VideoPlayer', () => {
       });
       // Second attempt succeeds
       mockMarkLessonComplete.mockResolvedValueOnce({
+        courseId: mockCourseId,
         percentage: 50,
-        completedLessons: 2,
+        completedLessons: ['lesson-1', 'lesson-2'],
         totalLessons: 4,
+        updatedAt: new Date().toISOString(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);

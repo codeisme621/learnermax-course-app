@@ -15,6 +15,8 @@ interface VideoPlayerProps {
   onCourseComplete?: () => void;
   onError?: (error: Error) => void;
   autoPlay?: boolean;
+  isLastLesson?: boolean;
+  onReadyToComplete?: () => void;
 }
 
 /**
@@ -51,6 +53,8 @@ export function VideoPlayer({
   onCourseComplete,
   onError,
   autoPlay = false,
+  isLastLesson = false,
+  onReadyToComplete,
 }: VideoPlayerProps) {
   // Video URL state
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -152,7 +156,15 @@ export function VideoPlayer({
 
       // Check if 90% watched and haven't marked complete yet
       if (played >= 0.9 && !hasMarkedComplete && !isMarkingComplete.current) {
+        // If this is the last lesson, notify parent instead of auto-completing
+        if (isLastLesson) {
+          console.log('[VideoPlayer] Last lesson reached 90%, notifying parent');
+          setHasMarkedComplete(true); // Prevent multiple notifications
+          onReadyToComplete?.();
+          return;
+        }
 
+        // Auto-complete for non-last lessons
         console.log('[VideoPlayer] Marking lesson as complete');
         isMarkingComplete.current = true;
         setHasMarkedComplete(true);
@@ -165,24 +177,13 @@ export function VideoPlayer({
             throw new Error(result.error);
           }
 
-          // Check if course is 100% complete
-          if (result.percentage === 100) {
-            // Show celebration with confetti
-            console.log('[VideoPlayer] Course 100% complete, showing celebration');
-            setShowCelebration(true);
-            setTimeout(() => {
-              setShowCelebration(false);
-              onCourseComplete?.();
-            }, 3000);
-          } else {
-            // Just show simple lesson complete overlay
-            console.log('[VideoPlayer] Lesson complete, showing overlay');
-            setShowCompleteOverlay(true);
-            setTimeout(() => {
-              setShowCompleteOverlay(false);
-            }, 3000);
-            onLessonComplete?.();
-          }
+          // Just show simple lesson complete overlay (not last lesson, so can't be 100%)
+          console.log('[VideoPlayer] Lesson complete, showing overlay');
+          setShowCompleteOverlay(true);
+          setTimeout(() => {
+            setShowCompleteOverlay(false);
+          }, 3000);
+          onLessonComplete?.();
         } catch (err) {
           console.error('Failed to mark lesson complete:', err);
           // Reset flags to allow retry

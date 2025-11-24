@@ -4,6 +4,7 @@ import { getCourse } from '@/app/actions/courses';
 import { checkEnrollment } from '@/app/actions/enrollments';
 import { getProgress } from '@/app/actions/progress';
 import { getLessons } from '@/app/actions/lessons';
+import { getStudent } from '@/app/actions/students';
 import { Card } from '@/components/ui/card';
 import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
@@ -66,10 +67,11 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
 
   const course = courseResult.course;
 
-  // Fetch lessons and progress
-  const [lessonsResult, progressResult] = await Promise.all([
+  // Fetch lessons, progress, and student data
+  const [lessonsResult, progressResult, student] = await Promise.all([
     getLessons(courseId),
     getProgress(courseId),
+    getStudent(),
   ]);
 
   // Handle errors
@@ -132,6 +134,8 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
             initialLesson={currentLesson}
             lessons={lessons}
             initialProgress={progress}
+            student={student}
+            pricingModel={course.pricingModel}
           />
 
           {/* Course Info Section (below video player) */}
