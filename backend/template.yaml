@@ -36,6 +36,16 @@ Parameters:
     Type: String
     Description: CloudFront key group ID (created manually via create-key-group API)
 
+  SESFromEmail:
+    Type: String
+    Default: noreply@learnermax.com
+    Description: SES verified sender email address for transactional emails
+
+  SESReplyToEmail:
+    Type: String
+    Default: support@learnermax.com
+    Description: Reply-to email address for transactional emails
+
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
   IsPreview: !Not [!Equals [!Ref Environment, prod]]
@@ -316,6 +326,34 @@ Resources:
         - Key: Project
           Value: LearnerMax
 
+  # SNS Topic for Transactional Emails (Enrollment & Meetup Signup)
+  TransactionalEmailTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub learnermax-transactional-email-${Environment}
+      DisplayName: Transactional Email Events
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+        - Key: Feature
+          Value: TransactionalEmail
+
+  # Dead Letter Queue for Transactional Emails
+  TransactionalEmailDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub learnermax-transactional-email-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+        - Key: Feature
+          Value: TransactionalEmail
+
   # SNS Topic for Observability Alerts
   ObservabilityAlertTopic:
     Type: AWS::SNS::Topic
@@ -429,6 +467,47 @@ Resources:
           Properties:
             Topic: !Ref StudentOnboardingTopic
 
+  # Transactional Email Function - Sends transactional emails for enrollment and meetup signup
+  TransactionalEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: dist/email/handler.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Description: Sends transactional emails for enrollment and meetup signup events
+      Environment:
+        Variables:
+          EDUCATION_TABLE_NAME: !Ref EducationTable
+          FRONTEND_DOMAIN: !Ref FrontendDomain
+          SES_FROM_EMAIL: !Ref SESFromEmail
+          SES_REPLY_TO_EMAIL: !Ref SESReplyToEmail
+          # ADOT Auto-instrumentation
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
+      Layers:
+        - !Ref AdotLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EducationTable
+        - Statement:
+            - Sid: SESSendEmail
+              Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt TransactionalEmailDLQ.Arn
+      Events:
+        TransactionalEmailSNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref TransactionalEmailTopic
+
   # Express.js API Function using Lambda Web Adapter
   ExpressApiFunction:
     Type: AWS::Serverless::Function
@@ -456,6 +535,8 @@ Resources:
           CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
           CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
           VIDEO_URL_EXPIRY_MINUTES: 30
+          # SNS Topic for transactional emails
+          TRANSACTIONAL_EMAIL_TOPIC_ARN: !Ref TransactionalEmailTopic
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
@@ -464,6 +545,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt TransactionalEmailTopic.TopicName
         - Statement:
             - Sid: ReadCloudFrontPrivateKey
               Effect: Allow
@@ -660,6 +743,12 @@ Outputs:
     Value: !Ref StudentOnboardingTopic
     Export:
       Name: !Sub ${AWS::StackName}-StudentOnboardingTopicArn
+
+  TransactionalEmailTopicArn:
+    Description: SNS Topic ARN for Transactional Email Events
+    Value: !Ref TransactionalEmailTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-TransactionalEmailTopicArn
 
   ExpressApiFunction:
     Description: Express API Lambda Function ARN

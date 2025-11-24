@@ -1,0 +1,15 @@
+{
+  "name": "@learnermax/email",
+  "version": "1.0.0",
+  "description": "Email templates and handlers for LearnerMax transactional emails",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Email package tests - to be added in Slice 4.2\""
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "comments": {
+    "future": "React Email dependencies (@react-email/components, @react-email/render) will be added in Slice 4.2"
+  }
+}
