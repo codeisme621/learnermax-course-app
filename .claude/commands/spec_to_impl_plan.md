@@ -221,6 +221,21 @@ Present your plan to the user in this structure:
 ## New Libraries (if any)
 - Library name, version, why, usage
 
+## Summary of Changes
+- File being Created | Edit | Deleted
+- Very short sentence of Why the change per file
+E.g.
+ Files Affected Summary
+
+ | File                                               | Action           | Why                                   |
+ |----------------------------------------------------|------------------|---------------------------------------|
+ | frontend/components/layout/AuthenticatedHeader.tsx | CREATE           | New unified header component          |
+ | frontend/app/dashboard/page.tsx                    | EDIT             | Use AuthenticatedHeader               |
+ | frontend/components/dashboard/DashboardContent.tsx | EDIT             | Remove user profile card              |
+ | frontend/components/course/CourseHeader.tsx        | DELETE           | Replaced by AuthenticatedHeader       |
+
+
+
 ## Questions for User
 - Any clarifications needed before implementation
 ```
