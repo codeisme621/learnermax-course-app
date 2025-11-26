@@ -40,7 +40,9 @@
         "typescript": "^5.0.0"
     },
     "scripts": {
-        "build": "tsc",
+        "build": "pnpm run email:build && tsc",
+        "email:build": "cd email && pnpm install && pnpm build",
+        "email:dev": "cd email && pnpm dev",
         "start": "node dist/app.js",
         "dev": "tsc && node dist/app.js",
         "dev:bg": "./scripts/start-dev-bg.sh",

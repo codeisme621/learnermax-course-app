@@ -9,6 +9,8 @@
 ## Objective
 Update the enrollment API to publish SNS events after successfully creating enrollment records in DynamoDB. This connects the enrollment flow to the email service, triggering welcome emails for both manual enrollments (user clicks "Enroll" on dashboard) and auto-enrollments (sessionStorage-based enrollment on first dashboard visit).
 
+**Note:** This slice focuses on enrollment events. A similar pattern is implemented in Slice 4.5 for meetup signup events, which publishes `MeetupSignupCompleted` events to the same SNS topic.
+
 ## What We're Doing
 
 ### 1. Update Enrollment Service to Publish SNS Events

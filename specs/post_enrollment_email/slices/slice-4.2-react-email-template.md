@@ -1,11 +1,15 @@
-# Slice 4.2: React Email Template
+# Slice 4.2: React Email Templates
 
 **Parent Mainspec:** `specs/post_enrollment_email/mainspec.md`
 **Status:** Not Started
 **Depends On:** Slice 4.1 (SNS Topic & Infrastructure - handler file must exist)
 
 ## Objective
-Create a professional, responsive HTML email template for enrollment confirmation using React Email (`@react-email/components`). The template will live in the `backend/email/` package alongside the Lambda handler, making it a complete, self-contained email service.
+Create professional, responsive HTML email templates using React Email (`@react-email/components`):
+1. **Enrollment Confirmation Email** - Welcome email with course link
+2. **Meetup Calendar Invite Email** - Signup confirmation with .ics attachment
+
+The templates will live in the `backend/email/` package alongside the Lambda handler, making it a complete, self-contained email service. Additionally, this slice includes .ics calendar file generation for meetup invites.
 
 ## What We're Doing
 
@@ -27,7 +31,9 @@ Create a professional, responsive HTML email template for enrollment confirmatio
   "dependencies": {
     "react": "^18.3.1",
     "@react-email/components": "^0.0.25",
-    "@react-email/render": "^1.0.1"
+    "@react-email/render": "^1.0.1",
+    "ics": "^3.8.1",
+    "luxon": "^3.5.0"
   },
   "devDependencies": {
     "@react-email/cli": "^1.0.3",
@@ -462,6 +468,297 @@ EnrollmentEmail.PreviewProps = {
 
 ```typescript
 export { default as EnrollmentEmail } from './enrollment-email';
+export { default as MeetupCalendarInviteEmail } from './meetup-calendar-invite-email';
+```
+
+### 4.5. Create Meetup Calendar Invite Email Template
+
+**Create:** `backend/email/emails/meetup-calendar-invite-email.tsx`
+
+```tsx
+import {
+  Html,
+  Head,
+  Body,
+  Container,
+  Section,
+  Text,
+  Heading,
+  Hr,
+  Preview
+} from '@react-email/components';
+import { EmailHeader, EmailFooter } from './components';
+
+export interface MeetupCalendarInviteEmailProps {
+  studentName: string;
+  meetupTitle: string;
+  meetupDescription: string;
+  formattedDateTime: string;
+  duration: number;
+  zoomLink: string;
+  hostName: string;
+}
+
+export default function MeetupCalendarInviteEmail({
+  studentName,
+  meetupTitle,
+  meetupDescription,
+  formattedDateTime,
+  duration,
+  zoomLink,
+  hostName
+}: MeetupCalendarInviteEmailProps) {
+  return (
+    <Html>
+      <Head />
+      <Preview>You're signed up for {meetupTitle} - Calendar invite attached</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <EmailHeader />
+
+          <Heading style={h1}>You're Signed Up! 📅</Heading>
+
+          <Text style={text}>Hi {studentName},</Text>
+
+          <Text style={text}>
+            You're all set for our weekly meetup. We've attached a calendar invite
+            (.ics file) to this email so you can add it to your calendar with one click.
+          </Text>
+
+          {/* Meetup Details Card */}
+          <Section style={meetupCard}>
+            <Heading as="h2" style={h2}>
+              {meetupTitle}
+            </Heading>
+
+            <Section style={detailsSection}>
+              <Text style={detailLabel}>When</Text>
+              <Text style={detailValue}>{formattedDateTime}</Text>
+            </Section>
+
+            <Section style={detailsSection}>
+              <Text style={detailLabel}>Duration</Text>
+              <Text style={detailValue}>{duration} minutes</Text>
+            </Section>
+
+            <Section style={detailsSection}>
+              <Text style={detailLabel}>Host</Text>
+              <Text style={detailValue}>{hostName}</Text>
+            </Section>
+          </Section>
+
+          {/* About Section */}
+          <Section style={aboutSection}>
+            <Heading as="h3" style={h3}>
+              About This Meetup
+            </Heading>
+            <Text style={text}>{meetupDescription}</Text>
+          </Section>
+
+          {/* Zoom Link Section */}
+          <Section style={zoomSection}>
+            <Text style={text}>
+              <strong>Zoom Link:</strong>{' '}
+              <a href={zoomLink} style={link}>
+                {zoomLink}
+              </a>
+            </Text>
+            <Text style={smallText}>
+              Note: The Zoom link is also included in the calendar invite attachment.
+            </Text>
+          </Section>
+
+          <Hr style={hr} />
+
+          <Text style={smallText}>
+            <strong>To add this meetup to your calendar:</strong> Open the attached .ics file.
+            It works with Google Calendar, Outlook, Apple Calendar, and most other calendar apps.
+          </Text>
+
+          <EmailFooter />
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+// Styles
+const main = {
+  backgroundColor: '#f6f9fc',
+  fontFamily:
+    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+};
+
+const container = {
+  backgroundColor: '#ffffff',
+  margin: '0 auto',
+  padding: '20px 0 48px',
+  marginBottom: '64px',
+  maxWidth: '600px',
+};
+
+const h1 = {
+  color: '#1a1a1a',
+  fontSize: '32px',
+  fontWeight: '700',
+  margin: '40px 0',
+  padding: '0 40px',
+  lineHeight: '1.3',
+};
+
+const h2 = {
+  color: '#1a1a1a',
+  fontSize: '24px',
+  fontWeight: '600',
+  margin: '0 0 16px',
+};
+
+const h3 = {
+  color: '#1a1a1a',
+  fontSize: '20px',
+  fontWeight: '600',
+  margin: '0 0 12px',
+};
+
+const text = {
+  color: '#484848',
+  fontSize: '16px',
+  lineHeight: '1.6',
+  margin: '16px 40px',
+};
+
+const smallText = {
+  color: '#666',
+  fontSize: '14px',
+  lineHeight: '1.5',
+  margin: '8px 40px',
+};
+
+const meetupCard = {
+  backgroundColor: '#f8f9fa',
+  borderRadius: '8px',
+  padding: '24px',
+  margin: '24px 40px',
+};
+
+const detailsSection = {
+  marginBottom: '16px',
+};
+
+const detailLabel = {
+  color: '#666',
+  fontSize: '14px',
+  fontWeight: '500',
+  margin: '0 0 4px 0',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.5px',
+};
+
+const detailValue = {
+  color: '#1a1a1a',
+  fontSize: '16px',
+  margin: '0',
+};
+
+const aboutSection = {
+  margin: '24px 40px',
+};
+
+const zoomSection = {
+  backgroundColor: '#e3f2fd',
+  borderRadius: '8px',
+  padding: '16px 24px',
+  margin: '24px 40px',
+};
+
+const link = {
+  color: '#2563eb',
+  textDecoration: 'underline',
+  wordBreak: 'break-all' as const,
+};
+
+const hr = {
+  borderColor: '#e6e6e6',
+  margin: '32px 40px',
+};
+```
+
+### 4.6. Create ICS Calendar File Generator
+
+**Create:** `backend/email/utils/generateIcs.ts`
+
+```typescript
+import { createEvent, EventAttributes, DateArray } from 'ics';
+import { DateTime } from 'luxon';
+
+export interface MeetupEventData {
+  meetupTitle: string;
+  meetupDescription: string;
+  nextOccurrence: string;  // ISO timestamp
+  duration: number;         // minutes
+  zoomLink: string;
+  hostName: string;
+  hostEmail: string;
+  studentName: string;
+  studentEmail: string;
+}
+
+export function generateMeetupIcs(data: MeetupEventData): Buffer {
+  const startDateTime = DateTime.fromISO(data.nextOccurrence);
+
+  // Convert to DateArray format: [year, month, day, hour, minute]
+  const start: DateArray = [
+    startDateTime.year,
+    startDateTime.month,
+    startDateTime.day,
+    startDateTime.hour,
+    startDateTime.minute,
+  ];
+
+  const event: EventAttributes = {
+    start,
+    duration: { minutes: data.duration },
+    title: data.meetupTitle,
+    description: `${data.meetupDescription}\\n\\nZoom Link: ${data.zoomLink}`,
+    location: data.zoomLink,
+    url: data.zoomLink,
+    organizer: {
+      name: data.hostName,
+      email: data.hostEmail,
+    },
+    attendees: [
+      {
+        name: data.studentName,
+        email: data.studentEmail,
+        rsvp: true,
+        partstat: 'NEEDS-ACTION',
+        role: 'REQ-PARTICIPANT',
+      },
+    ],
+    status: 'CONFIRMED',
+    busyStatus: 'BUSY',
+    method: 'REQUEST',
+  };
+
+  const { error, value } = createEvent(event);
+
+  if (error) {
+    console.error('Failed to generate ICS file', { error, data });
+    throw new Error(`ICS generation failed: ${error.message}`);
+  }
+
+  if (!value) {
+    throw new Error('ICS generation returned no value');
+  }
+
+  return Buffer.from(value, 'utf-8');
+}
+```
+
+**Create:** `backend/email/utils/index.ts`
+
+```typescript
+export { generateMeetupIcs } from './generateIcs';
 ```
 
 ### 5. Create Email Rendering Utility with Event Router

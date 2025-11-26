@@ -5,7 +5,7 @@
 **Depends On:** None (foundational infrastructure)
 
 ## Objective
-Create the AWS SNS topic for enrollment events and set up the Lambda function that will subscribe to these events. This establishes the event-driven infrastructure needed for sending enrollment emails, following the same pattern as the existing student onboarding flow.
+Create the AWS SNS topic for transactional email events (enrollment and meetup signup) and set up the Lambda function that will subscribe to these events. This establishes the event-driven infrastructure needed for sending both enrollment confirmation emails and meetup calendar invite emails, following the same pattern as the existing student onboarding flow.
 
 ## What We're Doing
 
@@ -19,19 +19,19 @@ Add the EnrollmentCompleted SNS topic to the SAM template:
 Resources:
   # Existing resources...
 
-  # SNS Topic for Enrollment Events
+  # SNS Topic for Transactional Email Events (Enrollment & Meetup Signup)
   EnrollmentCompletedTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-enrollment-completed'
-      DisplayName: Enrollment Completed Events
+      DisplayName: Transactional Email Events (Enrollment & Meetup)
       Tags:
         - Key: Environment
           Value: !Ref Environment
         - Key: Feature
-          Value: EnrollmentEmail
+          Value: TransactionalEmail
 
-  # Lambda Function for Enrollment Emails
+  # Lambda Function for Transactional Emails (Enrollment & Meetup)
   EnrollmentEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -52,7 +52,7 @@ Resources:
         - SESCrudPolicy:
             IdentityName: !Ref SESFromEmail
       Events:
-        EnrollmentCompletedEvent:
+        TransactionalEmailEvent:
           Type: SNS
           Properties:
             Topic: !Ref EnrollmentCompletedTopic
@@ -162,32 +162,69 @@ interface EnrollmentCompletedEvent {
   source: 'manual' | 'auto';
 }
 
+interface MeetupSignupCompletedEvent {
+  eventType: 'MeetupSignupCompleted';
+  studentId: string;
+  studentEmail: string;
+  studentName: string;
+  meetupId: string;
+  signedUpAt: string;
+  source: 'manual' | 'auto';
+}
+
+type TransactionalEmailEvent = EnrollmentCompletedEvent | MeetupSignupCompletedEvent;
+
 export const handler: SNSHandler = async (event: SNSEvent) => {
-  console.log('Received enrollment event', {
+  console.log('Received transactional email event', {
     recordCount: event.Records.length
   });
 
   for (const record of event.Records) {
     try {
-      const enrollmentEvent: EnrollmentCompletedEvent = JSON.parse(record.Sns.Message);
+      const emailEvent: TransactionalEmailEvent = JSON.parse(record.Sns.Message);
 
-      console.log('Processing enrollment email', {
-        studentId: enrollmentEvent.studentId,
-        courseId: enrollmentEvent.courseId,
-        enrollmentType: enrollmentEvent.enrollmentType,
-        source: enrollmentEvent.source
+      console.log('Processing email event', {
+        eventType: emailEvent.eventType
       });
 
-      // TODO: Fetch student and course data (Slice 4.3)
-      // TODO: Render email template (Slice 4.2)
-      // TODO: Send email via SES (Slice 4.3)
+      if (emailEvent.eventType === 'EnrollmentCompleted') {
+        console.log('Processing enrollment email', {
+          studentId: emailEvent.studentId,
+          courseId: emailEvent.courseId,
+          enrollmentType: emailEvent.enrollmentType,
+          source: emailEvent.source
+        });
 
-      console.log('Enrollment email sent successfully', {
-        studentId: enrollmentEvent.studentId,
-        courseId: enrollmentEvent.courseId
-      });
+        // TODO: Fetch student and course data (Slice 4.3)
+        // TODO: Render enrollment email template (Slice 4.2)
+        // TODO: Send email via SES (Slice 4.3)
+
+        console.log('Enrollment email sent successfully', {
+          studentId: emailEvent.studentId,
+          courseId: emailEvent.courseId
+        });
+      } else if (emailEvent.eventType === 'MeetupSignupCompleted') {
+        console.log('Processing meetup calendar invite email', {
+          studentId: emailEvent.studentId,
+          meetupId: emailEvent.meetupId
+        });
+
+        // TODO: Fetch meetup data (Slice 4.3)
+        // TODO: Generate .ics file (Slice 4.2)
+        // TODO: Render meetup calendar invite email template (Slice 4.2)
+        // TODO: Send email with .ics attachment via SES (Slice 4.3)
+
+        console.log('Meetup calendar invite email sent successfully', {
+          studentId: emailEvent.studentId,
+          meetupId: emailEvent.meetupId
+        });
+      } else {
+        console.warn('Unknown event type', {
+          eventType: (emailEvent as any).eventType
+        });
+      }
     } catch (error) {
-      console.error('Failed to process enrollment email', {
+      console.error('Failed to process email event', {
         error,
         record: record.Sns.Message
       });
@@ -209,6 +246,18 @@ export interface EnrollmentCompletedEvent {
   enrolledAt: string;
   source: 'manual' | 'auto';
 }
+
+export interface MeetupSignupCompletedEvent {
+  eventType: 'MeetupSignupCompleted';
+  studentId: string;
+  studentEmail: string;
+  studentName: string;
+  meetupId: string;
+  signedUpAt: string;
+  source: 'manual' | 'auto';
+}
+
+export type TransactionalEmailEvent = EnrollmentCompletedEvent | MeetupSignupCompletedEvent;
 ```
 
 ### 6. Deploy and Verify Infrastructure
@@ -250,7 +299,7 @@ TOPIC_ARN=$(aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`EnrollmentCompletedTopicArn`].OutputValue' \
   --output text)
 
-# Publish test event
+# Test 1: Publish enrollment event
 aws sns publish \
   --topic-arn $TOPIC_ARN \
   --message '{
@@ -263,15 +312,38 @@ aws sns publish \
   }' \
   --subject "Test Enrollment Event"
 
+# Test 2: Publish meetup signup event
+aws sns publish \
+  --topic-arn $TOPIC_ARN \
+  --message '{
+    "eventType": "MeetupSignupCompleted",
+    "studentId": "student-test-123",
+    "studentEmail": "test@example.com",
+    "studentName": "Test User",
+    "meetupId": "spec-driven-dev-weekly",
+    "signedUpAt": "2025-01-15T10:30:00Z",
+    "source": "manual"
+  }' \
+  --subject "Test Meetup Signup Event"
+
 # Check Lambda logs
 aws logs tail /aws/lambda/<function-name> --follow
 ```
 
-Expected log output:
+Expected log output for enrollment event:
 ```
-Received enrollment event recordCount=1
+Received transactional email event recordCount=1
+Processing email event eventType=EnrollmentCompleted
 Processing enrollment email studentId=student-test-123 courseId=spec-driven-dev-mini
 Enrollment email sent successfully studentId=student-test-123
+```
+
+Expected log output for meetup signup event:
+```
+Received transactional email event recordCount=1
+Processing email event eventType=MeetupSignupCompleted
+Processing meetup calendar invite email studentId=student-test-123 meetupId=spec-driven-dev-weekly
+Meetup calendar invite email sent successfully studentId=student-test-123
 ```
 
 ## What We're NOT Doing

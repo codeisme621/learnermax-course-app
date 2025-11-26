@@ -5,11 +5,24 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "echo \"Email package tests - to be added in Slice 4.2\""
+    "dev": "email dev --dir ./emails --port 3001",
+    "build": "tsc",
+    "test": "vitest"
   },
-  "dependencies": {},
-  "devDependencies": {},
-  "comments": {
-    "future": "React Email dependencies (@react-email/components, @react-email/render) will be added in Slice 4.2"
+  "dependencies": {
+    "@react-email/components": "^0.0.25",
+    "@react-email/render": "^1.0.1",
+    "ics": "^3.8.1",
+    "luxon": "^3.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@react-email/preview-server": "5.0.5",
+    "@types/luxon": "^3.4.2",
+    "@types/react": "^18.3.12",
+    "react-email": "^5.0.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
