@@ -1,23 +1,50 @@
 import { jest, describe, it, beforeAll, beforeEach, afterAll, expect } from '@jest/globals';
-import { FreeEnrollmentStrategy } from '../free-enrollment.strategy.js';
 import { enrollmentRepository } from '../../enrollment.repository.js';
-import type { Enrollment } from '../../enrollment.types.js';
+import type { Enrollment, EnrollmentCompletedEvent } from '../../enrollment.types.js';
+
+// Mock SNS client
+const mockSend = jest.fn();
+jest.unstable_mockModule('../../../../lib/sns.js', () => ({
+  getSnsClient: () => ({
+    send: mockSend,
+  }),
+  PublishCommand: jest.fn().mockImplementation((input) => ({ input })),
+}));
+
+// Mock metrics
+const mockAddMetric = jest.fn();
+jest.unstable_mockModule('../../../../lib/metrics.js', () => ({
+  createMetrics: () => ({
+    addMetric: mockAddMetric,
+    publishStoredMetrics: jest.fn(),
+  }),
+  MetricUnit: {
+    Count: 'Count',
+  },
+}));
+
+// Import FreeEnrollmentStrategy AFTER mocking
+const { FreeEnrollmentStrategy } = await import('../free-enrollment.strategy.js');
 
 describe('FreeEnrollmentStrategy', () => {
   let strategy: FreeEnrollmentStrategy;
   let mockCreate: jest.SpyInstance;
+  const originalEnv = process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN;
 
   beforeAll(() => {
     mockCreate = jest.spyOn(enrollmentRepository, 'create');
+    process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789:test-topic';
   });
 
   beforeEach(() => {
     strategy = new FreeEnrollmentStrategy();
     jest.clearAllMocks();
+    mockSend.mockResolvedValue({ MessageId: 'test-message-id' });
   });
 
   afterAll(() => {
     mockCreate.mockRestore();
+    process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN = originalEnv;
   });
 
   describe('enroll', () => {
@@ -149,6 +176,91 @@ describe('FreeEnrollmentStrategy', () => {
       expect(result2.enrollment?.userId).toBe('user-2');
       expect(result2.enrollment?.courseId).toBe('course-2');
       expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('SNS event publishing', () => {
+    it('should publish EnrollmentCompleted event to SNS after successful enrollment', async () => {
+      const userId = 'user-sns-test';
+      const courseId = 'course-sns-test';
+
+      mockCreate.mockResolvedValue(undefined);
+
+      await strategy.enroll(userId, courseId);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+
+      const publishCommand = mockSend.mock.calls[0][0];
+      expect(publishCommand.input.TopicArn).toBe('arn:aws:sns:us-east-1:123456789:test-topic');
+      expect(publishCommand.input.Subject).toBe('Enrollment Completed');
+
+      const message = JSON.parse(publishCommand.input.Message) as EnrollmentCompletedEvent;
+      expect(message.eventType).toBe('EnrollmentCompleted');
+      expect(message.studentId).toBe(userId);
+      expect(message.courseId).toBe(courseId);
+      expect(message.enrollmentType).toBe('free');
+      expect(message.enrolledAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('should still return enrollment when SNS publish fails', async () => {
+      const userId = 'user-sns-fail';
+      const courseId = 'course-sns-fail';
+
+      mockCreate.mockResolvedValue(undefined);
+      mockSend.mockRejectedValue(new Error('SNS service unavailable'));
+
+      const result = await strategy.enroll(userId, courseId);
+
+      // Enrollment should still succeed (fire-and-forget pattern)
+      expect(result.status).toBe('active');
+      expect(result.enrollment?.userId).toBe(userId);
+      expect(result.enrollment?.courseId).toBe(courseId);
+      expect(mockCreate).toHaveBeenCalled();
+    });
+
+    it('should record EnrollmentEventPublished metric on SNS success', async () => {
+      const userId = 'user-metric-success';
+      const courseId = 'course-metric-success';
+
+      mockCreate.mockResolvedValue(undefined);
+
+      await strategy.enroll(userId, courseId);
+
+      expect(mockAddMetric).toHaveBeenCalledWith(
+        'EnrollmentEventPublished',
+        expect.anything(),
+        1
+      );
+    });
+
+    it('should record EnrollmentEventPublishFailed metric on SNS failure', async () => {
+      const userId = 'user-metric-fail';
+      const courseId = 'course-metric-fail';
+
+      mockCreate.mockResolvedValue(undefined);
+      mockSend.mockRejectedValue(new Error('SNS error'));
+
+      await strategy.enroll(userId, courseId);
+
+      expect(mockAddMetric).toHaveBeenCalledWith(
+        'EnrollmentEventPublishFailed',
+        expect.anything(),
+        1
+      );
+    });
+
+    it('should use same enrolledAt timestamp in both enrollment and SNS event', async () => {
+      const userId = 'user-timestamp';
+      const courseId = 'course-timestamp';
+
+      mockCreate.mockResolvedValue(undefined);
+
+      const result = await strategy.enroll(userId, courseId);
+
+      const publishCommand = mockSend.mock.calls[0][0];
+      const snsMessage = JSON.parse(publishCommand.input.Message) as EnrollmentCompletedEvent;
+
+      expect(result.enrollment?.enrolledAt).toBe(snsMessage.enrolledAt);
     });
   });
 });

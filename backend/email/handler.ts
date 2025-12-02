@@ -28,7 +28,6 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
           studentId: emailEvent.studentId,
           courseId: emailEvent.courseId,
           enrollmentType: emailEvent.enrollmentType,
-          source: emailEvent.source,
         });
 
         // 1. Fetch student and course data from DynamoDB

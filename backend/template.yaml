@@ -410,7 +410,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: dist/lambdas/post-confirmation.handler
+      Handler: dist/src/lambdas/post-confirmation.handler
       Runtime: nodejs22.x
       Architectures:
         - x86_64
@@ -441,7 +441,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: dist/lambdas/student-onboarding.handler
+      Handler: dist/src/lambdas/student-onboarding.handler
       Runtime: nodejs22.x
       Architectures:
         - x86_64

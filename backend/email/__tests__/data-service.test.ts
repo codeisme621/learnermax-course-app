@@ -32,7 +32,6 @@ describe('data-service', () => {
       courseId: 'spec-driven-dev-mini',
       enrollmentType: 'free',
       enrolledAt: '2025-01-15T10:30:00Z',
-      source: 'manual',
     };
 
     const mockStudent = {
@@ -108,7 +107,6 @@ describe('data-service', () => {
       studentName: 'Alex Johnson',
       meetupId: 'spec-driven-dev-weekly',
       signedUpAt: '2025-01-15T10:30:00Z',
-      source: 'manual',
     };
 
     it('prepareMeetupEmailData_success_returnsFormattedData', () => {

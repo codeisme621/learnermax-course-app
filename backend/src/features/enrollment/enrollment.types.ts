@@ -15,3 +15,12 @@ export interface EnrollmentResult {
   checkoutUrl?: string;
   status: 'active' | 'pending';
 }
+
+// SNS Event Type (published after enrollment)
+export interface EnrollmentCompletedEvent {
+  eventType: 'EnrollmentCompleted';
+  studentId: string;
+  courseId: string;
+  enrollmentType: 'free' | 'paid';
+  enrolledAt: string;
+}

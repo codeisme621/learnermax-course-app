@@ -5,7 +5,6 @@ export interface EnrollmentCompletedEvent {
   courseId: string;
   enrollmentType: 'free' | 'paid';
   enrolledAt: string;
-  source: 'manual' | 'auto';
 }
 
 export interface MeetupSignupCompletedEvent {
@@ -15,7 +14,6 @@ export interface MeetupSignupCompletedEvent {
   studentName: string;
   meetupId: string;
   signedUpAt: string;
-  source: 'manual' | 'auto';
 }
 
 export type TransactionalEmailEvent =
