@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { generateMeetupIcs } from './generate-ics';
-import type { MeetupEventData } from '../types';
+import { generateMeetupIcs } from './generate-ics.js';
+import type { MeetupEventData } from '../types.js';
 
 describe('generateMeetupIcs', () => {
   const mockMeetupData: MeetupEventData = {

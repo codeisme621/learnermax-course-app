@@ -1,1 +1,1 @@
-export { generateMeetupIcs } from './generate-ics';
+export { generateMeetupIcs } from './generate-ics.js';

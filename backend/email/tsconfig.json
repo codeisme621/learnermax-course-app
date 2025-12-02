@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
+    "module": "NodeNext",
     "lib": ["ES2022"],
-    "moduleResolution": "bundler",
+    "moduleResolution": "NodeNext",
     "jsx": "react",
     "outDir": "./dist",
     "rootDir": "./",
@@ -16,5 +16,5 @@
     "declarationMap": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", ".react-email", "handler.ts"]
+  "exclude": ["node_modules", "dist", ".react-email", "__tests__"]
 }

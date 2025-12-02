@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { renderEmailFromEvent } from './render';
-import type { EnrollmentEmailData, MeetupCalendarInviteEmailData } from './types';
+import { renderEmailFromEvent } from './render.js';
+import type { EnrollmentEmailData, MeetupCalendarInviteEmailData } from './types.js';
 
 describe('renderEmailFromEvent', () => {
   const mockEnrollmentData: EnrollmentEmailData = {

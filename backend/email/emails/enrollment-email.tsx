@@ -8,8 +8,8 @@ import {
   Text,
   Heading,
 } from '@react-email/components';
-import { Header, Footer, CourseCard } from '../components';
-import type { EnrollmentEmailData } from '../types';
+import { Header, Footer, CourseCard } from '../components/index.js';
+import type { EnrollmentEmailData } from '../types.js';
 
 export default function EnrollmentEmail(props: EnrollmentEmailData) {
   const {

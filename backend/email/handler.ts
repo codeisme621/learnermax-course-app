@@ -1,6 +1,10 @@
 import { SNSEvent, SNSHandler } from 'aws-lambda';
-import { createLogger } from '../src/lib/logger.js';
-import { createMetrics, MetricUnit } from '../src/lib/metrics.js';
+import { createLogger } from './lib/logger.js';
+import { createMetrics, MetricUnit } from './lib/metrics.js';
+import { prepareEnrollmentEmailData, prepareMeetupEmailData } from './data-service.js';
+import { sendEmail } from './ses-service.js';
+import { renderEmailFromEvent } from './render.js';
+import { generateMeetupIcs } from './utils/generate-ics.js';
 import type { TransactionalEmailEvent } from './types.js';
 
 const logger = createLogger('TransactionalEmailFunction');
@@ -27,13 +31,36 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
           source: emailEvent.source,
         });
 
-        // TODO: Fetch student and course data (Slice 4.3)
-        // TODO: Render enrollment email template (Slice 4.2)
-        // TODO: Send email via SES (Slice 4.3)
+        // 1. Fetch student and course data from DynamoDB
+        const emailData = await prepareEnrollmentEmailData(emailEvent);
+
+        logger.info('Enrollment email data prepared', {
+          studentEmail: emailData.studentEmail,
+          courseName: emailData.courseName,
+        });
+
+        // 2. Render enrollment email template
+        const { html, subject } = await renderEmailFromEvent(
+          emailEvent.eventType,
+          emailData
+        );
+
+        logger.info('Enrollment email rendered', {
+          subject,
+          htmlLength: html.length,
+        });
+
+        // 3. Send email via SES
+        await sendEmail({
+          to: emailData.studentEmail,
+          subject,
+          html,
+        });
 
         logger.info('Enrollment email sent successfully', {
           studentId: emailEvent.studentId,
           courseId: emailEvent.courseId,
+          studentEmail: emailData.studentEmail,
         });
 
         metrics.addMetric('EnrollmentEmailSent', MetricUnit.Count, 1);
@@ -41,22 +68,59 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
         logger.info('Processing meetup calendar invite email', {
           studentId: emailEvent.studentId,
           meetupId: emailEvent.meetupId,
+          studentEmail: emailEvent.studentEmail,
         });
 
-        // TODO: Fetch meetup data (Slice 4.3)
-        // TODO: Generate .ics file (Slice 4.2)
-        // TODO: Render meetup calendar invite email template (Slice 4.2)
-        // TODO: Send email with .ics attachment via SES (Slice 4.3)
+        // 1. Prepare meetup email data from constants
+        const { emailData, eventData } = prepareMeetupEmailData(emailEvent);
+
+        logger.info('Meetup email data prepared', {
+          meetupTitle: emailData.meetupTitle,
+          formattedDateTime: emailData.formattedDateTime,
+        });
+
+        // 2. Generate .ics calendar file
+        const icsBuffer = generateMeetupIcs(eventData);
+
+        logger.info('ICS calendar file generated', {
+          icsSize: icsBuffer.length,
+        });
+
+        // 3. Render meetup calendar invite email template
+        const { html, subject } = await renderEmailFromEvent(
+          emailEvent.eventType,
+          emailData
+        );
+
+        logger.info('Meetup email rendered', {
+          subject,
+          htmlLength: html.length,
+        });
+
+        // 4. Send email via SES with .ics attachment
+        await sendEmail({
+          to: emailData.studentEmail,
+          subject,
+          html,
+          attachments: [
+            {
+              filename: `meetup-${emailEvent.meetupId}.ics`,
+              content: icsBuffer,
+              contentType: 'text/calendar; charset=utf-8; method=REQUEST',
+            },
+          ],
+        });
 
         logger.info('Meetup calendar invite email sent successfully', {
           studentId: emailEvent.studentId,
           meetupId: emailEvent.meetupId,
+          studentEmail: emailData.studentEmail,
         });
 
         metrics.addMetric('MeetupEmailSent', MetricUnit.Count, 1);
       } else {
         logger.warn('Unknown event type', {
-          eventType: (emailEvent as any).eventType,
+          eventType: (emailEvent as unknown as { eventType: string }).eventType,
         });
       }
     } catch (error) {
@@ -65,6 +129,9 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
         errorStack: error instanceof Error ? error.stack : undefined,
         record: record.Sns.Message,
       });
+
+      metrics.addMetric('EmailSendFailed', MetricUnit.Count, 1);
+
       // Don't throw - we don't want to retry and spam emails
       // Log error for monitoring and alerting
     }

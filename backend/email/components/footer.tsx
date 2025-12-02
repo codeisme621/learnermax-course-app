@@ -10,21 +10,21 @@ export function Footer() {
           Questions? Reply to this email and we'll be happy to help.
         </Text>
         <Text style={footerText}>
-          The LearnerMax Team
+          The Learn With Rico Team
         </Text>
         <Text style={legalText}>
           This is a transactional email confirming your action.
         </Text>
         <Text style={legalText}>
-          <Link href="https://learnermax.com" style={link}>
-            LearnerMax
+          <Link href="https://www.learnwithrico.com" style={link}>
+            Learn With Rico
           </Link>
           {' • '}
-          <Link href="https://learnermax.com/privacy" style={link}>
+          <Link href="https://www.learnwithrico.com/privacy" style={link}>
             Privacy Policy
           </Link>
           {' • '}
-          <Link href="https://learnermax.com/terms" style={link}>
+          <Link href="https://www.learnwithrico.com/terms" style={link}>
             Terms of Service
           </Link>
         </Text>

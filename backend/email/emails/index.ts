@@ -1,2 +1,2 @@
-export { default as EnrollmentEmail } from './enrollment-email';
-export { default as MeetupCalendarInviteEmail } from './meetup-calendar-invite-email';
+export { default as EnrollmentEmail } from './enrollment-email.js';
+export { default as MeetupCalendarInviteEmail } from './meetup-calendar-invite-email.js';

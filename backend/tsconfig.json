@@ -18,7 +18,7 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*", "email/**/*"],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",
@@ -26,6 +26,7 @@
     "src/__tests__/**",
     "**/__tests__/**",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "email/**"
   ]
 }

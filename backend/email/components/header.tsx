@@ -8,7 +8,7 @@ export function Header() {
         src="https://www.learnwithrico.com/images/logo.png"
         width="150"
         height="40"
-        alt="LearnerMax"
+        alt="Learn With Rico"
         style={logo}
       />
     </Section>

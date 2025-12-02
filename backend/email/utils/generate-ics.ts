@@ -1,6 +1,6 @@
 import { createEvent, EventAttributes, DateArray } from 'ics';
 import { DateTime } from 'luxon';
-import type { MeetupEventData } from '../types';
+import type { MeetupEventData } from '../types.js';
 
 export function generateMeetupIcs(data: MeetupEventData): Buffer {
   const startDateTime = DateTime.fromISO(data.nextOccurrence);

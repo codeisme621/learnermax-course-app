@@ -11,8 +11,8 @@ import {
   Preview,
   Link,
 } from '@react-email/components';
-import { Header, Footer } from '../components';
-import type { MeetupCalendarInviteEmailData } from '../types';
+import { Header, Footer } from '../components/index.js';
+import type { MeetupCalendarInviteEmailData } from '../types.js';
 
 export default function MeetupCalendarInviteEmail(props: MeetupCalendarInviteEmailData) {
   const {

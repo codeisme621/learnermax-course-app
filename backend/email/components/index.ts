@@ -1,4 +1,4 @@
-export { Header } from './header';
-export { Footer } from './footer';
-export { Button } from './button';
-export { CourseCard } from './course-card';
+export { Header } from './header.js';
+export { Footer } from './footer.js';
+export { Button } from './button.js';
+export { CourseCard } from './course-card.js';

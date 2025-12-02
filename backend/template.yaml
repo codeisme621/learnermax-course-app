@@ -38,12 +38,12 @@ Parameters:
 
   SESFromEmail:
     Type: String
-    Default: noreply@learnermax.com
+    Default: support@learnwithrico.com
     Description: SES verified sender email address for transactional emails
 
   SESReplyToEmail:
     Type: String
-    Default: support@learnermax.com
+    Default: support@learnwithrico.com
     Description: Reply-to email address for transactional emails
 
 Conditions:
@@ -471,8 +471,8 @@ Resources:
   TransactionalEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
-      Handler: dist/email/handler.handler
+      CodeUri: ./email/
+      Handler: dist/handler.handler
       Runtime: nodejs22.x
       Architectures:
         - x86_64

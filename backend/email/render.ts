@@ -1,7 +1,7 @@
 import { render } from '@react-email/render';
-import EnrollmentEmail from './emails/enrollment-email';
-import MeetupCalendarInviteEmail from './emails/meetup-calendar-invite-email';
-import type { EnrollmentEmailData, MeetupCalendarInviteEmailData } from './types';
+import EnrollmentEmail from './emails/enrollment-email.js';
+import MeetupCalendarInviteEmail from './emails/meetup-calendar-invite-email.js';
+import type { EnrollmentEmailData, MeetupCalendarInviteEmailData } from './types.js';
 
 /**
  * Render email HTML from SNS event type and data

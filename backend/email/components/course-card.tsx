@@ -1,6 +1,6 @@
 import React from 'react';
 import { Section, Heading, Text, Hr } from '@react-email/components';
-import { Button } from './button';
+import { Button } from './button.js';
 
 interface CourseCardProps {
   courseName: string;
