@@ -6,6 +6,7 @@ import type { EnrollmentCompletedEvent, MeetupSignupCompletedEvent } from '../ty
 // Set environment variables before importing modules that use them
 process.env.EDUCATION_TABLE_NAME = 'test-education-table';
 process.env.FRONTEND_DOMAIN = 'https://www.learnwithrico.com';
+process.env.SES_FROM_EMAIL = 'support@learnwithrico.com';
 
 // Mock DynamoDB
 const ddbMock = mockClient(DynamoDBDocumentClient);
@@ -120,7 +121,8 @@ describe('data-service', () => {
       expect(emailData.zoomLink).toContain('zoom.us');
 
       expect(eventData.meetupTitle).toBe('Spec Driven Development & Context Engineering');
-      expect(eventData.hostEmail).toBe('rico@learnermax.com');
+      // hostEmail now uses SES_FROM_EMAIL to match FROM domain (required for Gmail calendar)
+      expect(eventData.hostEmail).toBe('support@learnwithrico.com');
       expect(eventData.nextOccurrence).toBeDefined();
     });
 

@@ -1,14 +1,18 @@
 import { DateTime } from 'luxon';
 import { createLogger } from '../../lib/logger.js';
+import { createMetrics, MetricUnit } from '../../lib/metrics.js';
+import { getSnsClient, PublishCommand } from '../../lib/sns.js';
 import { MEETUPS } from './meetups.constants.js';
 import { meetupsRepository } from './meetups.repository.js';
 import type {
   Meetup,
   MeetupSchedule,
   MeetupResponse,
+  MeetupSignupCompletedEvent,
 } from './meetups.types.js';
 
 const logger = createLogger('MeetupsService');
+const metrics = createMetrics('LearnerMax/Backend', 'MeetupsService');
 
 export class MeetupsService {
   /**
@@ -58,15 +62,15 @@ export class MeetupsService {
    * Sign up for a meetup and send calendar invite
    */
   async signupForMeetup(
-    userId: string,
+    studentId: string,
     meetupId: string,
-    userEmail: string,
-    userName: string
+    studentEmail: string,
+    studentName: string
   ): Promise<void> {
     logger.info('[signupForMeetup] Processing signup', {
-      userId,
+      studentId,
       meetupId,
-      userEmail,
+      studentEmail,
     });
 
     const meetup = MEETUPS.find((m) => m.meetupId === meetupId);
@@ -77,13 +81,13 @@ export class MeetupsService {
 
     // Create signup record (idempotent)
     try {
-      await meetupsRepository.createSignup(userId, meetupId);
-      logger.info('[signupForMeetup] Signup created', { userId, meetupId });
+      await meetupsRepository.createSignup(studentId, meetupId);
+      logger.info('[signupForMeetup] Signup created', { studentId, meetupId });
     } catch (error: any) {
       // If already exists, that's fine (idempotent)
       if (error.name === 'ConditionalCheckFailedException') {
         logger.warn('[signupForMeetup] Already signed up (idempotent)', {
-          userId,
+          studentId,
           meetupId,
         });
         // Continue to send calendar invite (they may have lost it)
@@ -92,8 +96,8 @@ export class MeetupsService {
       }
     }
 
-    // Send calendar invite (deferred - log intent only)
-    await this.sendCalendarInvite(meetup, userEmail, userName);
+    // Publish SNS event to trigger calendar invite email
+    await this.publishMeetupSignupEvent(meetup, studentId, studentEmail, studentName);
   }
 
   /**
@@ -147,30 +151,55 @@ export class MeetupsService {
   }
 
   /**
-   * Send calendar invite via email
-   * MVP: Log intent only (email integration deferred)
+   * Publish meetup signup event to SNS for calendar invite email
    */
-  private async sendCalendarInvite(
+  private async publishMeetupSignupEvent(
     meetup: Meetup,
-    userEmail: string,
-    userName: string
+    studentId: string,
+    studentEmail: string,
+    studentName: string
   ): Promise<void> {
-    const nextOccurrence = this.getNextOccurrence(meetup.schedule);
+    const topicArn = process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN;
 
-    logger.info('[sendCalendarInvite] Calendar invite intent (deferred)', {
-      to: userEmail,
-      userName,
-      meetupTitle: meetup.title,
-      nextOccurrence: nextOccurrence.toISO(),
-    });
+    if (!topicArn) {
+      logger.warn('[publishMeetupSignupEvent] TRANSACTIONAL_EMAIL_TOPIC_ARN not configured, skipping email');
+      return;
+    }
 
-    // Future: Invoke email Lambda with calendar event
-    // await emailService.sendMeetupInvite({
-    //   to: userEmail,
-    //   userName,
-    //   meetup,
-    //   nextOccurrence
-    // });
+    try {
+      const event: MeetupSignupCompletedEvent = {
+        eventType: 'MeetupSignupCompleted',
+        studentId,
+        studentEmail,
+        studentName,
+        meetupId: meetup.meetupId,
+        signedUpAt: new Date().toISOString(),
+      };
+
+      await getSnsClient().send(new PublishCommand({
+        TopicArn: topicArn,
+        Message: JSON.stringify(event),
+        Subject: 'Meetup Signup Completed',
+      }));
+
+      logger.info('[publishMeetupSignupEvent] Meetup signup event published', {
+        studentId,
+        meetupId: meetup.meetupId,
+        studentEmail,
+      });
+
+      metrics.addMetric('MeetupSignupEventPublished', MetricUnit.Count, 1);
+    } catch (error) {
+      // Log but don't fail signup - email is non-critical
+      logger.error('[publishMeetupSignupEvent] Failed to publish meetup signup event', {
+        error: error instanceof Error ? error.message : String(error),
+        studentId,
+        meetupId: meetup.meetupId,
+        studentEmail,
+      });
+
+      metrics.addMetric('MeetupSignupEventPublishFailed', MetricUnit.Count, 1);
+    }
   }
 }
 

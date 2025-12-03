@@ -11,6 +11,7 @@ export interface EmailAttachment {
   filename: string;
   content: Buffer;
   contentType: string;
+  isCalendarInvite?: boolean; // If true, include as alternative part for Gmail integration
 }
 
 interface SendEmailParams {
@@ -22,10 +23,25 @@ interface SendEmailParams {
 
 /**
  * Build MIME multipart message for raw email
+ *
+ * For calendar invites, uses multipart/alternative structure so Gmail/Outlook
+ * show interactive "Add to Calendar" buttons instead of just a download link.
+ *
+ * Structure for calendar invites:
+ * multipart/mixed
+ * ├── multipart/alternative
+ * │   ├── text/html (email body)
+ * │   └── text/calendar; method=REQUEST (triggers Gmail's calendar UI)
+ * └── application/ics attachment (fallback download for other clients)
  */
 function buildMimeMessage(params: SendEmailParams): string {
   const { to, subject, html, attachments = [] } = params;
-  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  const calendarAttachment = attachments.find(a => a.isCalendarInvite);
+  const regularAttachments = attachments.filter(a => !a.isCalendarInvite);
+
+  const mixedBoundary = `----=_Mixed_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const altBoundary = `----=_Alt_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
   const lines: string[] = [
     `From: ${FROM_EMAIL}`,
@@ -33,31 +49,78 @@ function buildMimeMessage(params: SendEmailParams): string {
     `Reply-To: ${REPLY_TO_EMAIL}`,
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
-    '',
-    `--${boundary}`,
-    `Content-Type: text/html; charset=UTF-8`,
-    `Content-Transfer-Encoding: 7bit`,
-    '',
-    html,
-    '',
   ];
 
-  // Add attachments if present
-  for (const attachment of attachments) {
-    const base64Content = attachment.content.toString('base64');
+  if (calendarAttachment) {
+    // Use multipart/mixed as outer container for alternative + attachment
     lines.push(
-      `--${boundary}`,
-      `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
-      `Content-Disposition: attachment; filename="${attachment.filename}"`,
-      `Content-Transfer-Encoding: base64`,
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
       '',
-      base64Content,
+      `--${mixedBoundary}`,
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+      '',
+      // HTML part
+      `--${altBoundary}`,
+      `Content-Type: text/html; charset=UTF-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      html,
+      '',
+      // Calendar part (triggers Gmail's interactive calendar UI)
+      `--${altBoundary}`,
+      `Content-Type: text/calendar; charset=UTF-8; method=REQUEST`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      calendarAttachment.content.toString('utf-8'),
+      '',
+      `--${altBoundary}--`,
+      '',
+    );
+
+    // Add any other regular attachments
+    for (const attachment of regularAttachments) {
+      const base64Content = attachment.content.toString('base64');
+      lines.push(
+        `--${mixedBoundary}`,
+        `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+        `Content-Disposition: attachment; filename="${attachment.filename}"`,
+        `Content-Transfer-Encoding: base64`,
+        '',
+        base64Content,
+        ''
+      );
+    }
+
+    lines.push(`--${mixedBoundary}--`);
+  } else {
+    // No calendar invite - use simple multipart/mixed structure
+    lines.push(
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+      '',
+      `--${mixedBoundary}`,
+      `Content-Type: text/html; charset=UTF-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      html,
       ''
     );
-  }
 
-  lines.push(`--${boundary}--`);
+    // Add attachments if present
+    for (const attachment of attachments) {
+      const base64Content = attachment.content.toString('base64');
+      lines.push(
+        `--${mixedBoundary}`,
+        `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+        `Content-Disposition: attachment; filename="${attachment.filename}"`,
+        `Content-Transfer-Encoding: base64`,
+        '',
+        base64Content,
+        ''
+      );
+    }
+
+    lines.push(`--${mixedBoundary}--`);
+  }
 
   return lines.join('\r\n');
 }

@@ -54,11 +54,11 @@ router.post('/:meetupId/signup', async (req: Request, res: Response) => {
     return;
   }
 
-  const userEmail = claims.email || '';
-  const userName = claims.name || 'Student';
+  const studentEmail = claims.email || '';
+  const studentName = claims.name || 'Student';
 
   try {
-    await meetupsService.signupForMeetup(userId, meetupId, userEmail, userName);
+    await meetupsService.signupForMeetup(userId, meetupId, studentEmail, studentName);
     logger.info('[POST /api/meetups/:meetupId/signup] Success', {
       userId,
       meetupId,

@@ -24,6 +24,7 @@ const docClient = DynamoDBDocumentClient.from(client, {
 
 const TABLE_NAME = process.env.EDUCATION_TABLE_NAME!;
 const FRONTEND_DOMAIN = process.env.FRONTEND_DOMAIN!;
+const SES_FROM_EMAIL = process.env.SES_FROM_EMAIL!;
 
 interface StudentData {
   userId: string;
@@ -216,7 +217,8 @@ export function prepareMeetupEmailData(
     duration: meetup.duration,
     zoomLink: meetup.zoomLink,
     hostName: meetup.hostName,
-    hostEmail: meetup.hostEmail,
+    // Use SES_FROM_EMAIL as organizer to match the FROM domain (required for Gmail calendar)
+    hostEmail: SES_FROM_EMAIL,
     studentName: event.studentName,
     studentEmail: event.studentEmail,
   };

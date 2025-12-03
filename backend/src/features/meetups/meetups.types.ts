@@ -48,3 +48,16 @@ export interface MeetupResponse {
   duration: number;
   hostName: string;
 }
+
+/**
+ * MeetupSignupCompletedEvent - SNS event published after meetup signup
+ * Triggers calendar invite email via TransactionalEmailFunction
+ */
+export interface MeetupSignupCompletedEvent {
+  eventType: 'MeetupSignupCompleted';
+  studentId: string;
+  studentEmail: string;
+  studentName: string;
+  meetupId: string;
+  signedUpAt: string; // ISO timestamp
+}

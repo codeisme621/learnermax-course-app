@@ -106,6 +106,7 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
               filename: `meetup-${emailEvent.meetupId}.ics`,
               content: icsBuffer,
               contentType: 'text/calendar; charset=utf-8; method=REQUEST',
+              isCalendarInvite: true, // Triggers Gmail/Outlook interactive calendar UI
             },
           ],
         });

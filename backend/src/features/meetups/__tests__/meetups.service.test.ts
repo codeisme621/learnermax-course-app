@@ -1,5 +1,6 @@
-import { jest, describe, it, beforeEach, expect } from '@jest/globals';
+import { jest, describe, it, beforeEach, beforeAll, afterAll, expect } from '@jest/globals';
 import { DateTime } from 'luxon';
+import type { MeetupSignupCompletedEvent } from '../meetups.types.js';
 
 // Mock dependencies
 const mockGetSignup = jest.fn();
@@ -22,15 +23,46 @@ jest.unstable_mockModule('../../../lib/logger', () => ({
   }),
 }));
 
+// Mock SNS client
+const mockSend = jest.fn();
+jest.unstable_mockModule('../../../lib/sns', () => ({
+  getSnsClient: () => ({
+    send: mockSend,
+  }),
+  PublishCommand: jest.fn().mockImplementation((input) => ({ input })),
+}));
+
+// Mock metrics
+const mockAddMetric = jest.fn();
+jest.unstable_mockModule('../../../lib/metrics', () => ({
+  createMetrics: () => ({
+    addMetric: mockAddMetric,
+    publishStoredMetrics: jest.fn(),
+  }),
+  MetricUnit: {
+    Count: 'Count',
+  },
+}));
+
 // Import after mocking
 const { MeetupsService } = await import('../meetups.service.js');
 
 describe('MeetupsService', () => {
   let service: InstanceType<typeof MeetupsService>;
+  const originalEnv = process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN;
+
+  beforeAll(() => {
+    process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789:test-topic';
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSend.mockResolvedValue({ MessageId: 'test-message-id' });
     service = new MeetupsService();
+  });
+
+  afterAll(() => {
+    process.env.TRANSACTIONAL_EMAIL_TOPIC_ARN = originalEnv;
   });
 
   describe('getMeetups', () => {
@@ -249,6 +281,137 @@ describe('MeetupsService', () => {
       DateTime.now = originalNow;
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('SNS event publishing', () => {
+    it('should publish MeetupSignupCompleted event to SNS after successful signup', async () => {
+      mockCreateSignup.mockResolvedValue(undefined);
+
+      await service.signupForMeetup(
+        'student-123',
+        'spec-driven-dev-weekly',
+        'student@example.com',
+        'Test Student'
+      );
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+
+      const publishCommand = mockSend.mock.calls[0][0];
+      expect(publishCommand.input.TopicArn).toBe('arn:aws:sns:us-east-1:123456789:test-topic');
+      expect(publishCommand.input.Subject).toBe('Meetup Signup Completed');
+
+      const message = JSON.parse(publishCommand.input.Message) as MeetupSignupCompletedEvent;
+      expect(message.eventType).toBe('MeetupSignupCompleted');
+      expect(message.studentId).toBe('student-123');
+      expect(message.studentEmail).toBe('student@example.com');
+      expect(message.studentName).toBe('Test Student');
+      expect(message.meetupId).toBe('spec-driven-dev-weekly');
+      expect(message.signedUpAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('should still complete signup when SNS publish fails', async () => {
+      mockCreateSignup.mockResolvedValue(undefined);
+      mockSend.mockRejectedValue(new Error('SNS service unavailable'));
+
+      // Should not throw - signup should succeed even if SNS fails
+      await service.signupForMeetup(
+        'student-456',
+        'spec-driven-dev-weekly',
+        'student@example.com',
+        'Test Student'
+      );
+
+      expect(mockCreateSignup).toHaveBeenCalledWith('student-456', 'spec-driven-dev-weekly');
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('should record MeetupSignupEventPublished metric on SNS success', async () => {
+      mockCreateSignup.mockResolvedValue(undefined);
+
+      await service.signupForMeetup(
+        'student-789',
+        'spec-driven-dev-weekly',
+        'student@example.com',
+        'Test Student'
+      );
+
+      expect(mockAddMetric).toHaveBeenCalledWith(
+        'MeetupSignupEventPublished',
+        expect.anything(),
+        1
+      );
+    });
+
+    it('should record MeetupSignupEventPublishFailed metric on SNS failure', async () => {
+      mockCreateSignup.mockResolvedValue(undefined);
+      mockSend.mockRejectedValue(new Error('SNS error'));
+
+      await service.signupForMeetup(
+        'student-fail',
+        'spec-driven-dev-weekly',
+        'student@example.com',
+        'Test Student'
+      );
+
+      expect(mockAddMetric).toHaveBeenCalledWith(
+        'MeetupSignupEventPublishFailed',
+        expect.anything(),
+        1
+      );
+    });
+
+    it('should include correct event payload in SNS message', async () => {
+      mockCreateSignup.mockResolvedValue(undefined);
+
+      const beforeSignup = new Date().toISOString();
+
+      await service.signupForMeetup(
+        'student-payload',
+        'spec-driven-dev-weekly',
+        'payload@example.com',
+        'Payload Student'
+      );
+
+      const afterSignup = new Date().toISOString();
+
+      const publishCommand = mockSend.mock.calls[0][0];
+      const message = JSON.parse(publishCommand.input.Message) as MeetupSignupCompletedEvent;
+
+      // Verify all required fields
+      expect(message).toEqual({
+        eventType: 'MeetupSignupCompleted',
+        studentId: 'student-payload',
+        studentEmail: 'payload@example.com',
+        studentName: 'Payload Student',
+        meetupId: 'spec-driven-dev-weekly',
+        signedUpAt: expect.any(String),
+      });
+
+      // Verify timestamp is within reasonable range
+      expect(message.signedUpAt >= beforeSignup).toBe(true);
+      expect(message.signedUpAt <= afterSignup).toBe(true);
+    });
+
+    it('should publish SNS event even for idempotent duplicate signup', async () => {
+      const error = new Error('ConditionalCheckFailedException');
+      error.name = 'ConditionalCheckFailedException';
+      mockCreateSignup.mockRejectedValue(error);
+
+      await service.signupForMeetup(
+        'student-duplicate',
+        'spec-driven-dev-weekly',
+        'duplicate@example.com',
+        'Duplicate Student'
+      );
+
+      // SNS should still be called even for duplicate signup
+      expect(mockSend).toHaveBeenCalledTimes(1);
+
+      const publishCommand = mockSend.mock.calls[0][0];
+      const message = JSON.parse(publishCommand.input.Message) as MeetupSignupCompletedEvent;
+      expect(message.studentId).toBe('student-duplicate');
+      expect(message.studentEmail).toBe('duplicate@example.com');
     });
   });
 });
