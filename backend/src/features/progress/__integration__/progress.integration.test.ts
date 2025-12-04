@@ -318,4 +318,110 @@ describe('Progress Integration Tests', () => {
       await testDataManager.deleteProgress(userFor3Lessons, courseWith3Lessons);
     });
   });
+
+  describe('POST /api/progress/access', () => {
+    it('should track lesson access in DynamoDB (lightweight update)', async () => {
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({
+          courseId: testCourseId,
+          lessonId: testLessonIds[2],
+        });
+
+      expect(response.status).toBe(204);
+
+      // Verify lastAccessedLesson was saved to DynamoDB
+      const fetchResponse = await request(app)
+        .get(`/api/progress/${testCourseId}`)
+        .set(createAuthHeader(testUserId));
+
+      expect(fetchResponse.body.lastAccessedLesson).toBe(testLessonIds[2]);
+    });
+
+    it('should only update lastAccessedLesson without affecting completedLessons', async () => {
+      // First complete a lesson
+      await request(app)
+        .post('/api/progress')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[0] });
+
+      // Then track access to a different lesson (without completing it)
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[3] });
+
+      // Verify completedLessons is unchanged but lastAccessedLesson is updated
+      const fetchResponse = await request(app)
+        .get(`/api/progress/${testCourseId}`)
+        .set(createAuthHeader(testUserId));
+
+      expect(fetchResponse.body.completedLessons).toEqual([testLessonIds[0]]);
+      expect(fetchResponse.body.completedLessons).toHaveLength(1);
+      expect(fetchResponse.body.lastAccessedLesson).toBe(testLessonIds[3]);
+      expect(fetchResponse.body.percentage).toBe(20); // Still 20%, not affected
+    });
+
+    it('should create progress record if none exists (upsert behavior)', async () => {
+      // Track access without any prior progress
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[1] });
+
+      // Verify progress record was created with lastAccessedLesson
+      const fetchResponse = await request(app)
+        .get(`/api/progress/${testCourseId}`)
+        .set(createAuthHeader(testUserId));
+
+      expect(fetchResponse.body.lastAccessedLesson).toBe(testLessonIds[1]);
+    });
+
+    it('should allow updating lastAccessedLesson multiple times', async () => {
+      // Track access to lesson 1
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[0] });
+
+      // Track access to lesson 3
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[2] });
+
+      // Track access to lesson 5
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId, lessonId: testLessonIds[4] });
+
+      // Verify only the last access is recorded
+      const fetchResponse = await request(app)
+        .get(`/api/progress/${testCourseId}`)
+        .set(createAuthHeader(testUserId));
+
+      expect(fetchResponse.body.lastAccessedLesson).toBe(testLessonIds[4]);
+    });
+
+    it('should return 401 if not authenticated', async () => {
+      const response = await request(app)
+        .post('/api/progress/access')
+        .send({ courseId: testCourseId, lessonId: testLessonIds[0] });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: 'Unauthorized' });
+    });
+
+    it('should return 400 for invalid request body', async () => {
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(testUserId))
+        .send({ courseId: testCourseId }); // Missing lessonId
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Missing or invalid courseId or lessonId' });
+    });
+  });
 });

@@ -102,4 +102,56 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/progress/access
+ * Tracks lesson access (when user clicks/opens a lesson)
+ * - Requires authentication
+ * - Request body: { courseId: string, lessonId: string }
+ * - Only updates lastAccessedLesson (lightweight update)
+ * - Does not affect completedLessons or percentage
+ */
+router.post('/access', async (req: Request, res: Response) => {
+  logger.info('[POST /api/progress/access] Request received', { body: req.body });
+
+  // Authentication check
+  const userId = getUserIdFromContext(req);
+  if (!userId) {
+    logger.warn('[POST /api/progress/access] Unauthorized - no userId');
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // Validate request body
+  const { courseId, lessonId } = req.body;
+  if (!courseId || typeof courseId !== 'string' || !lessonId || typeof lessonId !== 'string') {
+    logger.warn('[POST /api/progress/access] Invalid request body', {
+      userId,
+      courseId,
+      lessonId,
+    });
+    res.status(400).json({ error: 'Missing or invalid courseId or lessonId' });
+    return;
+  }
+
+  try {
+    await progressService.trackLessonAccess(userId, courseId, lessonId);
+
+    logger.info('[POST /api/progress/access] Lesson access tracked', {
+      userId,
+      courseId,
+      lessonId,
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    logger.error('[POST /api/progress/access] Failed to track lesson access', {
+      userId,
+      courseId,
+      lessonId,
+      error,
+    });
+    res.status(500).json({ error: 'Failed to track lesson access' });
+  }
+});
+
 export default router;

@@ -140,4 +140,51 @@ export const progressRepository = {
 
     return progressData as ProgressResponse;
   },
+
+  /**
+   * Update only the lastAccessedLesson field (lightweight update for tracking lesson access)
+   * Creates the progress record if it doesn't exist, initializing completedLessons to empty array
+   */
+  async updateLastAccessedLesson(
+    studentId: string,
+    courseId: string,
+    lessonId: string
+  ): Promise<void> {
+    const key = {
+      PK: `STUDENT#${studentId}`,
+      SK: `PROGRESS#${courseId}`,
+    };
+
+    const now = new Date().toISOString();
+
+    logger.info('[updateLastAccessedLesson] Updating lastAccessedLesson', {
+      studentId,
+      courseId,
+      lessonId,
+      tableName: getTableName(),
+    });
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: getTableName(),
+        Key: key,
+        UpdateExpression:
+          'SET lastAccessedLesson = :last, updatedAt = :now, courseId = :courseId, entityType = :entityType, completedLessons = if_not_exists(completedLessons, :emptyList), percentage = if_not_exists(percentage, :zero), totalLessons = if_not_exists(totalLessons, :zero)',
+        ExpressionAttributeValues: {
+          ':last': lessonId,
+          ':now': now,
+          ':courseId': courseId,
+          ':entityType': 'PROGRESS',
+          ':emptyList': [],
+          ':zero': 0,
+        },
+      })
+    );
+
+    logger.info('[updateLastAccessedLesson] Updated successfully', {
+      studentId,
+      courseId,
+      lessonId,
+    });
+  },
 };

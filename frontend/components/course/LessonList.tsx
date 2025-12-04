@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { BookOpen, CheckCircle, Clock, PlayCircle, Circle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { LessonResponse } from '@/app/actions/lessons';
 import type { ProgressResponse } from '@/app/actions/progress';
@@ -42,7 +41,6 @@ export function LessonList({
         {sortedLessons.map((lesson) => {
           const isCompleted = progress.completedLessons.includes(lesson.lessonId);
           const isCurrent = currentLessonId === lesson.lessonId;
-          const isResume = lesson.lessonId === progress.lastAccessedLesson && !isCompleted;
 
           return (
             <Link
@@ -77,19 +75,12 @@ export function LessonList({
                       {lesson.order}. {lesson.title}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {lesson.lengthInMins && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{lesson.lengthInMins} min</span>
-                      </div>
-                    )}
-                    {isResume && (
-                      <Badge variant="secondary" className="text-xs">
-                        Resume
-                      </Badge>
-                    )}
-                  </div>
+                  {lesson.lengthInMins && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>{lesson.lengthInMins} min</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </Link>

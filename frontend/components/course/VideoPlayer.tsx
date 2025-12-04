@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getVideoUrl } from '@/app/actions/lessons';
-import { markLessonComplete } from '@/app/actions/progress';
+import { markLessonComplete, trackLessonAccess } from '@/app/actions/progress';
 
 // Dynamically import react-confetti
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
@@ -96,6 +96,9 @@ export function VideoPlayer({
 
   // Fetch video URL on mount or when lessonId changes
   useEffect(() => {
+    // Track lesson access (fire-and-forget) - catches ALL navigation methods
+    trackLessonAccess(courseId, lessonId);
+
     async function fetchVideo() {
       try {
         setIsLoading(true);
@@ -126,7 +129,7 @@ export function VideoPlayer({
     }
 
     fetchVideo();
-  }, [lessonId, onError]);
+  }, [lessonId, courseId, onError]);
 
   // Debug: Log when videoUrl changes
   useEffect(() => {

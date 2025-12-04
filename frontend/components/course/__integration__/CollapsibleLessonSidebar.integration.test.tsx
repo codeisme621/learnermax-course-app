@@ -219,22 +219,4 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
     const lessonContainer = within(incompleteLessonLink);
     expect(lessonContainer.getByText(/3\. State Management/)).toBeInTheDocument();
   });
-
-  test('lastAccessedLesson_showsResumeBadge_ifIncomplete', () => {
-    render(
-      <CollapsibleLessonSidebar
-        course={mockCourse}
-        lessons={mockLessons}
-        currentLessonId="lesson-2"
-        progress={mockProgress}
-      />
-    );
-
-    // Lesson 2 is lastAccessedLesson and incomplete (current lesson)
-    const currentLessonLink = screen.getByRole('link', { name: /2\. Components/ });
-    const lessonContainer = within(currentLessonLink);
-
-    // Should show Resume badge
-    expect(lessonContainer.getByText('Resume')).toBeInTheDocument();
-  });
 });

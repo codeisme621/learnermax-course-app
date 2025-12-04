@@ -240,6 +240,12 @@ export const handlers = [
     } as ProgressResponse);
   }),
 
+  // POST /api/progress/access - Track lesson access (lightweight update)
+  http.post(`${API_URL}/api/progress/access`, async () => {
+    // Fire-and-forget endpoint - returns 204 No Content
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // POST /api/progress
   http.post(`${API_URL}/api/progress`, async ({ request }) => {
     const body = (await request.json()) as { courseId: string; lessonId: string };

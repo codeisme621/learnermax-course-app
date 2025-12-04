@@ -87,11 +87,6 @@ export function ExpandedSidebarView({
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                     {lesson.lengthInMins && <span>{lesson.lengthInMins} min</span>}
-                    {isLastAccessed && !isCompleted && (
-                      <Badge variant="secondary" className="text-xs">
-                        Resume
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </div>

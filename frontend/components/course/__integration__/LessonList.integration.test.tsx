@@ -124,22 +124,6 @@ describe('LessonList Integration Tests', () => {
       expect(checkIcon).toBeInTheDocument();
     });
 
-    it('shows "Resume" badge for last accessed incomplete lesson', () => {
-      render(
-        <LessonList
-          courseId={mockCourseId}
-          lessons={mockLessons}
-          progress={mockProgressWithLastAccessed}
-        />
-      );
-
-      // Lesson 2 is lastAccessedLesson and not completed, so should show Resume badge
-      const resumeBadge = screen.getByText('Resume');
-      expect(resumeBadge).toBeInTheDocument();
-      // Badge has secondary variant (from shadcn)
-      expect(resumeBadge).toHaveClass('bg-secondary');
-    });
-
     it('does NOT show Resume badge if last accessed lesson is completed', () => {
       const progressCompletedLast: ProgressResponse = {
         ...mockProgressWithLastAccessed,
