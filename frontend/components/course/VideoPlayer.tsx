@@ -1,12 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { getVideoUrl } from '@/app/actions/lessons';
 import { markLessonComplete, trackLessonAccess } from '@/app/actions/progress';
-
-// Dynamically import react-confetti
-const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
 interface VideoPlayerProps {
   lessonId: string;
@@ -65,34 +61,14 @@ export function VideoPlayer({
 
   // Progress tracking state
   const [hasMarkedComplete, setHasMarkedComplete] = useState(false);
-  const [showCompleteOverlay, setShowCompleteOverlay] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   // Ref to track if we're currently marking complete (prevent race conditions)
   const isMarkingComplete = useRef(false);
 
-  // Confetti dimensions (match video player size)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Video element ref for progress tracking
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Update dimensions for confetti
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
 
   // Fetch video URL on mount or when lessonId changes
   useEffect(() => {
@@ -180,12 +156,7 @@ export function VideoPlayer({
             throw new Error(result.error);
           }
 
-          // Just show simple lesson complete overlay (not last lesson, so can't be 100%)
-          console.log('[VideoPlayer] Lesson complete, showing overlay');
-          setShowCompleteOverlay(true);
-          setTimeout(() => {
-            setShowCompleteOverlay(false);
-          }, 3000);
+          console.log('[VideoPlayer] Lesson complete');
           onLessonComplete?.();
         } catch (err) {
           console.error('Failed to mark lesson complete:', err);
@@ -317,36 +288,6 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Lesson complete overlay (simple checkmark) */}
-      {showCompleteOverlay && !showCelebration && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
-          <div className="bg-white rounded-full p-8 shadow-2xl">
-            <div className="text-green-600 text-4xl font-bold flex items-center gap-3">
-              <span className="text-5xl">✓</span>
-              <span>Lesson Complete</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Course 100% complete celebration (confetti) */}
-      {showCelebration && (
-        <>
-          <Confetti
-            width={dimensions.width}
-            height={dimensions.height}
-            recycle={false}
-            numberOfPieces={500}
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-10 shadow-2xl animate-bounce-in">
-              <div className="text-white text-5xl font-bold text-center">
-                🎉 Course Complete! 🎉
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

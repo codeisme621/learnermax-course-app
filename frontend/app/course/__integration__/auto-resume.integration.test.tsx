@@ -73,7 +73,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/course/course-1?lesson=lesson-2');
   });
 
-  test('coursePageLoad_noQueryParam_noLastAccessed_redirectsToFirstIncomplete', () => {
+  test('coursePageLoad_noQueryParam_noLastAccessed_staysOnFirstLesson', () => {
     const progress: ProgressResponse = {
       courseId: 'course-1',
       completedLessons: ['lesson-1'],
@@ -86,8 +86,8 @@ describe('Auto-Resume Integration Tests', () => {
     const search: { lesson?: string } | undefined = undefined;
     const currentLesson = determineCurrentLesson(mockLessons, progress, search);
 
-    // Should return lesson-2 (first incomplete)
-    expect(currentLesson?.lessonId).toBe('lesson-2');
+    // Should return lesson-1 (first lesson, since no lastAccessedLesson)
+    expect(currentLesson?.lessonId).toBe('lesson-1');
 
     // Simulate the redirect logic
     const requestedLesson = search?.lesson;
@@ -95,11 +95,9 @@ describe('Auto-Resume Integration Tests', () => {
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;
 
-    if (shouldRedirect && currentLesson) {
-      mockRedirect(`/course/course-1?lesson=${currentLesson.lessonId}`);
-    }
-
-    expect(mockRedirect).toHaveBeenCalledWith('/course/course-1?lesson=lesson-2');
+    // Should NOT redirect (currentLesson IS the first lesson)
+    expect(shouldRedirect).toBe(false);
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 
   test('coursePageLoad_withQueryParam_ignoresLastAccessed_loadsRequestedLesson', () => {
@@ -129,7 +127,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  test('coursePageLoad_lastAccessedIsCompleted_redirectsToFirstIncomplete', () => {
+  test('coursePageLoad_lastAccessedIsCompleted_redirectsToLastAccessed', () => {
     const progress: ProgressResponse = {
       courseId: 'course-1',
       completedLessons: ['lesson-1', 'lesson-2'], // lesson-2 is completed
@@ -142,8 +140,8 @@ describe('Auto-Resume Integration Tests', () => {
     const search: { lesson?: string } | undefined = undefined;
     const currentLesson = determineCurrentLesson(mockLessons, progress, search);
 
-    // Should return lesson-3 (first incomplete, since lastAccessed is complete)
-    expect(currentLesson?.lessonId).toBe('lesson-3');
+    // Should return lesson-2 (lastAccessed, even though completed)
+    expect(currentLesson?.lessonId).toBe('lesson-2');
 
     // Simulate the redirect logic
     const requestedLesson = search?.lesson;
@@ -155,10 +153,10 @@ describe('Auto-Resume Integration Tests', () => {
       mockRedirect(`/course/course-1?lesson=${currentLesson.lessonId}`);
     }
 
-    expect(mockRedirect).toHaveBeenCalledWith('/course/course-1?lesson=lesson-3');
+    expect(mockRedirect).toHaveBeenCalledWith('/course/course-1?lesson=lesson-2');
   });
 
-  test('coursePageLoad_allLessonsCompleted_loadsFirstLesson', () => {
+  test('coursePageLoad_allLessonsCompleted_loadsLastAccessed', () => {
     const progress: ProgressResponse = {
       courseId: 'course-1',
       completedLessons: ['lesson-1', 'lesson-2', 'lesson-3'], // All completed
@@ -171,8 +169,8 @@ describe('Auto-Resume Integration Tests', () => {
     const search: { lesson?: string } | undefined = undefined;
     const currentLesson = determineCurrentLesson(mockLessons, progress, search);
 
-    // Should return lesson-1 (fallback when all complete)
-    expect(currentLesson?.lessonId).toBe('lesson-1');
+    // Should return lesson-3 (lastAccessed, even when all complete)
+    expect(currentLesson?.lessonId).toBe('lesson-3');
 
     // Simulate the redirect logic
     const requestedLesson = search?.lesson;
@@ -180,8 +178,11 @@ describe('Auto-Resume Integration Tests', () => {
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;
 
-    // Should NOT redirect (currentLesson IS the first lesson)
-    expect(shouldRedirect).toBe(false);
-    expect(mockRedirect).not.toHaveBeenCalled();
+    // Should redirect to lesson-3
+    if (shouldRedirect && currentLesson) {
+      mockRedirect(`/course/course-1?lesson=${currentLesson.lessonId}`);
+    }
+
+    expect(mockRedirect).toHaveBeenCalledWith('/course/course-1?lesson=lesson-3');
   });
 });

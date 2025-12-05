@@ -301,7 +301,7 @@ describe('VideoPlayer', () => {
       });
     });
 
-    it('shows simple lesson complete overlay after marking complete', async () => {
+    it('does not show lesson complete overlay after marking complete', async () => {
       const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
       mockGetVideoUrl.mockResolvedValue({
         videoUrl: mockVideoUrl,
@@ -328,9 +328,13 @@ describe('VideoPlayer', () => {
         simulateVideoProgress(videoPlayer, 0.9);
       });
 
+      // Verify lesson was marked complete
       await waitFor(() => {
-        expect(screen.getByText(/lesson complete/i)).toBeInTheDocument();
+        expect(mockMarkLessonComplete).toHaveBeenCalled();
       });
+
+      // Verify no overlay is shown
+      expect(screen.queryByText(/lesson complete/i)).not.toBeInTheDocument();
     });
   });
 
@@ -464,12 +468,14 @@ describe('VideoPlayer', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/lesson complete/i)).toBeInTheDocument();
+        expect(mockMarkLessonComplete).toHaveBeenCalled();
       });
 
-      // Should not show confetti
+      // Should not show confetti or course complete
       expect(screen.queryByTestId('confetti')).not.toBeInTheDocument();
       expect(screen.queryByText(/course complete/i)).not.toBeInTheDocument();
+      // Should also not show lesson complete overlay anymore
+      expect(screen.queryByText(/lesson complete/i)).not.toBeInTheDocument();
     });
   });
 

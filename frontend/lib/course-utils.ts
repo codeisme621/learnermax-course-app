@@ -4,9 +4,8 @@ import type { ProgressResponse } from '@/app/actions/progress';
 /**
  * Determines which lesson should be displayed based on priority:
  * 1. Query param (?lesson=lessonId) - if provided and valid
- * 2. Last accessed lesson from progress - if not completed
- * 3. First uncompleted lesson
- * 4. First lesson (fallback)
+ * 2. Last accessed lesson from progress (regardless of completion status)
+ * 3. First lesson (fallback)
  *
  * @param lessons - Array of all lessons in the course
  * @param progress - Student's progress for the course
@@ -33,31 +32,17 @@ export function determineCurrentLesson(
     }
   }
 
-  // Priority 2: Last accessed lesson (if not completed)
+  // Priority 2: Last accessed lesson (always, regardless of completion)
   if (progress.lastAccessedLesson) {
-    const isLastAccessedCompleted = progress.completedLessons.includes(
-      progress.lastAccessedLesson
+    const lastAccessedLesson = lessons.find(
+      (l) => l.lessonId === progress.lastAccessedLesson
     );
-    if (!isLastAccessedCompleted) {
-      const lastAccessedLesson = lessons.find(
-        (l) => l.lessonId === progress.lastAccessedLesson
-      );
-      if (lastAccessedLesson) {
-        return lastAccessedLesson;
-      }
+    if (lastAccessedLesson) {
+      return lastAccessedLesson;
     }
   }
 
-  // Priority 3: First uncompleted lesson
-  const firstUncompletedLesson = lessons
-    .sort((a, b) => a.order - b.order)
-    .find((l) => !progress.completedLessons.includes(l.lessonId));
-
-  if (firstUncompletedLesson) {
-    return firstUncompletedLesson;
-  }
-
-  // Priority 4: Fallback to first lesson (all completed or no progress)
+  // Priority 3: Fallback to first lesson
   const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
   return sortedLessons[0];
 }

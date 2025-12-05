@@ -78,7 +78,7 @@ describe('course-utils', () => {
       expect(result?.lessonId).toBe('lesson-2');
     });
 
-    it('should NOT return lastAccessedLesson if it is completed', () => {
+    it('should return lastAccessedLesson even if it is completed', () => {
       const progressWithCompletedLast: ProgressResponse = {
         ...mockProgressWithCompletion,
         completedLessons: ['lesson-1', 'lesson-2'],
@@ -86,11 +86,11 @@ describe('course-utils', () => {
       };
 
       const result = determineCurrentLesson(mockLessons, progressWithCompletedLast);
-      // Should return first uncompleted (lesson-3)
-      expect(result?.lessonId).toBe('lesson-3');
+      // Should return lastAccessed regardless of completion status
+      expect(result?.lessonId).toBe('lesson-2');
     });
 
-    it('should return first uncompleted lesson when no lastAccessedLesson', () => {
+    it('should return first lesson when no lastAccessedLesson', () => {
       const progressSomeCompleted: ProgressResponse = {
         courseId: 'test-course',
         completedLessons: ['lesson-1'],
@@ -100,20 +100,23 @@ describe('course-utils', () => {
       };
 
       const result = determineCurrentLesson(mockLessons, progressSomeCompleted);
-      expect(result?.lessonId).toBe('lesson-2');
+      // No lastAccessedLesson, so fallback to first lesson
+      expect(result?.lessonId).toBe('lesson-1');
     });
 
-    it('should return first lesson when all lessons completed', () => {
+    it('should return lastAccessedLesson when all lessons completed', () => {
       const progressAllCompleted: ProgressResponse = {
         courseId: 'test-course',
         completedLessons: ['lesson-1', 'lesson-2', 'lesson-3'],
+        lastAccessedLesson: 'lesson-3',
         percentage: 100,
         totalLessons: 3,
         updatedAt: '2025-01-15T10:30:00Z',
       };
 
       const result = determineCurrentLesson(mockLessons, progressAllCompleted);
-      expect(result?.lessonId).toBe('lesson-1');
+      // Should return lastAccessed even when all complete
+      expect(result?.lessonId).toBe('lesson-3');
     });
 
     it('should return first lesson when no progress at all', () => {
@@ -150,8 +153,8 @@ describe('course-utils', () => {
       };
 
       const result = determineCurrentLesson(mockLessons, progressNoLast);
-      // Should return first uncompleted (lesson-2)
-      expect(result?.lessonId).toBe('lesson-2');
+      // No lastAccessedLesson, so fallback to first lesson
+      expect(result?.lessonId).toBe('lesson-1');
     });
   });
 
