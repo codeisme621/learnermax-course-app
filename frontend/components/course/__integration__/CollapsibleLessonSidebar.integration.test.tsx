@@ -11,14 +11,18 @@ import type { LessonResponse } from '@/app/actions/lessons';
 import type { ProgressResponse } from '@/app/actions/progress';
 
 // Mock next/link
-jest.mock('next/link', () => ({
-  __esModule: true,
-  default: ({ children, href, ...props }: any) => (
+jest.mock('next/link', () => {
+  const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
     <a href={href} {...props}>
       {children}
     </a>
-  ),
-}));
+  );
+  MockLink.displayName = 'MockLink';
+  return {
+    __esModule: true,
+    default: MockLink,
+  };
+});
 
 describe('CollapsibleLessonSidebar Integration Tests', () => {
   const mockCourse: Course = {

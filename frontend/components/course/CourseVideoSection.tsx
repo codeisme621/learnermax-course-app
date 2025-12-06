@@ -178,7 +178,7 @@ export function CourseVideoSection({
         ) : isReadyToComplete ? (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-green-700">🎉 You've reached the end!</p>
+              <p className="text-sm font-semibold text-green-700">🎉 You&apos;ve reached the end!</p>
               <p className="font-medium text-gray-900">Ready to complete the course?</p>
             </div>
             <Button

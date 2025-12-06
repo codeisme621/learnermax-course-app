@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { motion } from 'motion/react';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { CourseData } from '@/lib/mock-data/course';
+import type { CourseData } from '@/types/landing';
 
 interface TestimonialsSectionProps {
   course: CourseData;

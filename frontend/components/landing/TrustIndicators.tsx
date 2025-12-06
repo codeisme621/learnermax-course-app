@@ -3,14 +3,6 @@
 import { motion } from 'motion/react';
 
 export function TrustIndicators() {
-  const companies = [
-    'Duolingo',
-    'Khan Academy',
-    'Udemy',
-    'Google',
-    'Facebook',
-  ];
-
   return (
     <section className="py-12 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -19,26 +11,15 @@ export function TrustIndicators() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center"
+          className="text-center max-w-3xl mx-auto"
         >
-          <p className="text-sm text-muted-foreground mb-8">
-            Trusted By 3000+ Company
-          </p>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">
+            Crafted From Real-World Engineering Battles—Yours Free
+          </h2>
 
-          <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-12">
-            {companies.map((company, index) => (
-              <motion.div
-                key={company}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className="text-xl font-semibold text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {company}
-              </motion.div>
-            ))}
-          </div>
+          <p className="text-muted-foreground">
+            These techniques come from leading large-scale software projects, fixing broken AI workflows, and eliminating endless rework. I&apos;ve distilled everything into a clear system you can apply today.
+          </p>
         </motion.div>
       </div>
     </section>

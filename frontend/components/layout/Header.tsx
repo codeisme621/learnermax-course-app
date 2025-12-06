@@ -9,8 +9,8 @@ export function Header() {
   const router = useRouter();
 
   const handleEnrollClick = () => {
-    // Store hardcoded courseId as per spec
-    sessionStorage.setItem('pendingEnrollmentCourseId', 'TEST-COURSE-001');
+    // Store courseId for enrollment
+    sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
     router.push('/enroll');
   };
 
@@ -22,7 +22,10 @@ export function Header() {
     >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="text-2xl font-bold text-primary">LearnerMax</div>
+          <div className="text-2xl font-bold text-primary">
+            <span className="hidden sm:inline">LearnWithRico</span>
+            <span className="sm:hidden">LWR</span>
+          </div>
         </Link>
 
         <nav className="flex items-center gap-4">

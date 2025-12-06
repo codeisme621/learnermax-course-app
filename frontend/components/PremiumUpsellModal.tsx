@@ -65,7 +65,7 @@ export function PremiumUpsellModal({
               Congratulations! 🎉
             </DialogTitle>
             <DialogDescription className="text-lg text-gray-600">
-              You've completed the course. Ready to take your skills to the next level?
+              You&apos;ve completed the course. Ready to take your skills to the next level?
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -91,7 +91,7 @@ export function PremiumUpsellModal({
 
           {/* Learning objectives */}
           <div className="space-y-2 mb-4">
-            <p className="text-sm font-semibold text-gray-900">What you'll learn:</p>
+            <p className="text-sm font-semibold text-gray-900">What you&apos;ll learn:</p>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start">
                 <Check className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
@@ -122,10 +122,10 @@ export function PremiumUpsellModal({
           <div className="text-center py-6">
             <div className="inline-flex items-center gap-3 text-green-600 text-lg font-semibold mb-2">
               <Check className="w-8 h-8" />
-              <span>You're on the early access list!</span>
+              <span>You&apos;re on the early access list!</span>
             </div>
             <p className="text-gray-600">
-              We'll notify you when the course launches.
+              We&apos;ll notify you when the course launches.
             </p>
           </div>
         ) : (

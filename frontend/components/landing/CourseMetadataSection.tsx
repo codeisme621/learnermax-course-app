@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { motion } from 'motion/react';
 import { CheckCircle2, Clock, BarChart } from 'lucide-react';
-import type { CourseData } from '@/lib/mock-data/course';
+import type { CourseData } from '@/types/landing';
 
 interface CourseMetadataSectionProps {
   course: CourseData;

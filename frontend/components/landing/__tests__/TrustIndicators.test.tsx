@@ -2,26 +2,28 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { TrustIndicators } from '../TrustIndicators';
 
 // Mock framer motion to avoid async rendering issues in tests
-jest.mock('motion/react', () => ({
-  motion: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
+jest.mock('motion/react', () => {
+  const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
+  MockDiv.displayName = 'MockMotionDiv';
+  return {
+    motion: {
+      div: MockDiv,
+    },
+  };
+});
 
 describe('TrustIndicators', () => {
-  it('renders company names', async () => {
+  it('renders heading', async () => {
     render(<TrustIndicators />);
     await waitFor(() => {
-      expect(screen.getByText('Duolingo')).toBeInTheDocument();
-      expect(screen.getByText('Google')).toBeInTheDocument();
+      expect(screen.getByText(/crafted from real-world engineering battles/i)).toBeInTheDocument();
     });
   });
 
-  it('renders trust message', async () => {
+  it('renders description text', async () => {
     render(<TrustIndicators />);
     await waitFor(() => {
-      expect(screen.getByText(/trusted by 3000\+ company/i)).toBeInTheDocument();
+      expect(screen.getByText(/these techniques come from leading large-scale software projects/i)).toBeInTheDocument();
     });
   });
 });

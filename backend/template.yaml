@@ -560,18 +560,37 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref ApiGatewayApi
+        # Public endpoints for SSG build-time fetching (no auth required)
+        GetCourses:
+          Type: Api
+          Properties:
+            Path: /api/courses
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        GetCourse:
+          Type: Api
+          Properties:
+            Path: /api/courses/{courseId}
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
+            Auth:
+              Authorizer: NONE
 
   # API Gateway with Cognito authorization
   ApiGatewayApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      OpenApiVersion: '3.0.1'
       Cors:
         AllowOrigin: "'*'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowMethods: "'GET,POST,PATCH,OPTIONS'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt LearnerMaxUserPool.Arn

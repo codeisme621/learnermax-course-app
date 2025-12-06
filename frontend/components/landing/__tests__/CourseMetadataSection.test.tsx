@@ -1,16 +1,53 @@
 import { render, screen } from '@testing-library/react';
 import { CourseMetadataSection } from '../CourseMetadataSection';
-import { mockCourse } from '@/lib/mock-data/course';
+import type { CourseData } from '@/types/landing';
 
 // Mock framer motion to avoid async rendering issues in tests
-jest.mock('motion/react', () => ({
-  motion: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
+jest.mock('motion/react', () => {
+  const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
+  MockDiv.displayName = 'MockMotionDiv';
+  const MockLi = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <li {...props}>{children}</li>;
+  MockLi.displayName = 'MockMotionLi';
+  return {
+    motion: {
+      div: MockDiv,
+      li: MockLi,
+    },
+  };
+});
+
+// Test fixture
+const mockCourse: CourseData = {
+  id: 'test-course-001',
+  title: 'Test Course Title',
+  subtitle: 'Test course subtitle for testing',
+  description: 'A comprehensive test course description',
+  duration: '2hrs',
+  level: 'Intermediate',
+  category: 'AI Development',
+  instructor: {
+    name: 'Test Instructor',
+    title: 'Software Engineer',
+    background: 'Test background',
+    imageUrl: '/images/test.jpg',
   },
-}));
+  outcomes: ['Outcome 1', 'Outcome 2'],
+  curriculum: [{ module: 'Module 1', topics: ['Topic 1', 'Topic 2'] }],
+  testimonials: [
+    {
+      id: 'testimonial-1',
+      name: 'Test User',
+      role: 'Developer',
+      content: 'Great course!',
+      imageUrl: '/images/testimonial.jpg',
+      rating: 5,
+    },
+  ],
+  stats: {
+    students: '100+',
+    rating: '4.9/5',
+  },
+};
 
 describe('CourseMetadataSection', () => {
   it('renders instructor information', () => {

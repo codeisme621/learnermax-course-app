@@ -10,7 +10,7 @@ export function CtaSection() {
 
   const handleGetStartedClick = () => {
     // Store hardcoded courseId as per spec
-    sessionStorage.setItem('pendingEnrollmentCourseId', 'TEST-COURSE-001');
+    sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
     router.push('/enroll');
   };
 
@@ -25,19 +25,15 @@ export function CtaSection() {
           className="max-w-3xl mx-auto text-center"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-            Are You Ready To Start Our Course Now?
+            Take Control of Your AI Coding Workflow
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of students who are already learning and growing their skills.
-            Start your journey today with lifetime access to all course materials.
+            Move beyond guesswork and learn a proven system that turns AI into a reliable engineering tool.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Button size="lg" onClick={handleGetStartedClick}>
               Get Started <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button size="lg" variant="outline">
-              Contact Us
             </Button>
           </div>
         </motion.div>

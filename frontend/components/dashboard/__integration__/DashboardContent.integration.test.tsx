@@ -8,11 +8,15 @@ import type { Session } from 'next-auth';
 import type { MeetupResponse } from '@/app/actions/meetups';
 
 // Mock framer motion
-jest.mock('motion/react', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
+jest.mock('motion/react', () => {
+  const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
+  MockDiv.displayName = 'MockMotionDiv';
+  return {
+    motion: {
+      div: MockDiv,
+    },
+  };
+});
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -24,9 +28,11 @@ jest.mock('next/navigation', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 // Mock auth token
