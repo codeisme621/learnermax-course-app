@@ -170,20 +170,28 @@ export function DashboardContent({ session }: DashboardContentProps) {
         className="space-y-8 md:space-y-12"
       >
         {/* Welcome Section */}
-        <div className="mb-8 md:mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
-          </h1>
-          <p className="text-muted-foreground">
-            Ready to continue your learning journey?
-          </p>
+        <div className="relative mb-8 md:mb-12 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border border-primary/10 overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 md:w-48 md:h-48 bg-gradient-to-br from-primary/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-gradient-to-tr from-accent/20 to-transparent rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
+            </h1>
+            <p className="text-muted-foreground">
+              Ready to continue your learning journey?
+            </p>
+          </div>
         </div>
 
         {/* Courses Section */}
         <section>
-          <div className="flex items-center gap-3 mb-3 md:mb-4">
-            <BookOpen className="w-6 h-6 text-primary" />
-            <h2 className="text-xl md:text-2xl font-bold">Available Courses</h2>
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BookOpen className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold">Your Courses</h2>
           </div>
 
           {/* Loading State */}
@@ -217,49 +225,84 @@ export function DashboardContent({ session }: DashboardContentProps) {
             </Card>
           )}
 
-          {/* Course Cards Grid */}
+          {/* Course Cards Grid with Staggered Animation */}
           {!isLoading && !error && courses.length > 0 && (
-            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                course.comingSoon ? (
-                  <PremiumCourseCard
-                    key={course.courseId}
-                    course={course}
-                    isInterestedInPremium={student?.interestedInPremium || false}
-                    isLoadingStudent={isLoadingStudent}
-                  />
-                ) : (
-                  <CourseCard
-                    key={course.courseId}
-                    course={course}
-                    enrollment={enrollmentMap.get(course.courseId)}
-                    progress={progressMap.get(course.courseId)}
-                    onEnroll={handleEnroll}
-                  />
-                )
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
+              {courses.map((course, index) => (
+                <motion.div
+                  key={course.courseId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: index * 0.1,
+                    ease: 'easeOut',
+                  }}
+                >
+                  {course.comingSoon ? (
+                    <PremiumCourseCard
+                      course={course}
+                      isInterestedInPremium={student?.interestedInPremium || false}
+                      isLoadingStudent={isLoadingStudent}
+                    />
+                  ) : (
+                    <CourseCard
+                      course={course}
+                      enrollment={enrollmentMap.get(course.courseId)}
+                      progress={progressMap.get(course.courseId)}
+                      onEnroll={handleEnroll}
+                    />
+                  )}
+                </motion.div>
               ))}
             </div>
           )}
         </section>
 
+        {/* Section Divider */}
+        {!isLoading && meetups.length > 0 && (
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+        )}
+
         {/* Meetups Section */}
         {!isLoading && meetups.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-3 md:mb-4">
-              <Users className="w-6 h-6 text-primary" />
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <div className="flex items-center gap-3 mb-4 md:mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
               <h2 className="text-xl md:text-2xl font-bold">Community Meetups</h2>
-              <Badge variant="secondary">New</Badge>
+              <Badge variant="secondary" className="bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50">
+                New
+              </Badge>
             </div>
             <p className="text-muted-foreground mb-4 md:mb-6">
               Join our weekly meetups to connect with fellow learners, ask questions, and dive deeper into topics.
             </p>
 
-            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
-              {meetups.map((meetup) => (
-                <MeetupCard key={meetup.meetupId} meetup={meetup} />
+            <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+              {meetups.map((meetup, index) => (
+                <motion.div
+                  key={meetup.meetupId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.4 + index * 0.1,
+                    ease: 'easeOut',
+                  }}
+                >
+                  <MeetupCard meetup={meetup} />
+                </motion.div>
               ))}
             </div>
-          </section>
+          </motion.section>
         )}
       </motion.div>
     </div>

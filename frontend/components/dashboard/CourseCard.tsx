@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Clock, Award, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen, Clock, Award, Loader2, AlertCircle, Play, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Course } from '@/app/actions/courses';
 import type { Enrollment } from '@/app/actions/enrollments';
@@ -48,93 +49,87 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
     }
   };
 
-  // Enrolled courses: wrap in Link for better accessibility
-  // Non-enrolled courses: use onClick handler
+  // Card content with improved styling
   const cardContent = (
     <Card
-      className={`overflow-hidden transition-all duration-200 ${
+      className={`overflow-hidden transition-all duration-300 group ${
         isEnrolled || onEnroll
-          ? 'hover:shadow-lg hover:border-primary/50 hover:scale-[1.02] active:scale-[0.98] active:opacity-90 cursor-pointer focus:ring-2 focus:ring-primary focus:ring-offset-2'
+          ? 'hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30 cursor-pointer'
           : ''
       }`}
       onClick={!isEnrolled ? handleCardClick : undefined}
     >
-      {/* Course Thumbnail */}
-      <div className="relative h-32 md:h-40 bg-gradient-to-br from-primary/20 to-accent/20">
+      {/* Course Thumbnail - Enhanced gradient */}
+      <div className="relative h-32 md:h-36 bg-gradient-to-br from-blue-500/20 via-primary/15 to-cyan-500/20 overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/20 rounded-full blur-xl" />
+        <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-cyan-500/20 rounded-full blur-lg" />
+
         <div className="absolute inset-0 flex items-center justify-center">
-          <BookOpen className="h-12 w-12 md:h-16 md:w-16 text-primary/40" />
+          <div className="p-4 rounded-full bg-white/80 dark:bg-gray-900/80 shadow-lg group-hover:scale-110 transition-transform duration-300">
+            <BookOpen className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+          </div>
         </div>
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
           {isEnrolled ? (
-            <Badge variant="default" className="bg-green-600">
-              Enrolled
+            <Badge variant="default" className="bg-green-600 hover:bg-green-600 shadow-md">
+              ✓ Enrolled
+            </Badge>
+          ) : course.pricingModel === 'free' ? (
+            <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg border-0">
+              FREE
             </Badge>
           ) : (
-            <Badge variant="secondary">
-              {course.pricingModel === 'free' ? 'Free' : `$${course.price}`}
+            <Badge variant="secondary" className="shadow-md bg-white/90 dark:bg-gray-800/90">
+              ${course.price}
             </Badge>
           )}
         </div>
       </div>
 
       {/* Card Content */}
-      <div className="p-4 md:p-6">
-        <div className="space-y-3 md:space-y-4">
+      <CardContent className="pt-5">
+        <div className="space-y-3">
           <div>
-            <h3 className="text-lg md:text-xl font-bold mb-2 line-clamp-2">
+            <h3 className="text-lg md:text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
               {course.name}
             </h3>
 
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+            <p className="text-sm text-muted-foreground line-clamp-2">
               {course.description}
             </p>
           </div>
 
           {/* Course Metadata */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-primary/70" />
               <span>Self-paced</span>
             </div>
-            <div className="flex items-center gap-1">
-              <Award className="w-4 h-4" />
+            <div className="flex items-center gap-1.5">
+              <Award className="w-4 h-4 text-primary/70" />
               <span>All Levels</span>
             </div>
           </div>
 
-          {/* Enrolled State */}
-          {isEnrolled && enrollment && (
-            <div className="space-y-3">
-              {/* Live Progress (only show if progress data available) */}
-              {progress && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs md:text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">
-                      {progress.completedLessons.length}/{progress.totalLessons} • {progress.percentage}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary rounded-full h-2 transition-all duration-500"
-                      style={{ width: `${progress.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Enrollment Date */}
-              <p className="text-xs text-muted-foreground">
-                Enrolled {new Date(enrollment.enrolledAt).toLocaleDateString()}
-              </p>
+          {/* Enrolled State - Progress Section */}
+          {isEnrolled && enrollment && progress && (
+            <div className="space-y-2 pt-2">
+              <div className="flex justify-between text-xs md:text-sm">
+                <span className="text-muted-foreground">Your Progress</span>
+                <span className="font-semibold text-primary">
+                  {progress.completedLessons.length}/{progress.totalLessons} lessons • {progress.percentage}%
+                </span>
+              </div>
+              <Progress value={progress.percentage} className="h-2" />
             </div>
           )}
 
           {/* Not Enrolled State */}
           {!isEnrolled && (
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2">
               {/* Instructor */}
               {course.instructor && (
                 <p className="text-sm text-muted-foreground">
@@ -144,23 +139,48 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded text-sm">
+                <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded-lg text-sm">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <p className="text-xs">{error}</p>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {isEnrolling && (
-                <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enrolling...
                 </div>
               )}
             </div>
           )}
         </div>
-      </div>
+      </CardContent>
+
+      {/* Card Footer with CTA */}
+      <CardFooter className="pt-0 pb-5">
+        {isEnrolled ? (
+          <Button
+            className="w-full cursor-pointer group/btn"
+            size="lg"
+          >
+            <Play className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            Continue Learning
+            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+          </Button>
+        ) : (
+          <Button
+            className="w-full cursor-pointer"
+            size="lg"
+            variant={isEnrolling ? 'secondary' : 'default'}
+            disabled={isEnrolling}
+          >
+            {isEnrolling ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enrolling...
+              </>
+            ) : (
+              <>
+                Enroll Now
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   );
 
