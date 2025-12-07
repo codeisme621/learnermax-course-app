@@ -9,7 +9,7 @@ export const MEETUPS: Meetup[] = [
     meetupId: 'spec-driven-dev-weekly',
     title: 'Spec Driven Development & Context Engineering',
     description:
-      'Weekly discussion on spec-driven workflows, context engineering, best practices, and Q&A. Join us to learn how to write effective specs that guide implementation and craft effective prompts for better AI interactions.',
+      "Join us weekly as we break down real specs, troubleshoot AI workflows, and explore best practices in Spec-Driven Development & context engineering. It's an open collaborative environment where you can ask questions, refine your approach, and learn from fellow builders.",
     schedule: {
       dayOfWeek: 6, // Saturday (0 = Sunday, 6 = Saturday)
       hour: 10, // 10 AM
@@ -18,7 +18,7 @@ export const MEETUPS: Meetup[] = [
     },
     duration: 60, // minutes
     zoomLink: 'https://zoom.us/j/XXXXXXXXXX',
-    hostName: 'Rico Martinez',
+    hostName: 'Rico Romero',
     hostEmail: 'rico@learnermax.com',
   },
 ];

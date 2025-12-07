@@ -231,7 +231,7 @@ MeetupCalendarInviteEmail.PreviewProps = {
   studentName: 'Alex Johnson',
   studentEmail: 'alex@example.com',
   meetupTitle: 'Spec Driven Development & Context Engineering',
-  meetupDescription: 'Join us for our weekly meetup where we discuss spec-driven development workflows, context engineering techniques, and best practices for working with AI coding assistants. Perfect for developers looking to improve their collaboration with tools like Claude Code.',
+  meetupDescription: "Join us weekly as we break down real specs, troubleshoot AI workflows, and explore best practices in Spec-Driven Development & context engineering. It's an open collaborative environment where you can ask questions, refine your approach, and learn from fellow builders.",
   formattedDateTime: 'Saturday, January 18, 2025 at 10:00 AM CST',
   duration: 60,
   zoomLink: 'https://zoom.us/j/123456789',

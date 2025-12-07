@@ -32,7 +32,7 @@ export function getInstructorProfile(): InstructorProfile {
     name: 'Rico Romero',
     title: 'Software Engineer & Educator',
     background:
-      '"With years of hands-on experience in modern web development, he brings practical insights and real-world examples to every lesson."',
+      'Experienced software engineer with a passion for teaching developers how to work effectively with AI coding tools. Rico specializes in spec-driven development and context engineering, helping teams build better software through clear specifications and strategic AI collaboration. With years of hands-on experience building full-stack, distributed systems, he brings practical battle-tested patterns and real-world examples to every lesson.',
     imageUrl: '/images/instructor-rico.jpg',
   };
 }
