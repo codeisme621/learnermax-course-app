@@ -17,7 +17,10 @@ export const MEETUPS: Meetup[] = [
       timezone: 'America/Chicago', // CST/CDT
     },
     duration: 60, // minutes
-    zoomLink: 'https://zoom.us/j/XXXXXXXXXX',
+    zoomLink: 'https://zoom.us/j/95804276890?pwd=qhb5WJdxazcBoNQn1SPNAWSAivxjqg.1',
+    zoomMeetingId: '958 0427 6890',
+    zoomPasscode: '140180',
+    zoomIcsUrl: 'https://zoom.us/meeting/tJEld-2qqT0iE9Sm3xeAey0-D5u1FAcWmA6Y/ics?icsToken=DLfMM3U3jd6lY9zqpQAALAAAABBkTzOcjcfOekqYICaAn4G9MihFyfNIm2WJUA0-01e7PUdk5JK6aUZkW5A2xU-3pn-rLHaF34Vo3ybo5jAwMDAwMQ&meetingMasterEventId=PJ5FutmASj24vxVOQaAEYg',
     hostName: 'Rico Romero',
     hostEmail: 'rico@learnermax.com',
   },

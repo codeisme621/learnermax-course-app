@@ -8,6 +8,9 @@ export interface Meetup {
   schedule: MeetupSchedule;
   duration: number; // minutes
   zoomLink: string;
+  zoomMeetingId: string;
+  zoomPasscode: string;
+  zoomIcsUrl?: string; // Zoom-provided ICS URL for recurring meetings
   hostName: string;
   hostEmail: string;
 }

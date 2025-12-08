@@ -39,10 +39,12 @@ export interface MeetupCalendarInviteEmailData {
   studentEmail: string;          // "alex@example.com"
   meetupTitle: string;           // "Spec Driven Development & Context Engineering"
   meetupDescription: string;     // Meetup description from constants
-  formattedDateTime: string;     // "Saturday, January 18, 2025 at 10:00 AM CST"
+  formattedDateTime: string;     // "Every Saturday at 10:00 AM CST"
   duration: number;              // 60 (minutes)
-  zoomLink: string;              // "https://zoom.us/j/XXXXXXXXXX"
-  hostName: string;              // "Rico Martinez"
+  zoomLink: string;              // Full Zoom join URL with password
+  zoomMeetingId: string;         // "958 0427 6890"
+  zoomPasscode: string;          // "140180"
+  hostName: string;              // "Rico Romero"
 }
 
 // ICS Calendar File Generation Data

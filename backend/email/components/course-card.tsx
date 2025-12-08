@@ -25,76 +25,116 @@ export function CourseCard({
 }: CourseCardProps) {
   return (
     <Section style={courseCard}>
-      <Heading as="h2" style={h2}>
-        {courseName}
-      </Heading>
+      {/* Accent bar at top */}
+      <div style={accentBar} />
 
-      <Text style={courseDescriptionStyle}>
-        {courseDescription}
-      </Text>
+      <Section style={cardContent}>
+        <Heading as="h2" style={h2}>
+          {courseName}
+        </Heading>
 
-      <Hr style={cardDivider} />
+        <Text style={courseDescriptionStyle}>
+          {courseDescription}
+        </Text>
 
-      <Section style={courseDetails}>
-        <Text style={detailItem}>
-          <strong>Instructor:</strong> {instructor}
-        </Text>
-        <Text style={detailItem}>
-          <strong>Lessons:</strong> {totalLessons} lessons
-        </Text>
-        <Text style={detailItem}>
-          <strong>Duration:</strong> {estimatedDuration}
-        </Text>
-        {pricingModel === 'free' && (
-          <Text style={detailItem}>
-            <strong>Price:</strong> Free
-          </Text>
-        )}
-        <Text style={detailItem}>
-          <strong>Enrolled:</strong> {enrolledAt}
-        </Text>
+        <Hr style={cardDivider} />
+
+        {/* Course details in a cleaner grid layout */}
+        <table cellPadding="0" cellSpacing="0" style={{ width: '100%' }}>
+          <tbody>
+            <tr>
+              <td style={detailLabel}>Instructor</td>
+              <td style={detailValue}>{instructor}</td>
+            </tr>
+            <tr>
+              <td style={detailLabel}>Lessons</td>
+              <td style={detailValue}>{totalLessons} lessons</td>
+            </tr>
+            <tr>
+              <td style={detailLabel}>Duration</td>
+              <td style={detailValue}>{estimatedDuration}</td>
+            </tr>
+            {pricingModel === 'free' && (
+              <tr>
+                <td style={detailLabel}>Price</td>
+                <td style={detailValueFree}>Free</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        <Section style={buttonSection}>
+          <Button href={courseUrl}>Start Learning</Button>
+        </Section>
       </Section>
-
-      <Button href={courseUrl}>Start Learning</Button>
     </Section>
   );
 }
 
 const courseCard = {
-  backgroundColor: '#f9fafb',
-  border: '2px solid #e5e7eb',
-  borderRadius: '8px',
+  backgroundColor: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  margin: '0 auto 24px',
+  maxWidth: '520px',
+  overflow: 'hidden' as const,
+};
+
+const accentBar = {
+  height: '4px',
+  backgroundColor: '#1DA1F2',
+};
+
+const cardContent = {
   padding: '24px',
-  margin: '24px 0',
 };
 
 const h2 = {
-  color: '#111827',
-  fontSize: '22px',
+  color: '#1e1b4b',
+  fontSize: '20px',
   fontWeight: '700',
-  lineHeight: '30px',
+  lineHeight: '1.3',
   margin: '0 0 12px',
 };
 
 const courseDescriptionStyle = {
-  color: '#6b7280',
+  color: '#64748b',
   fontSize: '15px',
-  lineHeight: '22px',
-  margin: '12px 0',
+  lineHeight: '1.6',
+  margin: '0 0 16px',
 };
 
 const cardDivider = {
-  borderColor: '#e5e7eb',
-  margin: '16px 0',
+  borderColor: '#f1f5f9',
+  margin: '0 0 16px',
 };
 
-const courseDetails = {
-  margin: '16px 0',
+const detailLabel = {
+  color: '#94a3b8',
+  fontSize: '13px',
+  fontWeight: '500' as const,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.5px',
+  paddingBottom: '8px',
+  width: '100px',
+  verticalAlign: 'top' as const,
 };
 
-const detailItem = {
-  color: '#374151',
-  fontSize: '14px',
-  lineHeight: '20px',
-  margin: '8px 0',
+const detailValue = {
+  color: '#334155',
+  fontSize: '15px',
+  paddingBottom: '8px',
+  verticalAlign: 'top' as const,
+};
+
+const detailValueFree = {
+  color: '#059669',
+  fontSize: '15px',
+  fontWeight: '600' as const,
+  paddingBottom: '8px',
+  verticalAlign: 'top' as const,
+};
+
+const buttonSection = {
+  marginTop: '20px',
 };

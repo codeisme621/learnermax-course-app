@@ -3,61 +3,70 @@ import { Section, Text, Hr, Link } from '@react-email/components';
 
 export function Footer() {
   return (
-    <>
+    <Section style={footerWrapper}>
       <Hr style={divider} />
       <Section style={footerSection}>
         <Text style={footerText}>
-          Questions? Reply to this email and we'll be happy to help.
+          Questions? Just reply to this email — we're here to help!
         </Text>
-        <Text style={footerText}>
-          The Learn With Rico Team
-        </Text>
-        <Text style={legalText}>
-          This is a transactional email confirming your action.
+        <Text style={teamText}>
+          — The Learn With Rico Team
         </Text>
         <Text style={legalText}>
           <Link href="https://www.learnwithrico.com" style={link}>
-            Learn With Rico
+            learnwithrico.com
           </Link>
           {' • '}
           <Link href="https://www.learnwithrico.com/privacy" style={link}>
-            Privacy Policy
+            Privacy
           </Link>
           {' • '}
           <Link href="https://www.learnwithrico.com/terms" style={link}>
-            Terms of Service
+            Terms
           </Link>
         </Text>
       </Section>
-    </>
+    </Section>
   );
 }
 
+const footerWrapper = {
+  padding: '0 40px',
+};
+
 const divider = {
-  borderColor: '#e5e7eb',
-  margin: '32px 0',
+  borderColor: '#e2e8f0',
+  margin: '24px 0',
 };
 
 const footerSection = {
-  marginTop: '32px',
   textAlign: 'center' as const,
+  paddingBottom: '8px',
 };
 
 const footerText = {
-  color: '#6b7280',
+  color: '#64748b',
   fontSize: '14px',
-  lineHeight: '24px',
-  margin: '8px 0',
+  lineHeight: '1.5',
+  margin: '0 0 4px',
+};
+
+const teamText = {
+  color: '#1DA1F2',
+  fontSize: '14px',
+  fontWeight: '500' as const,
+  lineHeight: '1.5',
+  margin: '0 0 16px',
 };
 
 const legalText = {
-  color: '#9ca3af',
+  color: '#94a3b8',
   fontSize: '12px',
-  lineHeight: '20px',
-  margin: '8px 0',
+  lineHeight: '1.5',
+  margin: '0',
 };
 
 const link = {
-  color: '#1DA1F2',
+  color: '#94a3b8',
   textDecoration: 'none',
 };
