@@ -75,7 +75,7 @@ describe('MeetupsService', () => {
       expect(result[0].meetupId).toBe('spec-driven-dev-weekly');
       expect(result[0].isSignedUp).toBe(false);
       expect(result[0].nextOccurrence).toBeTruthy();
-      expect(result[0].hostName).toBe('Rico Martinez');
+      expect(result[0].hostName).toBe('Rico Romero');
     });
 
     it('should return meetups with isSignedUp true when user has signups', async () => {

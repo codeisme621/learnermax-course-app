@@ -177,7 +177,7 @@ describe('Meetups Integration Tests', () => {
     expect(meetup.isRunning).toBe(false); // Unlikely to run during test
     expect(meetup.isSignedUp).toBe(false); // User not signed up
     expect(meetup.duration).toBe(60);
-    expect(meetup.hostName).toBe('Rico Martinez');
+    expect(meetup.hostName).toBe('Rico Romero');
 
     // zoomLink should be undefined when not running
     if (!meetup.isRunning) {

@@ -5,6 +5,7 @@ import courseRoutes from './features/courses/course.routes.js';
 import lessonRoutes from './features/lessons/lesson.routes.js';
 import progressRoutes from './features/progress/progress.routes.js';
 import meetupsRoutes from './features/meetups/meetups.routes.js';
+import feedbackRoutes from './features/feedback/feedback.routes.js';
 import { createLogger } from './lib/logger.js';
 
 const logger = createLogger('ExpressApiFunction');
@@ -37,6 +38,7 @@ app.use('/api/courses', courseRoutes);  // Includes /api/courses/:courseId/lesso
 app.use('/api/lessons', lessonRoutes);  // Includes /api/lessons/:lessonId/video-url
 app.use('/api/progress', progressRoutes);  // Includes /api/progress/:courseId and POST /api/progress
 app.use('/api/meetups', meetupsRoutes);  // Includes GET /api/meetups and POST /api/meetups/:meetupId/signup
+app.use('/api/feedback', feedbackRoutes);  // POST /api/feedback
 
 // Start server (only in production, not during tests)
 if (process.env.NODE_ENV !== 'test') {
