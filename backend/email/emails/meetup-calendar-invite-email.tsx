@@ -39,7 +39,7 @@ export default function MeetupCalendarInviteEmail(props: MeetupCalendarInviteEma
 
           {/* Hero Section */}
           <Section style={heroSection}>
-            <Text style={heroEmoji}>📅</Text>
+            <Text style={heroEmoji}>📆</Text>
             <Heading style={h1}>You're In, {firstName}!</Heading>
             <Text style={heroSubtitle}>
               Your spot for <strong>{meetupTitle}</strong> is confirmed.

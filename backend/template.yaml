@@ -82,7 +82,9 @@ Resources:
           Required: true
           Mutable: true
       EmailConfiguration:
-        EmailSendingAccount: COGNITO_DEFAULT
+        EmailSendingAccount: DEVELOPER
+        From: !Sub "${SESFromEmail}"
+        SourceArn: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/learnwithrico.com"
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: false
       LambdaConfig:

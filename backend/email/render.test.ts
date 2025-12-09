@@ -7,7 +7,7 @@ describe('renderEmailFromEvent', () => {
     studentName: 'Alex Johnson',
     studentEmail: 'alex@example.com',
     courseName: 'Spec-Driven Development with Context Engineering',
-    courseUrl: 'https://learnermax.com/course/spec-driven-dev-mini',
+    courseUrl: 'https://www.learnwithrico.com/course/spec-driven-dev-mini',
     courseDescription: 'Learn how to build better software with AI collaboration.',
     instructor: 'Rico Romero',
     totalLessons: 3,
@@ -24,6 +24,8 @@ describe('renderEmailFromEvent', () => {
     formattedDateTime: 'Saturday, January 18, 2025 at 10:00 AM CST',
     duration: 60,
     zoomLink: 'https://zoom.us/j/123456789',
+    zoomMeetingId: '123 456 789',
+    zoomPasscode: '123456',
     hostName: 'Rico Romero',
   };
 

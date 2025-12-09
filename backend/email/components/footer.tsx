@@ -17,13 +17,9 @@ export function Footer() {
             learnwithrico.com
           </Link>
           {' • '}
-          <Link href="https://www.learnwithrico.com/privacy" style={link}>
-            Privacy
-          </Link>
+          <span style={link}>Privacy</span>
           {' • '}
-          <Link href="https://www.learnwithrico.com/terms" style={link}>
-            Terms
-          </Link>
+          <span style={link}>Terms</span>
         </Text>
       </Section>
     </Section>

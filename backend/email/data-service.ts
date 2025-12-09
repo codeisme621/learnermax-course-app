@@ -207,6 +207,8 @@ export function prepareMeetupEmailData(
     formattedDateTime,
     duration: meetup.duration,
     zoomLink: meetup.zoomLink,
+    zoomMeetingId: meetup.zoomMeetingId,
+    zoomPasscode: meetup.zoomPasscode,
     hostName: meetup.hostName,
   };
 
