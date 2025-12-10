@@ -39,3 +39,13 @@ jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
   useSearchParams: jest.fn(() => new URLSearchParams()),
 }));
+
+// Mock @vercel/analytics
+jest.mock('@vercel/analytics', () => ({
+  track: jest.fn(),
+}));
+
+jest.mock('@vercel/analytics/react', () => ({
+  Analytics: () => null,
+  track: jest.fn(),
+}));

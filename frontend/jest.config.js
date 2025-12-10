@@ -62,7 +62,7 @@ export default {
         ],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(next-auth|@auth)/)',
+        '/node_modules/(?!(.pnpm|next-auth|@auth|@vercel))',
       ],
     },
     {

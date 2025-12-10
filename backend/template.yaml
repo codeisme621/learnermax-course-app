@@ -730,6 +730,113 @@ Resources:
                 "title": "SNS Publishing",
                 "yAxis": {"left": {"min": 0}}
               }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "UserRegistrationSuccess"],
+                  [".", "EnrollmentSuccess"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Daily Signups & Enrollments",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "CourseCompletionSuccess"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Daily Course Completions",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "PremiumEarlyAccessSignup"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Premium Early Access Signups",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "ApiLatency", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "p90", "label": "p90"}],
+                  ["...", {"stat": "p99", "label": "p99"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "title": "API Latency (p50/p90/p99 ms)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 30,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "Http4xxCount", {"color": "#ff9900"}],
+                  [".", "Http5xxCount", {"color": "#d13212"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP Error Counts (4xx/5xx)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 30,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [{"expression": "100*m2/m1", "label": "Enrollment Rate %", "id": "e1"}],
+                  ["LearnerMax/Backend", "UserRegistrationSuccess", {"id": "m1", "visible": false}],
+                  [".", "EnrollmentSuccess", {"id": "m2", "visible": false}]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Conversion: Signup to Enrollment %",
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
             }
           ]
         }

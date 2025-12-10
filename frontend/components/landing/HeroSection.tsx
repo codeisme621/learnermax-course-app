@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Users, Award, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { track } from '@vercel/analytics';
 import type { CourseData } from '@/types/landing';
 
 interface HeroSectionProps {
@@ -16,6 +17,8 @@ export function HeroSection({ course }: HeroSectionProps) {
   const router = useRouter();
 
   const handleEnrollClick = () => {
+    // Track CTA click for analytics
+    track('cta_clicked', { location: 'hero' });
     // Store courseId in sessionStorage
     sessionStorage.setItem('pendingEnrollmentCourseId', course.id);
     // Navigate to enroll page

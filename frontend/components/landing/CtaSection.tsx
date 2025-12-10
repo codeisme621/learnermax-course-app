@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { track } from '@vercel/analytics';
 
 export function CtaSection() {
   const router = useRouter();
 
   const handleGetStartedClick = () => {
+    // Track CTA click for analytics
+    track('cta_clicked', { location: 'cta_section' });
     // Store hardcoded courseId as per spec
     sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
     router.push('/enroll');

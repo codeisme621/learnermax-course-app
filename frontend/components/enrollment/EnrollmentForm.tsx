@@ -11,6 +11,7 @@ import { GoogleSignInButton } from './GoogleSignInButton';
 import { motion } from 'motion/react';
 import { Mail, User, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { signUp } from '@/lib/cognito';
+import { track } from '@vercel/analytics';
 
 export function EnrollmentForm() {
   const router = useRouter();
@@ -26,6 +27,9 @@ export function EnrollmentForm() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+
+    // Track signup started event (email only - Google OAuth can't distinguish new vs returning)
+    track('signup_started', { method: 'email' });
 
     try {
       const result = await signUp({

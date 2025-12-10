@@ -7,6 +7,7 @@ import progressRoutes from './features/progress/progress.routes.js';
 import meetupsRoutes from './features/meetups/meetups.routes.js';
 import feedbackRoutes from './features/feedback/feedback.routes.js';
 import { createLogger } from './lib/logger.js';
+import { observabilityMiddleware } from './middleware/observability.middleware.js';
 
 const logger = createLogger('ExpressApiFunction');
 
@@ -30,6 +31,9 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Observability middleware - track latency and HTTP errors
+app.use(observabilityMiddleware);
 
 // Feature-based routes
 app.use('/api/enrollments', enrollmentRoutes);

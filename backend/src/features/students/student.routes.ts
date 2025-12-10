@@ -4,9 +4,11 @@ import { z } from 'zod';
 import { studentService } from './student.service.js';
 import { getUserIdFromContext } from '../../lib/auth-utils.js';
 import { createLogger } from '../../lib/logger.js';
+import { createMetrics, MetricUnit } from '../../lib/metrics.js';
 
 const router: Router = express.Router();
 const logger = createLogger('StudentRoutes');
+const metrics = createMetrics('LearnerMax/Backend', 'StudentService');
 
 // Validation schema for early access signup
 const earlyAccessSchema = z.object({
@@ -75,6 +77,10 @@ router.post('/early-access', async (req: Request, res: Response) => {
 
     // Get updated student to retrieve studentId for response
     const student = await studentService.getStudent(userId);
+
+    // Track premium early access signup metric
+    metrics.addMetric('PremiumEarlyAccessSignup', MetricUnit.Count, 1);
+    metrics.publishStoredMetrics();
 
     res.json({
       success: true,

@@ -3,9 +3,11 @@ import type { Request, Response, Router } from 'express';
 import { progressService } from './progress.service.js';
 import { getUserIdFromContext } from '../../lib/auth-utils.js';
 import { createLogger } from '../../lib/logger.js';
+import { createMetrics, MetricUnit } from '../../lib/metrics.js';
 
 const router: Router = express.Router();
 const logger = createLogger('ProgressRoutes');
+const metrics = createMetrics('LearnerMax/Backend', 'ProgressService');
 
 /**
  * GET /api/progress/:courseId
@@ -89,6 +91,13 @@ router.post('/', async (req: Request, res: Response) => {
       completedCount: updatedProgress.completedLessons.length,
       percentage: updatedProgress.percentage,
     });
+
+    // Track course completion if user just reached 100%
+    if (updatedProgress.percentage === 100) {
+      metrics.addMetric('CourseCompletionSuccess', MetricUnit.Count, 1);
+      metrics.publishStoredMetrics();
+      logger.info('[POST /api/progress] Course completed!', { userId, courseId });
+    }
 
     res.json(updatedProgress);
   } catch (error) {
