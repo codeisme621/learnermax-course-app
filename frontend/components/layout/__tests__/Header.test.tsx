@@ -39,7 +39,7 @@ describe('Header (Public)', () => {
   it('renders logo and navigation buttons', () => {
     render(<Header />);
 
-    expect(screen.getByText('LearnerMax')).toBeInTheDocument();
+    expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
     expect(screen.getByText('Sign In')).toBeInTheDocument();
     expect(screen.getByText('Enroll Now')).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe('Header (Public)', () => {
   it('logo links to home page', () => {
     render(<Header />);
 
-    const logo = screen.getByText('LearnerMax').closest('a');
+    const logo = screen.getByText('LearnWithRico').closest('a');
     expect(logo).toHaveAttribute('href', '/');
   });
 
@@ -64,7 +64,7 @@ describe('Header (Public)', () => {
     const enrollButton = screen.getByText('Enroll Now');
     fireEvent.click(enrollButton);
 
-    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('TEST-COURSE-001');
+    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('spec-driven-dev-mini');
     expect(mockPush).toHaveBeenCalledWith('/enroll');
   });
 });

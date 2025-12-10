@@ -10,7 +10,7 @@
     "dev:logs": "cat .local-dev.log",
     "build": "next build --turbopack",
     "start": "next start",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --forceExit",
     "test:unit": "jest --selectProjects=unit",
     "test:integration": "jest --selectProjects=integration --runInBand",
     "test:all": "pnpm test:unit && pnpm test:integration",

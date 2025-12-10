@@ -73,6 +73,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -88,6 +90,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -102,6 +106,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -117,6 +123,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[2]} // Last lesson
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -131,6 +139,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -144,6 +154,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -158,6 +170,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -172,6 +186,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[1]} // No description
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -193,6 +209,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -215,6 +233,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -236,6 +256,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -256,6 +278,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 
@@ -272,6 +296,8 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[1]}
         lessons={mockLessons}
         initialProgress={mockProgress}
+        student={null}
+        pricingModel="free"
       />
     );
 

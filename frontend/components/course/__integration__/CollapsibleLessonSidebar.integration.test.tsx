@@ -29,8 +29,11 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
     courseId: 'course-1',
     name: 'Introduction to React',
     description: 'Learn React from scratch',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
+    instructor: 'Test Instructor',
+    pricingModel: 'free',
+    imageUrl: '/test-image.jpg',
+    learningObjectives: ['Learn React basics'],
+    curriculum: [],
   };
 
   const mockLessons: LessonResponse[] = [
@@ -40,8 +43,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
       title: 'Getting Started',
       order: 1,
       lengthInMins: 10,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
     },
     {
       lessonId: 'lesson-2',
@@ -49,8 +50,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
       title: 'Components',
       order: 2,
       lengthInMins: 15,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
     },
     {
       lessonId: 'lesson-3',
@@ -58,8 +57,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
       title: 'State Management',
       order: 3,
       lengthInMins: 20,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
     },
   ];
 

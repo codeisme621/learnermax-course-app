@@ -58,80 +58,96 @@ jest.mock('react-confetti', () => {
 
 // Mock PremiumUpsellModal - need to use real component to test state changes
 jest.mock('@/components/PremiumUpsellModal', () => {
-  const { useState } = require('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const studentActions = require('@/app/actions/students');
+
+  const MockPremiumUpsellModal = (props: {
+    isOpen: boolean;
+    onClose: () => void;
+    isInterestedInPremium: boolean;
+  }) => {
+    const [hasSignedUp, setHasSignedUp] = React.useState(props.isInterestedInPremium);
+
+    if (!props.isOpen) return null;
+
+    const handleSignup = async () => {
+      await studentActions.signUpForEarlyAccess('premium-spec-course');
+      setHasSignedUp(true);
+    };
+
+    return (
+      <div data-testid="premium-upsell-modal">
+        <h2>Advanced Spec-Driven Development Mastery</h2>
+        {hasSignedUp ? (
+          <div>
+            <p>You&apos;re on the early access list!</p>
+            <p>We&apos;ll notify you when the course launches.</p>
+          </div>
+        ) : (
+          <>
+            <button onClick={props.onClose}>Maybe later</button>
+            <button onClick={handleSignup}>
+              Join Early Access
+            </button>
+          </>
+        )}
+        <button onClick={props.onClose} aria-label="close">X</button>
+      </div>
+    );
+  };
+  MockPremiumUpsellModal.displayName = 'MockPremiumUpsellModal';
+
   return {
-    PremiumUpsellModal: jest.fn((props) => {
-      const [hasSignedUp, setHasSignedUp] = useState(props.isInterestedInPremium);
-
-      if (!props.isOpen) return null;
-
-      const handleSignup = async () => {
-        const { signUpForEarlyAccess } = require('@/app/actions/students');
-        await signUpForEarlyAccess('premium-spec-course');
-        setHasSignedUp(true);
-      };
-
-      return (
-        <div data-testid="premium-upsell-modal">
-          <h2>Advanced Spec-Driven Development Mastery</h2>
-          {hasSignedUp ? (
-            <div>
-              <p>You're on the early access list!</p>
-              <p>We'll notify you when the course launches.</p>
-            </div>
-          ) : (
-            <>
-              <button onClick={props.onClose}>Maybe later</button>
-              <button onClick={handleSignup}>
-                Join Early Access
-              </button>
-            </>
-          )}
-          <button onClick={props.onClose} aria-label="close">X</button>
-        </div>
-      );
-    }),
+    PremiumUpsellModal: MockPremiumUpsellModal,
   };
 });
 
 // Mock dynamic imports
-jest.mock('next/dynamic', () => (fn: any) => {
-  // For confetti
-  if (fn.toString().includes('react-confetti')) {
-    return () => <div data-testid="confetti">Confetti</div>;
-  }
-  // For PremiumUpsellModal
-  if (fn.toString().includes('PremiumUpsellModal')) {
-    const { PremiumUpsellModal } = require('@/components/PremiumUpsellModal');
-    return PremiumUpsellModal;
-  }
-  // Default
-  return fn();
+jest.mock('next/dynamic', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mockModule = require('@/components/PremiumUpsellModal');
+
+  return (fn: () => Promise<unknown>) => {
+    // For confetti
+    if (fn.toString().includes('react-confetti')) {
+      const MockConfetti = () => <div data-testid="confetti">Confetti</div>;
+      MockConfetti.displayName = 'MockConfetti';
+      return MockConfetti;
+    }
+    // For PremiumUpsellModal
+    if (fn.toString().includes('PremiumUpsellModal')) {
+      return mockModule.PremiumUpsellModal;
+    }
+    // Default
+    return fn();
+  };
 });
 
 describe('Course Completion Upsell - Integration Tests', () => {
   const mockLessons: LessonResponse[] = [
     {
       lessonId: 'lesson-1',
+      courseId: 'test-course',
       title: 'Lesson 1',
       description: 'First lesson',
-      videoId: 'video-1',
       order: 1,
       lengthInMins: 10,
     },
     {
       lessonId: 'lesson-2',
+      courseId: 'test-course',
       title: 'Lesson 2',
       description: 'Second lesson',
-      videoId: 'video-2',
       order: 2,
       lengthInMins: 15,
     },
     {
       lessonId: 'lesson-3',
+      courseId: 'test-course',
       title: 'Lesson 3',
       description: 'Final lesson',
-      videoId: 'video-3',
       order: 3,
       lengthInMins: 20,
     },

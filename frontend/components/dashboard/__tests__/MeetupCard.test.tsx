@@ -32,15 +32,15 @@ describe('MeetupCard', () => {
 
       expect(screen.getByText('Spec Driven Development')).toBeInTheDocument();
       expect(screen.getByText(/Weekly discussion on spec-driven workflows/)).toBeInTheDocument();
-      expect(screen.getByText(/Host: Rico Martinez/)).toBeInTheDocument();
-      expect(screen.getByText('60 minutes')).toBeInTheDocument();
+      expect(screen.getByText('Rico Martinez')).toBeInTheDocument();
+      expect(screen.getByText('60 min')).toBeInTheDocument();
     });
 
     it('displays Sign Up button when not signed up', () => {
       render(<MeetupCard meetup={mockMeetup} />);
 
       expect(screen.getByRole('button', { name: /Sign Up for Meetup/i })).toBeInTheDocument();
-      expect(screen.queryByText('✅ Registered')).not.toBeInTheDocument();
+      expect(screen.queryByText('✓ Registered')).not.toBeInTheDocument();
     });
 
     it('does not show LIVE badge when not running', () => {
@@ -55,7 +55,7 @@ describe('MeetupCard', () => {
       const signedUpMeetup = { ...mockMeetup, isSignedUp: true };
       render(<MeetupCard meetup={signedUpMeetup} />);
 
-      expect(screen.getByText('✅ Registered')).toBeInTheDocument();
+      expect(screen.getByText('✓ Registered')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Sign Up for Meetup/i })).not.toBeInTheDocument();
     });
 
@@ -81,7 +81,7 @@ describe('MeetupCard', () => {
       expect(screen.getByText(/LIVE/)).toBeInTheDocument();
     });
 
-    it('displays Join Zoom Meeting button when running and signed up', () => {
+    it('displays Join Live Now button when running and signed up', () => {
       const runningMeetup: MeetupResponse = {
         ...mockMeetup,
         isRunning: true,
@@ -91,11 +91,11 @@ describe('MeetupCard', () => {
 
       render(<MeetupCard meetup={runningMeetup} />);
 
-      expect(screen.getByRole('button', { name: /Join Zoom Meeting/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Join Live Now/i })).toBeInTheDocument();
       expect(screen.queryByText(/Calendar invite sent/)).not.toBeInTheDocument();
     });
 
-    it('does not show Join Zoom button if not signed up', () => {
+    it('does not show Join Live Now button if not signed up', () => {
       const runningMeetup: MeetupResponse = {
         ...mockMeetup,
         isRunning: true,
@@ -104,7 +104,7 @@ describe('MeetupCard', () => {
 
       render(<MeetupCard meetup={runningMeetup} />);
 
-      expect(screen.queryByRole('button', { name: /Join Zoom Meeting/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Join Live Now/i })).not.toBeInTheDocument();
     });
   });
 
@@ -154,7 +154,7 @@ describe('MeetupCard', () => {
       await user.click(signupButton);
 
       await waitFor(() => {
-        expect(screen.getByText('✅ Registered')).toBeInTheDocument();
+        expect(screen.getByText('✓ Registered')).toBeInTheDocument();
         expect(screen.getByText(/Calendar invite sent to your email/)).toBeInTheDocument();
       });
     });
@@ -178,8 +178,8 @@ describe('MeetupCard', () => {
     });
   });
 
-  describe('MeetupCard_clickJoinZoom_opensNewTab', () => {
-    it('opens Zoom link in new tab when Join Zoom button is clicked', async () => {
+  describe('MeetupCard_clickJoinLive_opensNewTab', () => {
+    it('opens Zoom link in new tab when Join Live Now button is clicked', async () => {
       const user = userEvent.setup();
       const mockWindowOpen = jest.spyOn(window, 'open').mockImplementation();
 
@@ -192,7 +192,7 @@ describe('MeetupCard', () => {
 
       render(<MeetupCard meetup={runningMeetup} />);
 
-      const joinButton = screen.getByRole('button', { name: /Join Zoom Meeting/i });
+      const joinButton = screen.getByRole('button', { name: /Join Live Now/i });
       await user.click(joinButton);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
@@ -205,7 +205,6 @@ describe('MeetupCard', () => {
     });
 
     it('does not open window if zoomLink is missing', async () => {
-      const user = userEvent.setup();
       const mockWindowOpen = jest.spyOn(window, 'open').mockImplementation();
 
       const runningMeetupNoLink: MeetupResponse = {
@@ -218,7 +217,7 @@ describe('MeetupCard', () => {
       render(<MeetupCard meetup={runningMeetupNoLink} />);
 
       // Button should not be rendered without zoomLink
-      expect(screen.queryByRole('button', { name: /Join Zoom Meeting/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Join Live Now/i })).not.toBeInTheDocument();
       expect(mockWindowOpen).not.toHaveBeenCalled();
 
       mockWindowOpen.mockRestore();

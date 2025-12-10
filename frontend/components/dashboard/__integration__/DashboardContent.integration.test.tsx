@@ -11,9 +11,12 @@ import type { MeetupResponse } from '@/app/actions/meetups';
 jest.mock('motion/react', () => {
   const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
   MockDiv.displayName = 'MockMotionDiv';
+  const MockSection = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <section {...props}>{children}</section>;
+  MockSection.displayName = 'MockMotionSection';
   return {
     motion: {
       div: MockDiv,
+      section: MockSection,
     },
   };
 });
@@ -32,7 +35,10 @@ jest.mock('next/link', () => {
     return <a href={href}>{children}</a>;
   };
   MockLink.displayName = 'MockLink';
-  return MockLink;
+  return {
+    __esModule: true,
+    default: MockLink,
+  };
 });
 
 // Mock auth token
@@ -79,11 +85,11 @@ describe('DashboardContent Integration Tests', () => {
       // Verify live progress is displayed for enrolled course
       // The enrolled course (spec-driven-dev-mini) should show progress from the Progress API
       await waitFor(() => {
-        expect(screen.getByText('1/3 • 33%')).toBeInTheDocument();
+        expect(screen.getByText('1/3 lessons • 33%')).toBeInTheDocument();
       });
 
       // Verify progress bar is rendered
-      const progressText = screen.getByText('Progress');
+      const progressText = screen.getByText('Your Progress');
       expect(progressText).toBeInTheDocument();
     });
   });
@@ -111,10 +117,10 @@ describe('DashboardContent Integration Tests', () => {
       expect(screen.getByText('Spec Driven Development Course')).toBeInTheDocument();
 
       // Verify progress section is NOT displayed (hidden due to error)
-      expect(screen.queryByText('Progress')).not.toBeInTheDocument();
+      expect(screen.queryByText('Your Progress')).not.toBeInTheDocument();
 
-      // Verify enrollment date is still shown
-      expect(screen.getByText(/enrolled 1\/13\/2025/i)).toBeInTheDocument();
+      // Progress section should NOT be displayed, but enrolled badge is still visible
+      expect(screen.getByText('✓ Enrolled')).toBeInTheDocument();
     });
   });
 
@@ -162,7 +168,7 @@ describe('DashboardContent Integration Tests', () => {
       expect(screen.getByText('Context Engineering Fundamentals')).toBeInTheDocument();
 
       // Verify enrolled badge appears on enrolled course
-      expect(screen.getByText('Enrolled')).toBeInTheDocument();
+      expect(screen.getByText('✓ Enrolled')).toBeInTheDocument();
 
       // Verify non-enrolled course shows price
       expect(screen.getByText('$49.99')).toBeInTheDocument();
@@ -213,7 +219,7 @@ describe('DashboardContent Integration Tests', () => {
       // Verify meetup card is displayed
       expect(screen.getByText('Spec Driven Development')).toBeInTheDocument();
       expect(screen.getByText(/Weekly discussion on spec-driven workflows/)).toBeInTheDocument();
-      expect(screen.getByText(/Host: Rico Martinez/)).toBeInTheDocument();
+      expect(screen.getByText('Rico Martinez')).toBeInTheDocument();
     });
 
     it('DashboardContent_meetupsApiFails_stillShowsCourses', async () => {
@@ -271,7 +277,7 @@ describe('DashboardContent Integration Tests', () => {
 
       // Wait for signup to complete
       await waitFor(() => {
-        expect(screen.getByText('✅ Registered')).toBeInTheDocument();
+        expect(screen.getByText('✓ Registered')).toBeInTheDocument();
       });
 
       // Verify confirmation message appears
@@ -293,7 +299,7 @@ describe('DashboardContent Integration Tests', () => {
       });
 
       // Verify Registered badge is visible
-      expect(screen.getByText('✅ Registered')).toBeInTheDocument();
+      expect(screen.getByText('✓ Registered')).toBeInTheDocument();
 
       // Verify Sign Up button is NOT present
       expect(screen.queryByRole('button', { name: /Sign Up for Meetup/i })).not.toBeInTheDocument();
@@ -331,11 +337,11 @@ describe('DashboardContent Integration Tests', () => {
       // Verify LIVE badge is visible
       expect(screen.getByText(/LIVE/)).toBeInTheDocument();
 
-      // Verify Join Zoom Meeting button is visible
-      const joinButton = screen.getByRole('button', { name: /Join Zoom Meeting/i });
+      // Verify Join Live Now button is visible
+      const joinButton = screen.getByRole('button', { name: /Join Live Now/i });
       expect(joinButton).toBeInTheDocument();
 
-      // Click Join Zoom Meeting button
+      // Click Join Live Now button
       await user.click(joinButton);
 
       // Verify window.open was called with correct parameters
@@ -426,7 +432,7 @@ describe('DashboardContent Integration Tests', () => {
 
       // Wait for success state
       await waitFor(() => {
-        expect(screen.getByText("You're on the early access list")).toBeInTheDocument();
+        expect(screen.getByText(/You're on the early access list/i)).toBeInTheDocument();
       });
 
       // Verify button no longer exists
@@ -477,7 +483,7 @@ describe('DashboardContent Integration Tests', () => {
       expect(screen.getByRole('button', { name: /join early access/i })).not.toBeDisabled();
 
       // Verify success message NOT displayed
-      expect(screen.queryByText("You're on the early access list")).not.toBeInTheDocument();
+      expect(screen.queryByText(/You're on the early access list/i)).not.toBeInTheDocument();
     });
   });
 });

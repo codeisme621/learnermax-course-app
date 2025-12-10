@@ -61,7 +61,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(currentLesson?.lessonId).toBe('lesson-2');
 
     // Simulate the redirect logic from page.tsx
-    const requestedLesson = search?.lesson;
+    const requestedLesson = (search as { lesson?: string } | undefined)?.lesson;
     const shouldRedirect = !requestedLesson &&
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;
@@ -90,7 +90,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(currentLesson?.lessonId).toBe('lesson-1');
 
     // Simulate the redirect logic
-    const requestedLesson = search?.lesson;
+    const requestedLesson = (search as { lesson?: string } | undefined)?.lesson;
     const shouldRedirect = !requestedLesson &&
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;
@@ -144,7 +144,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(currentLesson?.lessonId).toBe('lesson-2');
 
     // Simulate the redirect logic
-    const requestedLesson = search?.lesson;
+    const requestedLesson = (search as { lesson?: string } | undefined)?.lesson;
     const shouldRedirect = !requestedLesson &&
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;
@@ -173,7 +173,7 @@ describe('Auto-Resume Integration Tests', () => {
     expect(currentLesson?.lessonId).toBe('lesson-3');
 
     // Simulate the redirect logic
-    const requestedLesson = search?.lesson;
+    const requestedLesson = (search as { lesson?: string } | undefined)?.lesson;
     const shouldRedirect = !requestedLesson &&
                           mockLessons.length > 0 &&
                           currentLesson?.lessonId !== mockLessons[0]?.lessonId;

@@ -19,7 +19,7 @@ jest.mock('@/app/actions/auth', () => ({
 // Mock next/dynamic for react-confetti
 jest.mock('next/dynamic', () => ({
   __esModule: true,
-  default: (fn: () => Promise<unknown>, _options?: unknown) => {
+  default: (fn: () => Promise<unknown>) => {
     // For react-confetti
     if (fn.toString().includes('react-confetti')) {
       const MockConfetti = () => <div data-testid="confetti">Confetti</div>;
@@ -96,6 +96,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -116,6 +118,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -150,6 +154,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -193,6 +199,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -228,6 +236,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -246,6 +256,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -265,6 +277,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[2]} // Last lesson
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -285,6 +299,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -302,6 +318,8 @@ describe('CourseVideoSection Integration Tests', () => {
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
           initialProgress={mockProgress}
+          student={null}
+          pricingModel="free"
         />
       );
 
@@ -328,6 +346,8 @@ describe('CourseVideoSection Integration Tests', () => {
             completedLessons: ['lesson-1', 'lesson-2'],
             percentage: 67,
           }}
+          student={null}
+          pricingModel="free"
         />
       );
 
