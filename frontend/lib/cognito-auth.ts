@@ -46,7 +46,7 @@ export async function signInWithCognito(
     return {
       id: payload['cognito:username'] || payload.sub,
       email: payload.email,
-      username: payload['cognito:username'] || email,
+      username: payload['name'] || email,
       accessToken: response.AuthenticationResult.AccessToken || '',
       idToken: idToken,
       refreshToken: response.AuthenticationResult.RefreshToken || '',

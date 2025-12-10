@@ -80,10 +80,11 @@ describe('LessonListSidebar', () => {
     const lesson1Link = Array.from(links).find(link =>
       link.textContent?.includes('1. Introduction')
     );
-    expect(lesson1Link?.querySelector('.text-green-500')).toBeInTheDocument();
+    // Check for the check-circle-icon test-id (our new structure uses data-testid)
+    expect(lesson1Link?.querySelector('[data-testid="check-circle-icon"]')).toBeInTheDocument();
   });
 
-  it('should show Resume badge for lastAccessedLesson if not completed', async () => {
+  it('should not show Resume badge (removed feature)', async () => {
     (lessonsActions.getLessons as jest.Mock).mockResolvedValue({
       lessons: mockLessons,
     });
@@ -91,8 +92,8 @@ describe('LessonListSidebar', () => {
 
     render(await LessonListSidebar({ courseId: 'test-course' }));
 
-    // lesson-2 is lastAccessedLesson and not completed, so should have Resume badge
-    expect(screen.getByText('Resume')).toBeInTheDocument();
+    // Resume badge has been removed - trackLessonAccess now happens in VideoPlayer
+    expect(screen.queryByText('Resume')).not.toBeInTheDocument();
   });
 
   it('should display lesson duration', async () => {
@@ -183,7 +184,7 @@ describe('LessonListSidebar', () => {
     expect(screen.getByText('0%')).toBeInTheDocument();
   });
 
-  it('should not show Resume badge if lesson is completed', async () => {
+  it('should not show Resume badge even when lastAccessedLesson is set', async () => {
     const progressWithCompletedLast = {
       ...mockProgress,
       completedLessons: ['lesson-1', 'lesson-2'],
@@ -197,7 +198,7 @@ describe('LessonListSidebar', () => {
 
     render(await LessonListSidebar({ courseId: 'test-course' }));
 
-    // lesson-2 is both completed and lastAccessed, so should NOT show Resume badge
+    // Resume badge has been removed entirely
     expect(screen.queryByText('Resume')).not.toBeInTheDocument();
   });
 

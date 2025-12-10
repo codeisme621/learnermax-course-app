@@ -6,4 +6,7 @@ export interface Student {
   signUpMethod?: 'email' | 'google';
   createdAt: string;
   updatedAt: string;
+  // Premium early access fields
+  interestedInPremium?: boolean;
+  premiumInterestDate?: string;
 }

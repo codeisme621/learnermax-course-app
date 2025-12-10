@@ -111,6 +111,26 @@ export class ProgressService {
 
     return updated;
   }
+
+  /**
+   * Track lesson access (lightweight update when user clicks/opens a lesson)
+   * Only updates lastAccessedLesson, does not affect completedLessons or percentage
+   */
+  async trackLessonAccess(studentId: string, courseId: string, lessonId: string): Promise<void> {
+    logger.info('[trackLessonAccess] Tracking lesson access', {
+      studentId,
+      courseId,
+      lessonId,
+    });
+
+    await progressRepository.updateLastAccessedLesson(studentId, courseId, lessonId);
+
+    logger.info('[trackLessonAccess] Lesson access tracked', {
+      studentId,
+      courseId,
+      lessonId,
+    });
+  }
 }
 
 // Singleton instance

@@ -1,21 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Clock, Award, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen, Clock, Award, Loader2, AlertCircle, Play, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import type { Course } from '@/app/actions/courses';
 import type { Enrollment } from '@/app/actions/enrollments';
+import type { ProgressResponse } from '@/app/actions/progress';
 
 interface CourseCardProps {
   course: Course;
   enrollment?: Enrollment; // Present if user is enrolled
+  progress?: ProgressResponse; // Live progress from Progress API
   onEnroll?: (courseId: string) => Promise<void>; // Callback for enrollment action
 }
 
-export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
+export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCardProps) {
   const router = useRouter();
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,137 +41,157 @@ export function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
     }
   };
 
-  const handleContinueCourse = () => {
-    router.push(`/course/${course.courseId}`);
+  const handleCardClick = () => {
+    if (isEnrolled) {
+      router.push(`/course/${course.courseId}`);
+    } else if (onEnroll && !isEnrolling) {
+      handleEnrollClick();
+    }
   };
 
-  return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Course Thumbnail */}
-      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20">
+  // Card content with improved styling
+  const cardContent = (
+    <Card
+      className={`overflow-hidden transition-all duration-300 group ${
+        isEnrolled || onEnroll
+          ? 'hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30 cursor-pointer'
+          : ''
+      }`}
+      onClick={!isEnrolled ? handleCardClick : undefined}
+    >
+      {/* Course Thumbnail - Enhanced gradient */}
+      <div className="relative h-32 md:h-36 bg-gradient-to-br from-blue-500/20 via-primary/15 to-cyan-500/20 overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/20 rounded-full blur-xl" />
+        <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-cyan-500/20 rounded-full blur-lg" />
+
         <div className="absolute inset-0 flex items-center justify-center">
-          <BookOpen className="w-12 h-12 text-primary/40" />
+          <div className="p-4 rounded-full bg-white/80 dark:bg-gray-900/80 shadow-lg group-hover:scale-110 transition-transform duration-300">
+            <BookOpen className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+          </div>
         </div>
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
           {isEnrolled ? (
-            <Badge variant="default" className="bg-green-600">
-              Enrolled
+            <Badge variant="default" className="bg-green-600 hover:bg-green-600 shadow-md">
+              ✓ Enrolled
+            </Badge>
+          ) : course.pricingModel === 'free' ? (
+            <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg border-0">
+              FREE
             </Badge>
           ) : (
-            <Badge variant="secondary">
-              {course.pricingModel === 'free' ? 'Free' : `$${course.price}`}
+            <Badge variant="secondary" className="shadow-md bg-white/90 dark:bg-gray-800/90">
+              ${course.price}
             </Badge>
           )}
         </div>
       </div>
 
       {/* Card Content */}
-      <div className="p-6">
-        <h3 className="text-xl font-bold mb-2 line-clamp-2">
-          {course.name}
-        </h3>
+      <CardContent className="pt-5">
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg md:text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+              {course.name}
+            </h3>
 
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-          {course.description}
-        </p>
-
-        {/* Course Metadata */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>Self-paced</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Award className="w-4 h-4" />
-            <span>All Levels</span>
-          </div>
-        </div>
-
-        {/* Enrolled State */}
-        {isEnrolled && enrollment && (
-          <div className="space-y-3">
-            {/* Progress Bar */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{enrollment.progress}%</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary rounded-full h-2 transition-all"
-                  style={{ width: `${enrollment.progress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Enrollment Date */}
-            <p className="text-xs text-muted-foreground">
-              Enrolled {new Date(enrollment.enrolledAt).toLocaleDateString()}
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {course.description}
             </p>
-
-            {/* Continue Button */}
-            <Button
-              onClick={handleContinueCourse}
-              className="w-full"
-              size="lg"
-            >
-              Continue Course
-            </Button>
           </div>
-        )}
 
-        {/* Not Enrolled State */}
-        {!isEnrolled && (
-          <div className="space-y-3">
-            {/* Instructor */}
-            {course.instructor && (
-              <p className="text-sm text-muted-foreground">
-                By {course.instructor}
-              </p>
-            )}
+          {/* Course Metadata */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-primary/70" />
+              <span>Self-paced</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Award className="w-4 h-4 text-primary/70" />
+              <span>All Levels</span>
+            </div>
+          </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <p className="text-xs">{error}</p>
+          {/* Enrolled State - Progress Section */}
+          {isEnrolled && enrollment && progress && (
+            <div className="space-y-2 pt-2">
+              <div className="flex justify-between text-xs md:text-sm">
+                <span className="text-muted-foreground">Your Progress</span>
+                <span className="font-semibold text-primary">
+                  {progress.completedLessons.length}/{progress.totalLessons} lessons • {progress.percentage}%
+                </span>
               </div>
-            )}
+              <Progress value={progress.percentage} className="h-2" />
+            </div>
+          )}
 
-            {/* Enroll Button */}
-            <Button
-              onClick={handleEnrollClick}
-              disabled={isEnrolling || !onEnroll}
-              className="w-full"
-              size="lg"
-            >
-              {isEnrolling ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enrolling...
-                </>
-              ) : (
-                'Enroll Now'
+          {/* Not Enrolled State */}
+          {!isEnrolled && (
+            <div className="space-y-3 pt-2">
+              {/* Instructor */}
+              {course.instructor && (
+                <p className="text-sm text-muted-foreground">
+                  By {course.instructor}
+                </p>
               )}
-            </Button>
 
-            {/* Retry Button (if error) */}
-            {error && (
-              <Button
-                onClick={handleEnrollClick}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={isEnrolling}
-              >
-                Try Again
-              </Button>
+              {/* Error Message */}
+              {error && (
+                <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded-lg text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-xs">{error}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+
+      {/* Card Footer with CTA */}
+      <CardFooter className="pt-0 pb-5">
+        {isEnrolled ? (
+          <Button
+            className="w-full cursor-pointer group/btn"
+            size="lg"
+          >
+            <Play className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            Continue Learning
+            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+          </Button>
+        ) : (
+          <Button
+            className="w-full cursor-pointer"
+            size="lg"
+            variant={isEnrolling ? 'secondary' : 'default'}
+            disabled={isEnrolling}
+          >
+            {isEnrolling ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enrolling...
+              </>
+            ) : (
+              <>
+                Enroll Now
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
             )}
-          </div>
+          </Button>
         )}
-      </div>
+      </CardFooter>
     </Card>
   );
+
+  // Wrap enrolled courses in Link for proper navigation
+  if (isEnrolled) {
+    return (
+      <Link href={`/course/${course.courseId}`} className="block active:scale-[0.98] active:opacity-90 transition-transform">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }

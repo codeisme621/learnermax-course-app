@@ -5,8 +5,67 @@
 import { http, HttpResponse } from 'msw';
 import type { LessonResponse, VideoUrlResponse } from '../lessons';
 import type { ProgressResponse } from '../progress';
+import type { Course } from '../courses';
+import type { Enrollment } from '../enrollments';
+import type { MeetupResponse } from '../meetups';
+import type { Student } from '../students';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// Mock course data
+export const mockCourses: Course[] = [
+  {
+    courseId: 'spec-driven-dev-mini',
+    name: 'Spec Driven Development Course',
+    description: 'Learn to write specs that guide implementation',
+    instructor: 'Rico Martinez',
+    pricingModel: 'free',
+    imageUrl: '/courses/spec-driven-dev.jpg',
+    learningObjectives: ['Write clear specs', 'Guide AI implementation'],
+    curriculum: [],
+  },
+  {
+    courseId: 'context-engineering',
+    name: 'Context Engineering Fundamentals',
+    description: 'Master the art of context engineering for AI',
+    instructor: 'Rico Martinez',
+    pricingModel: 'paid',
+    price: 49.99,
+    imageUrl: '/courses/context-eng.jpg',
+    learningObjectives: ['Understand context windows', 'Optimize AI interactions'],
+    curriculum: [],
+  },
+  {
+    courseId: 'premium-spec-course',
+    name: 'Advanced Spec-Driven Development Mastery',
+    description: 'Master advanced spec-driven development techniques with real-world case studies',
+    instructor: 'Rico Romero',
+    pricingModel: 'paid',
+    price: 19900,
+    imageUrl: '/courses/premium-spec.jpg',
+    learningObjectives: [
+      'Design complex multi-feature specifications',
+      'Implement advanced context engineering patterns',
+    ],
+    curriculum: [],
+    comingSoon: true,
+    estimatedDuration: '6-8 hours',
+    totalLessons: null,
+  },
+];
+
+// Mock enrollment data
+export const mockEnrollments: Enrollment[] = [
+  {
+    userId: 'test-user-123',
+    courseId: 'spec-driven-dev-mini',
+    enrollmentType: 'free',
+    enrolledAt: '2025-01-13T12:00:00.000Z',
+    paymentStatus: 'free',
+    progress: 33, // Static value (not used anymore)
+    completed: false,
+  },
+];
 
 // Mock lesson data (with completion status for integration tests)
 export const mockLessons: LessonResponse[] = [
@@ -38,8 +97,59 @@ export const mockLessons: LessonResponse[] = [
   },
 ];
 
+// Mock meetup data
+export const mockMeetups: MeetupResponse[] = [
+  {
+    meetupId: 'spec-driven-dev-weekly',
+    title: 'Spec Driven Development',
+    description: 'Weekly discussion on spec-driven workflows, best practices, and Q&A',
+    nextOccurrence: '2025-01-25T16:00:00.000Z', // Saturday 10 AM CST
+    isRunning: false,
+    isSignedUp: false,
+    duration: 60,
+    hostName: 'Rico Martinez',
+  },
+];
+
+// Track meetup signups in memory (for integration tests)
+export const meetupSignups = new Set<string>();
+
+// Mock student data
+export let mockStudent: Student = {
+  studentId: 'student-test-123',
+  userId: 'test-user-123',
+  email: 'test@example.com',
+  name: 'Test User',
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-01T00:00:00Z',
+  interestedInPremium: false,
+};
+
+// Helper to reset student state (for tests)
+export function resetStudentState() {
+  mockStudent = {
+    studentId: 'student-test-123',
+    userId: 'test-user-123',
+    email: 'test@example.com',
+    name: 'Test User',
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    interestedInPremium: false,
+  };
+}
+
 // Default handlers for successful responses
 export const handlers = [
+  // GET /api/courses - Get all courses
+  http.get(`${API_URL}/api/courses`, () => {
+    return HttpResponse.json(mockCourses); // Return array directly
+  }),
+
+  // GET /api/enrollments - Get user enrollments
+  http.get(`${API_URL}/api/enrollments`, () => {
+    return HttpResponse.json(mockEnrollments); // Return array directly
+  }),
+
   // GET /api/courses/:courseId/lessons
   http.get(`${API_URL}/api/courses/:courseId/lessons`, ({ params }) => {
     const { courseId } = params;
@@ -130,6 +240,12 @@ export const handlers = [
     } as ProgressResponse);
   }),
 
+  // POST /api/progress/access - Track lesson access (lightweight update)
+  http.post(`${API_URL}/api/progress/access`, async () => {
+    // Fire-and-forget endpoint - returns 204 No Content
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // POST /api/progress
   http.post(`${API_URL}/api/progress`, async ({ request }) => {
     const body = (await request.json()) as { courseId: string; lessonId: string };
@@ -181,5 +297,62 @@ export const handlers = [
       totalLessons: 3,
       updatedAt: new Date().toISOString(),
     } as ProgressResponse);
+  }),
+
+  // GET /api/meetups - Get all meetups with signup status
+  http.get(`${API_URL}/api/meetups`, () => {
+    // Return meetups with signup status based on meetupSignups set
+    const meetupsWithStatus = mockMeetups.map((meetup) => ({
+      ...meetup,
+      isSignedUp: meetupSignups.has(meetup.meetupId),
+    }));
+
+    return HttpResponse.json(meetupsWithStatus);
+  }),
+
+  // POST /api/meetups/:meetupId/signup - Sign up for a meetup
+  http.post(`${API_URL}/api/meetups/:meetupId/signup`, ({ params }) => {
+    const { meetupId } = params as { meetupId: string };
+
+    // Check if meetup exists
+    const meetupExists = mockMeetups.some((m) => m.meetupId === meetupId);
+    if (!meetupExists) {
+      return HttpResponse.json(
+        { error: 'Meetup not found' },
+        { status: 404 }
+      );
+    }
+
+    // Add to signups set
+    meetupSignups.add(meetupId);
+
+    return HttpResponse.json({ success: true });
+  }),
+
+  // GET /api/students/me - Get current student profile
+  http.get(`${API_URL}/api/students/me`, () => {
+    return HttpResponse.json(mockStudent);
+  }),
+
+  // POST /api/students/early-access - Sign up for early access
+  http.post(`${API_URL}/api/students/early-access`, async ({ request }) => {
+    const body = (await request.json()) as { courseId: string };
+
+    // Update mock student
+    mockStudent = {
+      ...mockStudent,
+      interestedInPremium: true,
+      premiumInterestDate: new Date().toISOString(),
+    };
+
+    return HttpResponse.json({
+      success: true,
+      message: "You're on the early access list!",
+      student: {
+        studentId: mockStudent.studentId,
+        interestedInPremium: true,
+        premiumInterestDate: mockStudent.premiumInterestDate,
+      },
+    });
   }),
 ];

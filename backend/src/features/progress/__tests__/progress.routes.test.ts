@@ -23,10 +23,12 @@ describe('Progress Routes', () => {
   let app: express.Application;
   let mockGetProgress: jest.SpyInstance;
   let mockMarkLessonComplete: jest.SpyInstance;
+  let mockTrackLessonAccess: jest.SpyInstance;
 
   beforeAll(() => {
     mockGetProgress = jest.spyOn(progressService, 'getProgress');
     mockMarkLessonComplete = jest.spyOn(progressService, 'markLessonComplete');
+    mockTrackLessonAccess = jest.spyOn(progressService, 'trackLessonAccess');
   });
 
   beforeEach(() => {
@@ -39,6 +41,7 @@ describe('Progress Routes', () => {
   afterAll(() => {
     mockGetProgress.mockRestore();
     mockMarkLessonComplete.mockRestore();
+    mockTrackLessonAccess.mockRestore();
   });
 
   describe('GET /api/progress/:courseId', () => {
@@ -292,6 +295,138 @@ describe('Progress Routes', () => {
       expect(response.status).toBe(500);
       expect(response.body).toEqual({ error: 'Failed to update progress' });
       expect(mockMarkLessonComplete).toHaveBeenCalledWith(userId, courseId, lessonId);
+    });
+  });
+
+  describe('POST /api/progress/access', () => {
+    it('should return 401 if user not authenticated', async () => {
+      const response = await request(app).post('/api/progress/access').send({
+        courseId: 'course-123',
+        lessonId: 'lesson-1',
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: 'Unauthorized' });
+      expect(mockTrackLessonAccess).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if courseId is missing', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          lessonId: 'lesson-1',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Missing or invalid courseId or lessonId' });
+      expect(mockTrackLessonAccess).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if lessonId is missing', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId: 'course-123',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Missing or invalid courseId or lessonId' });
+      expect(mockTrackLessonAccess).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if courseId is not a string', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId: 123,
+          lessonId: 'lesson-1',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Missing or invalid courseId or lessonId' });
+      expect(mockTrackLessonAccess).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if lessonId is not a string', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId: 'course-123',
+          lessonId: 123,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Missing or invalid courseId or lessonId' });
+      expect(mockTrackLessonAccess).not.toHaveBeenCalled();
+    });
+
+    it('should successfully track lesson access with 204 response', async () => {
+      const userId = 'user-123';
+      const courseId = 'spec-driven-dev-mini';
+      const lessonId = 'lesson-3';
+
+      mockTrackLessonAccess.mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId,
+          lessonId,
+        });
+
+      expect(response.status).toBe(204);
+      expect(response.body).toEqual({});
+      expect(mockTrackLessonAccess).toHaveBeenCalledWith(userId, courseId, lessonId);
+    });
+
+    it('should not call markLessonComplete when tracking access', async () => {
+      const userId = 'user-456';
+
+      mockTrackLessonAccess.mockResolvedValue(undefined);
+
+      await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId: 'course-abc',
+          lessonId: 'lesson-1',
+        });
+
+      expect(mockTrackLessonAccess).toHaveBeenCalledTimes(1);
+      expect(mockMarkLessonComplete).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 if service throws error', async () => {
+      const userId = 'user-789';
+      const courseId = 'course-123';
+      const lessonId = 'lesson-1';
+
+      mockTrackLessonAccess.mockRejectedValue(new Error('DynamoDB error'));
+
+      const response = await request(app)
+        .post('/api/progress/access')
+        .set(createAuthHeader(userId))
+        .send({
+          courseId,
+          lessonId,
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ error: 'Failed to track lesson access' });
+      expect(mockTrackLessonAccess).toHaveBeenCalledWith(userId, courseId, lessonId);
     });
   });
 });

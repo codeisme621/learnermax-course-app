@@ -7,16 +7,67 @@
 - Slice 4.2 (React Email Template - email rendering must work)
 
 ## Objective
-Create the email service that fetches student and course data from DynamoDB, renders the email template, and sends it via AWS SES. This completes the email Lambda handler so it can send real enrollment confirmation emails.
+Create the email service that fetches data from DynamoDB (student/course data for enrollments, meetup data for signups), renders the appropriate email template, and sends it via AWS SES. This includes support for email attachments (.ics files) for meetup calendar invites. This completes the email Lambda handler so it can send both enrollment confirmation emails and meetup calendar invite emails.
 
 ## What We're Doing
 
 ### 1. Configure AWS SES
 
-**Verify sender email in SES:**
+**⚠️ IMPORTANT: Domain Verification Required for Production**
+
+For production email sending, you **MUST verify your domain** (not just individual email addresses). This is required for:
+- SPF/DKIM/DMARC authentication (Gmail/Yahoo 2025 requirements)
+- Avoiding spam folders
+- Using advanced SES features (configuration sets, custom MAIL FROM)
+
+**❌ DO NOT use Gmail addresses** (e.g., `yourname@gmail.com`) as the sender:
+- You cannot configure DNS records for Gmail's domain
+- SPF/DKIM will fail (Gmail's records don't include AWS SES)
+- Emails will be rejected or marked as spam
+- Reference: [AWS SES Identity Verification](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html)
+
+**✅ RECOMMENDED: Verify Domain with Easy DKIM (2048-bit)**
 
 ```bash
-# Verify the sender email address
+# Step 1: Verify entire domain (enables sending from any address @learnwithrico.com)
+aws ses verify-domain-identity \
+  --domain learnwithrico.com \
+  --region us-east-1
+
+# Returns verification token for DNS TXT record
+
+# Step 2: Enable Easy DKIM for domain (2048-bit keys - 2025 standard)
+aws ses set-identity-dkim-enabled \
+  --identity learnwithrico.com \
+  --dkim-enabled \
+  --region us-east-1
+
+# Step 3: Get DKIM DNS records to add to your domain
+aws sesv2 get-email-identity \
+  --email-identity learnwithrico.com \
+  --region us-east-1
+```
+
+**DNS Records Required:**
+1. **Domain Verification TXT Record**: Add to `learnwithrico.com` DNS
+2. **DKIM CNAME Records** (3 records): Provided by Easy DKIM setup
+3. **Custom MAIL FROM** (recommended for SPF alignment):
+   ```bash
+   # Configure custom MAIL FROM subdomain (e.g., mail.learnwithrico.com)
+   aws ses set-identity-mail-from-domain \
+     --identity learnwithrico.com \
+     --mail-from-domain mail.learnwithrico.com \
+     --behavior-on-mx-failure UseDefaultValue \
+     --region us-east-1
+   ```
+   Then add MX and SPF TXT records for `mail.learnwithrico.com`:
+   - MX: `10 feedback-smtp.us-east-1.amazonses.com`
+   - TXT: `v=spf1 include:amazonses.com ~all`
+
+**For development/testing only (not recommended for production):**
+
+```bash
+# Verify individual email address (only for sandbox testing)
 aws ses verify-email-identity \
   --email-address support@learnwithrico.com \
   --region us-east-1
@@ -25,17 +76,6 @@ aws ses verify-email-identity \
 aws ses get-identity-verification-attributes \
   --identities support@learnwithrico.com \
   --region us-east-1
-```
-
-**For production: Verify domain (instead of individual email):**
-
-```bash
-# Verify entire domain (requires DNS records)
-aws ses verify-domain-identity \
-  --domain learnwithrico.com \
-  --region us-east-1
-
-# Returns verification token for DNS TXT record
 ```
 
 **Move out of SES sandbox (production):**
@@ -273,57 +313,93 @@ export async function prepareEnrollmentEmailData(
 
 **Create:** `backend/email/ses-service.ts`
 
-This service sends emails via AWS SES:
+This service sends emails via AWS SES, with support for attachments (for calendar invites):
 
 ```typescript
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 
 const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const FROM_EMAIL = process.env.SES_FROM_EMAIL!;
 const REPLY_TO_EMAIL = process.env.SES_REPLY_TO_EMAIL!;
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
- * Send email via AWS SES
+ * Send email via AWS SES with optional attachments
+ * Uses SendRawEmailCommand to support MIME multipart messages
  */
-export async function sendEmail({ to, subject, html }: SendEmailParams): Promise<void> {
-  const command = new SendEmailCommand({
-    Source: FROM_EMAIL,
-    Destination: {
-      ToAddresses: [to]
-    },
-    Message: {
-      Subject: {
-        Data: subject,
-        Charset: 'UTF-8'
-      },
-      Body: {
-        Html: {
-          Data: html,
-          Charset: 'UTF-8'
-        }
-      }
-    },
-    ReplyToAddresses: [REPLY_TO_EMAIL]
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  attachments = []
+}: SendEmailParams): Promise<void> {
+  // Build MIME message
+  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  let rawMessage = [
+    `From: ${FROM_EMAIL}`,
+    `To: ${to}`,
+    `Reply-To: ${REPLY_TO_EMAIL}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: 7bit`,
+    '',
+    html,
+    ''
+  ].join('\r\n');
+
+  // Add attachments if present
+  for (const attachment of attachments) {
+    const base64Content = attachment.content.toString('base64');
+    rawMessage += [
+      `--${boundary}`,
+      `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+      `Content-Disposition: attachment; filename="${attachment.filename}"`,
+      `Content-Transfer-Encoding: base64`,
+      '',
+      base64Content,
+      ''
+    ].join('\r\n');
+  }
+
+  rawMessage += `--${boundary}--`;
+
+  const command = new SendRawEmailCommand({
+    RawMessage: {
+      Data: Buffer.from(rawMessage)
+    }
   });
 
   try {
     const response = await sesClient.send(command);
     console.log('Email sent successfully', {
       messageId: response.MessageId,
-      to
+      to,
+      attachmentCount: attachments.length
     });
   } catch (error) {
     console.error('Failed to send email via SES', {
       error,
       to,
-      subject
+      subject,
+      attachmentCount: attachments.length
     });
     throw error;
   }
@@ -687,6 +763,36 @@ case 'CourseCompleted':
 
 // Handler automatically routes based on eventType
 ```
+
+### For Production Email Authentication (DMARC)
+
+**Set up DMARC policy for your domain:**
+
+After configuring SPF and DKIM, add a DMARC TXT record to your DNS:
+
+```
+_dmarc.learnwithrico.com TXT "v=DMARC1; p=none; rua=mailto:dmarc-reports@learnwithrico.com; pct=100"
+```
+
+DMARC policy options:
+- `p=none`: Monitor only (start here, collect reports)
+- `p=quarantine`: Send failing emails to spam (after monitoring period)
+- `p=reject`: Reject failing emails (strictest, use after quarantine period)
+
+**Why DMARC matters (2025 requirements):**
+- Gmail and Yahoo require DMARC for bulk senders (5000+ emails/day)
+- Improves deliverability and protects against spoofing
+- Provides reports on email authentication failures
+- Reference: [AWS SES DMARC Compliance](https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication-dmarc.html)
+
+**Checklist for production email authentication:**
+- [ ] Domain verified in SES
+- [ ] Easy DKIM enabled (2048-bit)
+- [ ] Custom MAIL FROM domain configured
+- [ ] SPF record added for MAIL FROM subdomain
+- [ ] DMARC policy set to `p=none` initially
+- [ ] Monitor DMARC reports for 2-4 weeks
+- [ ] Gradually increase DMARC strictness (`p=quarantine`, then `p=reject`)
 
 ### For Production Monitoring
 **Add CloudWatch metrics:**

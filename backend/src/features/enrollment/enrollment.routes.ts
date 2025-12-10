@@ -4,9 +4,11 @@ import { enrollmentService } from './enrollment.service.js';
 import { enrollmentRepository } from './enrollment.repository.js';
 import { getUserIdFromContext } from '../../lib/auth-utils.js';
 import { createLogger } from '../../lib/logger.js';
+import { createMetrics, MetricUnit } from '../../lib/metrics.js';
 
 const router: Router = express.Router();
 const logger = createLogger('EnrollmentRoutes');
+const metrics = createMetrics('LearnerMax/Backend', 'EnrollmentService');
 
 // POST /api/enrollments - Create enrollment
 router.post('/', async (req: Request, res: Response) => {
@@ -35,6 +37,11 @@ router.post('/', async (req: Request, res: Response) => {
       status: result.status,
       enrollmentType: result.enrollment?.enrollmentType
     });
+
+    // Track enrollment success metric
+    metrics.addMetric('EnrollmentSuccess', MetricUnit.Count, 1);
+    metrics.publishStoredMetrics();
+
     res.status(201).json(result);
   } catch (error) {
     logger.error('[POST /api/enrollments] Enrollment failed', { error, body: req.body });

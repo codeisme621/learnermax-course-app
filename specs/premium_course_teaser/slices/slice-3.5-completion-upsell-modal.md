@@ -6,6 +6,15 @@
 - Slice 3.2 (Early Access Backend - API endpoint must exist)
 - Phase 1 Slice 1.4 (Video Player Component - confetti and onCourseComplete callback)
 
+## Prerequisites
+
+Before implementing this slice, ensure these are complete:
+
+- ✅ **Slice 3.2 complete**: Student type extended with `interestedInPremium` field
+- ✅ **Slice 3.2 complete**: `POST /api/students/early-access` endpoint exists
+- ✅ **Slice 3.2 complete**: `signUpForEarlyAccess()` server action available
+- ✅ **Phase 1 complete**: VideoPlayer component has confetti animation and `onCourseComplete` callback
+
 ## Objective
 Show a premium course upsell modal after the student completes 100% of the mini course. This is the highest-intent moment to capture leads - the student just finished the free course and is likely interested in learning more. The modal appears after the confetti celebration, creating a positive emotional context for the upsell.
 
@@ -88,12 +97,9 @@ export function PremiumUpsellModal({ isOpen, onClose, isInterestedInPremium }: P
 
           {/* Premium course card */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start mb-3">
               <span className="bg-yellow-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                 COMING SOON
-              </span>
-              <span className="text-blue-700 font-bold text-lg">
-                $199
               </span>
             </div>
 
@@ -185,23 +191,77 @@ export function PremiumUpsellModal({ isOpen, onClose, isInterestedInPremium }: P
 }
 ```
 
-### 2. Integrate Modal with Video Player
+### 2. Integrate Modal with Course Page
+
+**Why this is needed:** The course page is currently an async server component. To manage modal state (open/close), we need to refactor part of it into a client component. The VideoPlayer's `onCourseComplete` callback will trigger the modal to open.
+
+**Architecture Pattern:**
+- Course page (server component) - Fetches data and passes to client component
+- CourseVideoSection (client component) - Manages modal state and video player interactions
 
 **Update:** `frontend/app/course/[courseId]/page.tsx`
 
-Add state management for the modal and pass the `onCourseComplete` callback to the video player:
+The course page fetches student data and passes it to the client component:
+
+```typescript
+import { getCourse } from '@/app/actions/courses';
+import { getCourseLessons } from '@/app/actions/lessons';
+import { getStudent } from '@/app/actions/students';
+import { CourseVideoSection } from '@/components/course/CourseVideoSection';
+
+export default async function CoursePage({ params }: { params: { courseId: string } }) {
+  const { courseId } = params;
+
+  // Fetch course, lessons, and student data
+  const [course, lessons, student] = await Promise.all([
+    getCourse(courseId),
+    getCourseLessons(courseId),
+    getStudent(), // NEW: Fetch student for modal prop
+  ]);
+
+  if (!course) {
+    return <div>Course not found</div>;
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Course header, premium banner, etc. */}
+
+      {/* Video section with modal integration */}
+      <CourseVideoSection
+        course={course}
+        lessons={lessons}
+        student={student} // NEW: Pass student data to client component
+      />
+    </div>
+  );
+}
+```
+
+**Update:** `frontend/components/course/CourseVideoSection.tsx`
+
+Add modal state management and wire up the `onCourseComplete` callback:
 
 ```typescript
 'use client';
 
 import { useState } from 'react';
-import { PremiumUpsellModal } from '@/app/components/PremiumUpsellModal';
-import { VideoPlayer } from '@/app/components/VideoPlayer';
+import { PremiumUpsellModal } from '@/components/PremiumUpsellModal';
+import { VideoPlayer } from '@/components/course/VideoPlayer';
+import type { Course } from '@/app/actions/courses';
+import type { Student } from '@/app/actions/students';
 
-export default function CoursePage({ course, lessons, student, enrollment }) {
+interface CourseVideoSectionProps {
+  course: Course;
+  lessons: Lesson[];
+  student: Student | null;
+}
+
+export function CourseVideoSection({ course, lessons, student }: CourseVideoSectionProps) {
   const [showUpsellModal, setShowUpsellModal] = useState(false);
 
   const handleCourseComplete = () => {
+    console.log('Course completed! Showing premium upsell modal...');
     // Only show modal for free courses (not premium courses in future)
     if (course.pricingModel === 'free') {
       setShowUpsellModal(true);
@@ -210,23 +270,24 @@ export default function CoursePage({ course, lessons, student, enrollment }) {
 
   return (
     <div>
-      {/* ... course header and banner ... */}
-
+      {/* Video Player */}
       <VideoPlayer
         lesson={currentLesson}
         onProgress={handleProgress}
         onLessonComplete={handleLessonComplete}
-        onCourseComplete={handleCourseComplete}  // NEW: Pass callback
+        onCourseComplete={handleCourseComplete}  // NEW: Wire up callback
       />
 
       {/* Premium Upsell Modal */}
-      <PremiumUpsellModal
-        isOpen={showUpsellModal}
-        onClose={() => setShowUpsellModal(false)}
-        isInterestedInPremium={student?.interestedInPremium || false}
-      />
+      {showUpsellModal && (
+        <PremiumUpsellModal
+          isOpen={showUpsellModal}
+          onClose={() => setShowUpsellModal(false)}
+          isInterestedInPremium={student?.interestedInPremium || false}
+        />
+      )}
 
-      {/* ... rest of page ... */}
+      {/* Lesson sidebar, etc. */}
     </div>
   );
 }
@@ -318,11 +379,12 @@ export function VideoPlayer({ lesson, onProgress, onLessonComplete, onCourseComp
 ### Modal Content
 - [ ] Congratulations header with checkmark icon
 - [ ] "COMING SOON" badge displayed
-- [ ] Premium course title and price shown
+- [ ] Premium course title shown (no price for coming soon)
 - [ ] Premium course description shown
 - [ ] 4 learning objectives listed with checkmarks
-- [ ] Duration displayed
+- [ ] Duration displayed: "6-8 hours"
 - [ ] Gradient background on course card section
+- [ ] Price NOT displayed (coming soon courses hide price until launch)
 
 ### Early Access Functionality
 - [ ] "Join Early Access" button prominently displayed
@@ -354,10 +416,14 @@ export function VideoPlayer({ lesson, onProgress, onLessonComplete, onCourseComp
 ## Forward-Looking Requirements
 
 ### For Future Premium Course Launch
-**When premium course launches:**
-- Modal should not appear after completing premium course
-- Modal logic: `if (course.pricingModel === 'free')` prevents this
+**When premium course launches (`comingSoon: false`):**
+- **Price will be displayed** in the modal (update modal to show price for available paid courses)
+- Modal should still appear after completing FREE courses (mini course)
+- Modal should NOT appear after completing PAID courses (premium course)
+- Modal logic: `if (course.pricingModel === 'free')` prevents showing for premium
 - Or: Replace with "Rate this course" or "Share with friends" modal for premium completions
+
+**Key Point:** For MVP, modal shows "COMING SOON" badge with NO price. When course launches, update modal to conditionally show price based on `comingSoon` flag.
 
 ### For Future Enhancement
 **Add analytics tracking:**

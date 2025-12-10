@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { Session } from 'next-auth';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
-import { LogOut, User, Mail, BookOpen, Loader2, AlertCircle } from 'lucide-react';
-import { signOutAction } from '@/app/actions/auth';
+import { BookOpen, Loader2, AlertCircle, Users } from 'lucide-react';
 import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actions/enrollments';
 import { getAllCourses, type Course } from '@/app/actions/courses';
+import { getProgress, type ProgressResponse } from '@/app/actions/progress';
+import { getMeetups, type MeetupResponse } from '@/app/actions/meetups';
+import { getStudent, type Student } from '@/app/actions/students';
 import { CourseCard } from './CourseCard';
+import { PremiumCourseCard } from './PremiumCourseCard';
+import { MeetupCard } from './MeetupCard';
 
 interface DashboardContentProps {
   session: Session;
@@ -19,14 +22,12 @@ interface DashboardContentProps {
 export function DashboardContent({ session }: DashboardContentProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [progressMap, setProgressMap] = useState<Map<string, ProgressResponse>>(new Map());
+  const [meetups, setMeetups] = useState<MeetupResponse[]>([]);
+  const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStudent, setIsLoadingStudent] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const userInitials = session.user?.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || 'U';
 
   // Create enrollment lookup map for O(1) checks
   const enrollmentMap = new Map<string, Enrollment>();
@@ -57,20 +58,75 @@ export function DashboardContent({ session }: DashboardContentProps) {
           sessionStorage.removeItem('pendingEnrollmentCourseId');
         }
 
-        // Step 2: Fetch all courses
-        const coursesResult = await getAllCourses();
+        // Step 2: Fetch all dashboard data in parallel
+        console.log('[DashboardContent] Fetching student profile');
+        const [coursesResult, enrollmentsResult, meetupsResult, studentResult] = await Promise.all([
+          getAllCourses(),
+          getUserEnrollments(),
+          getMeetups(),
+          getStudent(),
+        ]);
+
+        // Handle student profile
+        if (studentResult) {
+          setStudent(studentResult);
+          console.log('[DashboardContent] Student profile loaded', {
+            interestedInPremium: studentResult.interestedInPremium,
+          });
+        } else {
+          console.warn('[DashboardContent] Failed to fetch student profile');
+        }
+        setIsLoadingStudent(false);
+
+        // Handle courses
         if ('courses' in coursesResult) {
           setCourses(coursesResult.courses);
         } else {
           setError('Failed to load courses');
         }
 
-        // Step 3: Fetch user enrollments
-        const enrollmentsResult = await getUserEnrollments();
+        // Handle enrollments
         if (enrollmentsResult) {
           setEnrollments(enrollmentsResult);
+
+          // Step 4: Fetch progress for each enrolled course in parallel
+          console.log('Fetching progress for enrolled courses:', enrollmentsResult.length);
+          const progressPromises = enrollmentsResult.map((enrollment) =>
+            getProgress(enrollment.courseId).then((result) => [enrollment.courseId, result] as const)
+          );
+
+          const progressEntries = await Promise.all(progressPromises);
+
+          // Filter out errors and create Map
+          const validProgressEntries = progressEntries.filter(
+            ([courseId, result]) => {
+              if ('error' in result) {
+                console.warn('Failed to fetch progress for course', { courseId, error: result.error });
+                return false;
+              }
+              return true;
+            }
+          ) as [string, ProgressResponse][];
+
+          const newProgressMap = new Map(validProgressEntries);
+          setProgressMap(newProgressMap);
+
+          console.log('Dashboard data loaded', {
+            coursesCount: courses.length,
+            enrollmentsCount: enrollmentsResult.length,
+            progressFetchedCount: newProgressMap.size,
+            progressFailedCount: enrollmentsResult.length - newProgressMap.size,
+          });
         }
-        // Note: enrollment fetch failure is not critical, just means empty enrollments
+
+        // Handle meetups (non-critical - fail gracefully)
+        if (Array.isArray(meetupsResult)) {
+          setMeetups(meetupsResult);
+          console.log('Meetups loaded successfully', { count: meetupsResult.length });
+        } else if (meetupsResult && 'error' in meetupsResult) {
+          console.error('Failed to load meetups (continuing anyway):', meetupsResult.error);
+          // Don't set error state - meetups are non-critical
+        }
 
       } catch (err) {
         console.error('Dashboard initialization error:', err);
@@ -92,6 +148,12 @@ export function DashboardContent({ session }: DashboardContentProps) {
       const updatedEnrollments = await getUserEnrollments();
       if (updatedEnrollments) {
         setEnrollments(updatedEnrollments);
+
+        // Fetch progress for the newly enrolled course
+        const progressResult = await getProgress(courseId);
+        if (!('error' in progressResult)) {
+          setProgressMap((prev) => new Map(prev).set(courseId, progressResult));
+        }
       }
     } else {
       // Error will be shown in CourseCard component
@@ -105,57 +167,31 @@ export function DashboardContent({ session }: DashboardContentProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="space-y-8 md:space-y-12"
       >
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
-          </h1>
-          <p className="text-muted-foreground">
-            Ready to continue your learning journey?
-          </p>
+        <div className="relative mb-8 md:mb-12 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border border-primary/10 overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 md:w-48 md:h-48 bg-gradient-to-br from-primary/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-gradient-to-tr from-accent/20 to-transparent rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
+            </h1>
+            <p className="text-muted-foreground">
+              Ready to continue your learning journey?
+            </p>
+          </div>
         </div>
 
-        {/* User Info Card */}
-        <Card className="p-6 mb-8">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={session.user?.image || undefined} />
-                <AvatarFallback className="text-lg font-semibold">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold mb-1">
-                  {session.user?.name || 'Student'}
-                </h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  {session.user?.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <User className="w-4 h-4" />
-                  User ID: {session.user?.id}
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={signOutAction}
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
-          </div>
-        </Card>
-
         {/* Courses Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <BookOpen className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">Available Courses</h2>
+        <section>
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BookOpen className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold">Your Courses</h2>
           </div>
 
           {/* Loading State */}
@@ -189,31 +225,84 @@ export function DashboardContent({ session }: DashboardContentProps) {
             </Card>
           )}
 
-          {/* Course Cards Grid */}
+          {/* Course Cards Grid with Staggered Animation */}
           {!isLoading && !error && courses.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                <CourseCard
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
+              {courses.map((course, index) => (
+                <motion.div
                   key={course.courseId}
-                  course={course}
-                  enrollment={enrollmentMap.get(course.courseId)}
-                  onEnroll={handleEnroll}
-                />
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: index * 0.1,
+                    ease: 'easeOut',
+                  }}
+                >
+                  {course.comingSoon ? (
+                    <PremiumCourseCard
+                      course={course}
+                      isInterestedInPremium={student?.interestedInPremium || false}
+                      isLoadingStudent={isLoadingStudent}
+                    />
+                  ) : (
+                    <CourseCard
+                      course={course}
+                      enrollment={enrollmentMap.get(course.courseId)}
+                      progress={progressMap.get(course.courseId)}
+                      onEnroll={handleEnroll}
+                    />
+                  )}
+                </motion.div>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Session Debug Info (dev only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card className="p-6 mt-8 bg-muted/50">
-            <h3 className="font-semibold mb-2 text-sm">
-              Session Info (Development Only)
-            </h3>
-            <pre className="text-xs overflow-auto">
-              {JSON.stringify(session, null, 2)}
-            </pre>
-          </Card>
+        {/* Section Divider */}
+        {!isLoading && meetups.length > 0 && (
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+        )}
+
+        {/* Meetups Section */}
+        {!isLoading && meetups.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <div className="flex items-center gap-3 mb-4 md:mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl md:text-2xl font-bold">Community Meetups</h2>
+              <Badge variant="secondary" className="bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50">
+                New
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mb-4 md:mb-6">
+              Join our weekly meetups to connect with fellow learners, ask questions, and dive deeper into topics.
+            </p>
+
+            <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+              {meetups.map((meetup, index) => (
+                <motion.div
+                  key={meetup.meetupId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.4 + index * 0.1,
+                    ease: 'easeOut',
+                  }}
+                >
+                  <MeetupCard meetup={meetup} />
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
         )}
       </motion.div>
     </div>

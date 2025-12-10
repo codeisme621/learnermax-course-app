@@ -6,12 +6,57 @@
 - Slice 3.2 (Early Access Backend - API endpoint must exist)
 - Phase 1 Slice 1.5 (Course Lesson UI - course page must exist)
 
+## Prerequisites
+
+Before implementing this slice, ensure these are complete:
+
+- ✅ **Slice 3.2 complete**: Student type extended with `interestedInPremium` field
+- ✅ **Slice 3.2 complete**: `POST /api/students/early-access` endpoint exists
+- ✅ **Slice 3.2 complete**: `getStudent()` server action available in `frontend/app/actions/students.ts`
+- ✅ **Slice 3.2 complete**: `signUpForEarlyAccess()` server action available
+
 ## Objective
 Display a promotional banner inside the mini course that promotes the premium course while students are learning. This keeps the premium course top-of-mind and provides a non-intrusive way to sign up for early access without leaving the learning experience.
 
 ## What We're Doing
 
-### 1. Premium Promotion Banner Component
+### 1. Fetch Student Data in Course Page
+
+**Why this comes first:** The banner component needs to know if the student has already signed up for early access (`interestedInPremium` field). We must fetch this data before rendering the banner.
+
+**Update:** `frontend/app/course/[courseId]/page.tsx`
+
+The course page is an async server component that needs to fetch student data:
+
+```typescript
+import { getStudent } from '@/app/actions/students';
+import { getCourse } from '@/app/actions/courses';
+import { getCourseLessons } from '@/app/actions/lessons';
+
+export default async function CoursePage({ params }: { params: { courseId: string } }) {
+  const { courseId } = params;
+
+  // Fetch course, lessons, and student data in parallel
+  const [course, lessons, student] = await Promise.all([
+    getCourse(courseId),
+    getCourseLessons(courseId),
+    getStudent(), // NEW: Fetch student profile to get interestedInPremium status
+  ]);
+
+  if (!course) {
+    return <div>Course not found</div>;
+  }
+
+  // ... rest of component
+}
+```
+
+**Key Points:**
+- Use `Promise.all()` for parallel fetching (better performance)
+- `getStudent()` returns `Student | null` (handle null case)
+- Student data includes `interestedInPremium?: boolean` field
+
+### 2. Premium Promotion Banner Component
 
 **Create:** `frontend/app/components/PremiumPromotionBanner.tsx`
 
@@ -114,7 +159,7 @@ export function PremiumPromotionBanner({ isInterestedInPremium }: PremiumPromoti
 }
 ```
 
-### 2. Add Banner to Course Page
+### 3. Add Banner to Course Page
 
 **Update:** `frontend/app/course/[courseId]/page.tsx`
 
@@ -122,16 +167,16 @@ Add the premium promotion banner between the course header and the video player.
 
 ```typescript
 import { PremiumPromotionBanner } from '@/app/components/PremiumPromotionBanner';
-import { getStudent } from '@/app/actions/students';
 
 export default async function CoursePage({ params }: { params: { courseId: string } }) {
   const { courseId } = params;
 
-  // Fetch course, lessons, enrollment, and student data
-  const course = await getCourse(courseId);
-  const lessons = await getCourseLessons(courseId);
-  const enrollment = await checkEnrollment(courseId);
-  const student = await getStudent();
+  // Fetch course, lessons, and student data (from step 1)
+  const [course, lessons, student] = await Promise.all([
+    getCourse(courseId),
+    getCourseLessons(courseId),
+    getStudent(),
+  ]);
 
   // ... enrollment check logic ...
 

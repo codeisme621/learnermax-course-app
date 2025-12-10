@@ -6,7 +6,7 @@ Phases 1-4 built the platform foundation, mini course content, premium course te
 For MVP launch, the landing page must showcase the actual free mini course: "Spec-Driven Development with Context Engineering". This makes the landing page authentic, aligns with the actual product offering, and provides a cohesive experience from landing → enrollment → learning.
 
 ## User Story
-As a visitor landing on the LearnerMax homepage, I want to see information about the actual free course that's available - "Spec-Driven Development with Context Engineering" - not generic mock content. I expect to see:
+As a visitor landing on the LearnWithRico homepage, I want to see information about the actual free course that's available - "Spec-Driven Development with Context Engineering" - not generic mock content. I expect to see:
 - The real course title, description, and learning objectives
 - Accurate course details (3-5 lessons, ~30-60 minutes duration)
 - Authentic instructor information (Rico Romero)

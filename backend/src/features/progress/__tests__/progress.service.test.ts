@@ -13,12 +13,14 @@ jest.unstable_mockModule('../../../lib/logger', () => ({
 // Mock dependencies
 const mockGetProgress = jest.fn<() => Promise<ProgressResponse | undefined>>();
 const mockSaveProgress = jest.fn<() => Promise<ProgressResponse>>();
+const mockUpdateLastAccessedLesson = jest.fn<() => Promise<void>>();
 const mockGetTotalLessons = jest.fn<() => Promise<number>>();
 
 jest.unstable_mockModule('../progress.repository', () => ({
   progressRepository: {
     getProgress: mockGetProgress,
     saveProgress: mockSaveProgress,
+    updateLastAccessedLesson: mockUpdateLastAccessedLesson,
   },
 }));
 
@@ -334,6 +336,39 @@ describe('ProgressService', () => {
 
       expect(result.percentage).toBe(100);
       expect(result.completedLessons).toHaveLength(5);
+    });
+  });
+
+  describe('trackLessonAccess', () => {
+    it('should call repository to update lastAccessedLesson', async () => {
+      const studentId = 'student-123';
+      const courseId = 'course-abc';
+      const lessonId = 'lesson-3';
+
+      mockUpdateLastAccessedLesson.mockResolvedValue(undefined);
+
+      await progressService.trackLessonAccess(studentId, courseId, lessonId);
+
+      expect(mockUpdateLastAccessedLesson).toHaveBeenCalledTimes(1);
+      expect(mockUpdateLastAccessedLesson).toHaveBeenCalledWith(studentId, courseId, lessonId);
+    });
+
+    it('should not call getProgress or saveProgress', async () => {
+      mockUpdateLastAccessedLesson.mockResolvedValue(undefined);
+
+      await progressService.trackLessonAccess('student-456', 'course-xyz', 'lesson-1');
+
+      expect(mockGetProgress).not.toHaveBeenCalled();
+      expect(mockSaveProgress).not.toHaveBeenCalled();
+      expect(mockGetTotalLessons).not.toHaveBeenCalled();
+    });
+
+    it('should not return any value', async () => {
+      mockUpdateLastAccessedLesson.mockResolvedValue(undefined);
+
+      const result = await progressService.trackLessonAccess('student-789', 'course-123', 'lesson-5');
+
+      expect(result).toBeUndefined();
     });
   });
 });

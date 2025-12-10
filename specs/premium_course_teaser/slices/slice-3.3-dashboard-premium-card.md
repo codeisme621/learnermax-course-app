@@ -6,6 +6,16 @@
 - Slice 3.1 (Premium Course Placeholder - course must exist in database)
 - Slice 3.2 (Early Access Backend - API endpoint must exist)
 
+## Prerequisites
+
+Before implementing this slice, ensure these are complete:
+
+- ✅ **Slice 3.1 complete**: Course type extended with `comingSoon`, `estimatedDuration` fields
+- ✅ **Slice 3.1 complete**: Premium course record created in DynamoDB with `comingSoon: true`
+- ✅ **Slice 3.2 complete**: Student type extended with `interestedInPremium` field
+- ✅ **Slice 3.2 complete**: `POST /api/students/early-access` endpoint exists
+- ✅ **Slice 3.2 complete**: `getStudent()` server action available in `frontend/app/actions/students.ts`
+
 ## Objective
 Display the premium course on the dashboard with a "Coming Soon" badge and early access signup functionality. The card should show different states based on whether the student has already signed up for early access.
 
@@ -36,7 +46,7 @@ The dashboard should render both courses (mini course and premium course) with d
 │ Master advanced spec-driven...      │
 │                                     │
 │ ┌───────────────┐                  │
-│ │ COMING SOON   │    PAID • $199   │
+│ │ COMING SOON   │    6-8 hours     │
 │ └───────────────┘                  │
 │                                     │
 │ [Join Early Access] ← Blue button  │
@@ -54,7 +64,7 @@ The dashboard should render both courses (mini course and premium course) with d
 │ Master advanced spec-driven...      │
 │                                     │
 │ ┌───────────────┐                  │
-│ │ COMING SOON   │    PAID • $199   │
+│ │ COMING SOON   │    6-8 hours     │
 │ └───────────────┘                  │
 │                                     │
 │ ✓ You're on the early access list  │
@@ -149,14 +159,17 @@ export function PremiumCourseCard({ course, isInterestedInPremium }: PremiumCour
 
         {/* Course Meta */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-          <span className="font-semibold text-blue-600">
-            {course.pricingModel === 'paid' ? `PAID • $${course.price}` : 'FREE'}
-          </span>
-          {course.estimatedDuration && (
+          {/* Show price for available paid courses, hide for coming soon */}
+          {!course.comingSoon && course.pricingModel === 'paid' && course.price && (
             <>
-              <span>•</span>
-              <span>{course.estimatedDuration}</span>
+              <span className="font-semibold text-blue-600">
+                ${(course.price / 100).toFixed(2)}
+              </span>
+              {course.estimatedDuration && <span>•</span>}
             </>
+          )}
+          {course.estimatedDuration && (
+            <span>{course.estimatedDuration}</span>
           )}
         </div>
 
@@ -317,10 +330,11 @@ export async function getStudent(): Promise<Student | null> {
 
 ### Premium Course Display
 - [ ] Premium course appears on dashboard in "Coming Soon" section
-- [ ] "COMING SOON" badge displayed on course card
+- [ ] "COMING SOON" badge displayed on course card (yellow/gold color)
 - [ ] Course image, name, description shown correctly
-- [ ] Price displayed: "PAID • $199"
-- [ ] Estimated duration displayed if available
+- [ ] Estimated duration displayed: "6-8 hours"
+- [ ] Price NOT displayed for coming soon courses (because `comingSoon: true`)
+- [ ] When `comingSoon: false` in future, price WILL be displayed for paid courses
 
 ### Early Access Functionality
 - [ ] "Join Early Access" button appears if not signed up
@@ -361,9 +375,15 @@ export async function getStudent(): Promise<Student | null> {
 ### For Future Launch (Post-MVP)
 **When premium course launches:**
 1. Set `comingSoon: false` in course record
-2. Card automatically moves to "Your Courses" section
-3. "Join Early Access" button replaced with "Enroll Now" button
-4. Enrollment flow uses Stripe integration (future phase)
+2. **Price will automatically appear** on course card (logic: `!course.comingSoon && course.pricingModel === 'paid'`)
+3. Card automatically moves to "Your Courses" section
+4. "Join Early Access" button replaced with "Enroll Now" button
+5. Enrollment flow uses Stripe integration (future phase)
+
+**Key Point:** The price display logic checks `comingSoon` flag, NOT just `pricingModel`. This means:
+- `comingSoon: true` + `paid` → Hide price, show "COMING SOON"
+- `comingSoon: false` + `paid` → Show price (e.g., "$49.99")
+- `comingSoon: false` + `free` → Show "FREE"
 
 ## Verification Steps
 
@@ -418,7 +438,7 @@ After implementing:
    case studies, hands-on projects, and in-depth coverage of context
    engineering patterns.
 
-   PAID • $199 • 6-8 hours
+   6-8 hours
    ```
 
 4. **Interest sparked:** Michael clicks "Join Early Access" button.

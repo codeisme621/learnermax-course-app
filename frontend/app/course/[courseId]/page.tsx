@@ -1,19 +1,14 @@
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { getCourse } from '@/app/actions/courses';
 import { checkEnrollment } from '@/app/actions/enrollments';
 import { getProgress } from '@/app/actions/progress';
 import { getLessons } from '@/app/actions/lessons';
+import { getStudent } from '@/app/actions/students';
 import { Card } from '@/components/ui/card';
-import { CourseHeader } from '@/components/course/CourseHeader';
+import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
-import { LessonListSidebar } from '@/components/course/LessonListSidebar';
-import { MobileLessonMenu } from '@/components/course/MobileLessonMenu';
-import {
-  CourseHeaderSkeleton,
-  LessonListSkeleton,
-} from '@/components/course/skeletons';
+import { CollapsibleLessonSidebar } from '@/components/course/CollapsibleLessonSidebar';
 import { determineCurrentLesson } from '@/lib/course-utils';
 import {
   CheckCircle,
@@ -37,13 +32,13 @@ export async function generateMetadata({ params }: CoursePageProps): Promise<Met
 
   if ('course' in courseResult) {
     return {
-      title: `${courseResult.course.name} - LearnerMax`,
+      title: `${courseResult.course.name} - LearnWithRico`,
       description: courseResult.course.description,
     };
   }
 
   return {
-    title: 'Course - LearnerMax',
+    title: 'Course - LearnWithRico',
     description: 'Access your course content',
   };
 }
@@ -72,10 +67,11 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
 
   const course = courseResult.course;
 
-  // Fetch lessons and progress
-  const [lessonsResult, progressResult] = await Promise.all([
+  // Fetch lessons, progress, and student data
+  const [lessonsResult, progressResult, student] = await Promise.all([
     getLessons(courseId),
     getProgress(courseId),
+    getStudent(),
   ]);
 
   // Handle errors
@@ -101,42 +97,54 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
     redirect('/dashboard?error=no-lessons');
   }
 
+  // Auto-redirect to last accessed lesson if no query param and target is not first lesson
+  const requestedLesson = search?.lesson;
+  if (!requestedLesson && lessons.length > 0 && currentLesson.lessonId !== lessons[0]?.lessonId) {
+    redirect(`/course/${courseId}?lesson=${currentLesson.lessonId}`);
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with Progress */}
-      <Suspense fallback={<CourseHeaderSkeleton />}>
-        <CourseHeader courseId={courseId} />
-      </Suspense>
+      {/* Authenticated Header with Course Progress */}
+      <AuthenticatedHeader
+        variant="course"
+        user={session.user}
+        courseProgress={{
+          percentage: progress.percentage,
+          completedLessons: progress.completedLessons.length,
+          totalLessons: progress.totalLessons,
+        }}
+      />
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
+      {/* Main Layout: Flexbox with Left Sidebar */}
+      <main className="flex pt-16">
+        {/* Left Sidebar: Collapsible Lesson Navigation */}
+        <CollapsibleLessonSidebar
+          course={course}
+          lessons={lessons}
+          currentLessonId={currentLesson.lessonId}
+          progress={progress}
+        />
+
+        {/* Main Content: Video Player and Course Info */}
+        <div className="flex-1 p-4 md:p-6 lg:p-8">
           {/* Video Player Section */}
-          <div className="lg:col-span-2">
-            <CourseVideoSection
-              courseId={courseId}
-              initialLesson={currentLesson}
-              lessons={lessons}
-              initialProgress={progress}
-            />
-          </div>
+          <CourseVideoSection
+            courseId={courseId}
+            initialLesson={currentLesson}
+            lessons={lessons}
+            initialProgress={progress}
+            student={student}
+            pricingModel={course.pricingModel}
+          />
 
-          {/* Lesson List Sidebar (Desktop Only) */}
-          <div className="hidden lg:block lg:col-span-1">
-            <Suspense fallback={<LessonListSkeleton />}>
-              <LessonListSidebar courseId={courseId} />
-            </Suspense>
-          </div>
-        </div>
+          {/* Course Info Section (below video player) */}
+          <div className="mt-6 md:mt-8 space-y-4 md:space-y-6">
+            <Card className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">{course.name}</h2>
+              <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6">{course.description}</p>
 
-        {/* Course Info Section (below video player) */}
-        <div className="mt-8 grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">{course.name}</h2>
-              <p className="text-muted-foreground mb-6">{course.description}</p>
-
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-3 md:gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Award className="w-4 h-4 text-primary" />
                   <span>All Levels</span>
@@ -155,8 +163,8 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
             </Card>
 
             {course.learningObjectives && course.learningObjectives.length > 0 && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Card className="p-4 md:p-6">
+                <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-primary" />
                   What You&apos;ll Learn
                 </h3>
@@ -169,14 +177,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
             )}
           </div>
         </div>
-      </div>
-
-      {/* Mobile Lesson Menu (Hamburger) */}
-      <MobileLessonMenu
-        courseId={courseId}
-        lessons={lessons}
-        progress={progress}
-      />
+      </main>
     </div>
   );
 }

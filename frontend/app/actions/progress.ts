@@ -156,3 +156,59 @@ export async function markLessonComplete(
     return { error: 'Failed to mark lesson complete' };
   }
 }
+
+/**
+ * Track lesson access (lightweight update when user clicks/opens a lesson)
+ * Protected endpoint - requires authentication
+ * Fire-and-forget: returns void, does not block UI
+ *
+ * @param courseId - The ID of the course
+ * @param lessonId - The ID of the lesson being accessed
+ */
+export async function trackLessonAccess(
+  courseId: string,
+  lessonId: string
+): Promise<void> {
+  console.log('[trackLessonAccess] Tracking lesson access:', { courseId, lessonId });
+
+  try {
+    const token = await getAuthToken();
+
+    if (!token) {
+      console.error('[trackLessonAccess] No auth token available');
+      return;
+    }
+
+    const endpoint = `${API_URL}/api/progress/access`;
+    console.log('[trackLessonAccess] Posting to:', endpoint);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ courseId, lessonId }),
+      cache: 'no-store',
+    });
+
+    console.log('[trackLessonAccess] Response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[trackLessonAccess] Backend returned error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        url: endpoint,
+      });
+      // Fire-and-forget: don't throw, just log
+      return;
+    }
+
+    console.log('[trackLessonAccess] Successfully tracked lesson access');
+  } catch (error) {
+    // Fire-and-forget: don't throw, just log
+    console.error('[trackLessonAccess] Exception occurred:', error);
+  }
+}

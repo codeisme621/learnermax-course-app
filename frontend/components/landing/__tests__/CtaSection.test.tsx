@@ -10,12 +10,15 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock framer motion to avoid async rendering issues in tests
-jest.mock('motion/react', () => ({
-  motion: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
+jest.mock('motion/react', () => {
+  const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
+  MockDiv.displayName = 'MockMotionDiv';
+  return {
+    motion: {
+      div: MockDiv,
+    },
+  };
+});
 
 describe('CtaSection', () => {
   beforeEach(() => {
@@ -26,22 +29,21 @@ describe('CtaSection', () => {
 
   it('renders section heading', () => {
     render(<CtaSection />);
-    expect(screen.getByText(/are you ready to start our course now/i)).toBeInTheDocument();
+    expect(screen.getByText(/take control of your ai coding workflow/i)).toBeInTheDocument();
   });
 
-  it('renders CTA buttons', () => {
+  it('renders CTA button', () => {
     render(<CtaSection />);
     expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /contact us/i })).toBeInTheDocument();
   });
 
-  it('stores TEST-COURSE-001 in sessionStorage and navigates when Get Started clicked', () => {
+  it('stores courseId in sessionStorage and navigates when Get Started clicked', () => {
     render(<CtaSection />);
     const getStartedButton = screen.getByRole('button', { name: /get started/i });
 
     getStartedButton.click();
 
-    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('TEST-COURSE-001');
+    expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('spec-driven-dev-mini');
     expect(mockPush).toHaveBeenCalledWith('/enroll');
   });
 });

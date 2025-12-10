@@ -5,6 +5,9 @@ import { signInWithGoogle } from '@/app/actions/auth';
 
 export function GoogleSignInButton() {
   const handleGoogleSignIn = async () => {
+    // Note: We don't track signup_started for Google OAuth because we can't
+    // distinguish between new signups and returning sign-ins. Actual signups
+    // are tracked server-side via CloudWatch UserRegistrationSuccess metric.
     await signInWithGoogle();
   };
 

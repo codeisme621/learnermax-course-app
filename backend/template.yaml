@@ -36,6 +36,16 @@ Parameters:
     Type: String
     Description: CloudFront key group ID (created manually via create-key-group API)
 
+  SESFromEmail:
+    Type: String
+    Default: support@learnwithrico.com
+    Description: SES verified sender email address for transactional emails
+
+  SESReplyToEmail:
+    Type: String
+    Default: support@learnwithrico.com
+    Description: Reply-to email address for transactional emails
+
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
   IsPreview: !Not [!Equals [!Ref Environment, prod]]
@@ -72,7 +82,9 @@ Resources:
           Required: true
           Mutable: true
       EmailConfiguration:
-        EmailSendingAccount: COGNITO_DEFAULT
+        EmailSendingAccount: DEVELOPER
+        From: !Sub "${SESFromEmail}"
+        SourceArn: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/learnwithrico.com"
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: false
       LambdaConfig:
@@ -316,6 +328,34 @@ Resources:
         - Key: Project
           Value: LearnerMax
 
+  # SNS Topic for Transactional Emails (Enrollment & Meetup Signup)
+  TransactionalEmailTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub learnermax-transactional-email-${Environment}
+      DisplayName: Transactional Email Events
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+        - Key: Feature
+          Value: TransactionalEmail
+
+  # Dead Letter Queue for Transactional Emails
+  TransactionalEmailDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub learnermax-transactional-email-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+        - Key: Feature
+          Value: TransactionalEmail
+
   # SNS Topic for Observability Alerts
   ObservabilityAlertTopic:
     Type: AWS::SNS::Topic
@@ -372,7 +412,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: dist/lambdas/post-confirmation.handler
+      Handler: dist/src/lambdas/post-confirmation.handler
       Runtime: nodejs22.x
       Architectures:
         - x86_64
@@ -403,7 +443,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: dist/lambdas/student-onboarding.handler
+      Handler: dist/src/lambdas/student-onboarding.handler
       Runtime: nodejs22.x
       Architectures:
         - x86_64
@@ -428,6 +468,47 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref StudentOnboardingTopic
+
+  # Transactional Email Function - Sends transactional emails for enrollment and meetup signup
+  TransactionalEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./email/
+      Handler: dist/handler.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Description: Sends transactional emails for enrollment and meetup signup events
+      Environment:
+        Variables:
+          EDUCATION_TABLE_NAME: !Ref EducationTable
+          FRONTEND_DOMAIN: !Ref FrontendDomain
+          SES_FROM_EMAIL: !Ref SESFromEmail
+          SES_REPLY_TO_EMAIL: !Ref SESReplyToEmail
+          # ADOT Auto-instrumentation
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
+      Layers:
+        - !Ref AdotLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EducationTable
+        - Statement:
+            - Sid: SESSendEmail
+              Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt TransactionalEmailDLQ.Arn
+      Events:
+        TransactionalEmailSNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref TransactionalEmailTopic
 
   # Express.js API Function using Lambda Web Adapter
   ExpressApiFunction:
@@ -456,6 +537,8 @@ Resources:
           CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
           CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
           VIDEO_URL_EXPIRY_MINUTES: 30
+          # SNS Topic for transactional emails
+          TRANSACTIONAL_EMAIL_TOPIC_ARN: !Ref TransactionalEmailTopic
       Layers:
         # Lambda Web Adapter Layer
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
@@ -464,6 +547,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt TransactionalEmailTopic.TopicName
         - Statement:
             - Sid: ReadCloudFrontPrivateKey
               Effect: Allow
@@ -477,18 +562,37 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref ApiGatewayApi
+        # Public endpoints for SSG build-time fetching (no auth required)
+        GetCourses:
+          Type: Api
+          Properties:
+            Path: /api/courses
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        GetCourse:
+          Type: Api
+          Properties:
+            Path: /api/courses/{courseId}
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
+            Auth:
+              Authorizer: NONE
 
   # API Gateway with Cognito authorization
   ApiGatewayApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      OpenApiVersion: '3.0.1'
       Cors:
         AllowOrigin: "'*'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowMethods: "'GET,POST,PATCH,OPTIONS'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt LearnerMaxUserPool.Arn
@@ -626,6 +730,113 @@ Resources:
                 "title": "SNS Publishing",
                 "yAxis": {"left": {"min": 0}}
               }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "UserRegistrationSuccess"],
+                  [".", "EnrollmentSuccess"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Daily Signups & Enrollments",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "CourseCompletionSuccess"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Daily Course Completions",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "PremiumEarlyAccessSignup"]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Premium Early Access Signups",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "ApiLatency", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "p90", "label": "p90"}],
+                  ["...", {"stat": "p99", "label": "p99"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "title": "API Latency (p50/p90/p99 ms)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 30,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "Http4xxCount", {"color": "#ff9900"}],
+                  [".", "Http5xxCount", {"color": "#d13212"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP Error Counts (4xx/5xx)",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 30,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [{"expression": "100*m2/m1", "label": "Enrollment Rate %", "id": "e1"}],
+                  ["LearnerMax/Backend", "UserRegistrationSuccess", {"id": "m1", "visible": false}],
+                  [".", "EnrollmentSuccess", {"id": "m2", "visible": false}]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Conversion: Signup to Enrollment %",
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
             }
           ]
         }
@@ -660,6 +871,12 @@ Outputs:
     Value: !Ref StudentOnboardingTopic
     Export:
       Name: !Sub ${AWS::StackName}-StudentOnboardingTopicArn
+
+  TransactionalEmailTopicArn:
+    Description: SNS Topic ARN for Transactional Email Events
+    Value: !Ref TransactionalEmailTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-TransactionalEmailTopicArn
 
   ExpressApiFunction:
     Description: Express API Lambda Function ARN

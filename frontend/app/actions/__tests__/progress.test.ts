@@ -2,7 +2,7 @@
  * Unit tests for progress server actions
  * Following existing test pattern with jest.fn() mocking
  */
-import { getProgress, markLessonComplete } from '../progress';
+import { getProgress, markLessonComplete, trackLessonAccess } from '../progress';
 import * as auth from '../auth';
 
 // Mock the auth module
@@ -170,6 +170,82 @@ describe('progress server actions', () => {
       expect(result).toEqual({
         error: 'Failed to connect to backend. Please check if backend is running.',
       });
+    });
+  });
+
+  describe('trackLessonAccess', () => {
+    it('successfully tracks lesson access with 204 response', async () => {
+      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as Response);
+
+      await trackLessonAccess(mockCourseId, 'lesson-3');
+
+      expect(auth.getAuthToken).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/api/progress/access`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockToken}`,
+          },
+          body: JSON.stringify({ courseId: mockCourseId, lessonId: 'lesson-3' }),
+          cache: 'no-store',
+        })
+      );
+    });
+
+    it('returns early without error when not authenticated (fire-and-forget)', async () => {
+      (auth.getAuthToken as jest.Mock).mockResolvedValue(null);
+
+      // Should not throw, just return
+      await expect(trackLessonAccess(mockCourseId, 'lesson-1')).resolves.toBeUndefined();
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('handles backend errors silently (fire-and-forget)', async () => {
+      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => JSON.stringify({ error: 'Server error' }),
+      } as Response);
+
+      // Should not throw, just return
+      await expect(trackLessonAccess(mockCourseId, 'lesson-1')).resolves.toBeUndefined();
+    });
+
+    it('handles network errors silently (fire-and-forget)', async () => {
+      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
+      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      // Should not throw, just return
+      await expect(trackLessonAccess(mockCourseId, 'lesson-1')).resolves.toBeUndefined();
+    });
+
+    it('does not call markLessonComplete endpoint', async () => {
+      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as Response);
+
+      await trackLessonAccess(mockCourseId, 'lesson-2');
+
+      // Should call /api/progress/access, not /api/progress
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/api/progress/access`,
+        expect.anything()
+      );
+      expect(mockFetch).not.toHaveBeenCalledWith(
+        `${mockApiUrl}/api/progress`,
+        expect.anything()
+      );
     });
   });
 });

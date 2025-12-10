@@ -180,4 +180,141 @@ describe('Student Routes', () => {
       expect(mockUpdateStudent).toHaveBeenCalledWith(userId, updates);
     });
   });
+
+  describe('POST /api/students/early-access', () => {
+    it('should return 401 if user not authenticated', async () => {
+      const response = await request(app)
+        .post('/api/students/early-access')
+        .send({ courseId: 'premium-spec-course' });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: 'Unauthorized' });
+      expect(mockUpdateStudent).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for empty courseId', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({ courseId: '' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid request');
+      expect(response.body.details).toBeDefined();
+      expect(mockUpdateStudent).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for missing courseId', async () => {
+      const userId = 'user-123';
+
+      const response = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid request');
+      expect(response.body.details).toBeDefined();
+      expect(mockUpdateStudent).not.toHaveBeenCalled();
+    });
+
+    it('should sign up for early access successfully', async () => {
+      const userId = 'user-123';
+      const courseId = 'premium-spec-course';
+      const student: Student = {
+        userId,
+        email: 'test@example.com',
+        name: 'Test User',
+        emailVerified: true,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-15T14:30:00Z',
+        interestedInPremium: true,
+        premiumInterestDate: '2025-01-15T14:30:00Z',
+      };
+
+      mockUpdateStudent.mockResolvedValue();
+      mockGetStudent.mockResolvedValue(student);
+
+      const response = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({ courseId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe("You're on the early access list!");
+      expect(response.body.student).toBeDefined();
+      expect(response.body.student.studentId).toBe(userId);
+      expect(response.body.student.interestedInPremium).toBe(true);
+      expect(response.body.student.premiumInterestDate).toBeDefined();
+
+      // Verify updateStudent was called with correct fields
+      expect(mockUpdateStudent).toHaveBeenCalledWith(userId, expect.objectContaining({
+        interestedInPremium: true,
+        premiumInterestDate: expect.any(String),
+        updatedAt: expect.any(String),
+      }));
+
+      // Verify getStudent was called to retrieve studentId
+      expect(mockGetStudent).toHaveBeenCalledWith(userId);
+    });
+
+    it('should be idempotent - multiple signups succeed', async () => {
+      const userId = 'user-123';
+      const courseId = 'premium-spec-course';
+      const student: Student = {
+        userId,
+        email: 'test@example.com',
+        name: 'Test User',
+        emailVerified: true,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-15T14:30:00Z',
+        interestedInPremium: true,
+        premiumInterestDate: '2025-01-15T14:30:00Z',
+      };
+
+      mockUpdateStudent.mockResolvedValue();
+      mockGetStudent.mockResolvedValue(student);
+
+      // First signup
+      const response1 = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({ courseId });
+
+      expect(response1.status).toBe(200);
+      expect(response1.body.success).toBe(true);
+
+      // Second signup (should also succeed)
+      const response2 = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({ courseId });
+
+      expect(response2.status).toBe(200);
+      expect(response2.body.success).toBe(true);
+      expect(response2.body.student.interestedInPremium).toBe(true);
+
+      // Both calls should have updated the student
+      expect(mockUpdateStudent).toHaveBeenCalledTimes(2);
+    });
+
+    it('should return 500 if update fails', async () => {
+      const userId = 'user-123';
+      const courseId = 'premium-spec-course';
+
+      mockUpdateStudent.mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app)
+        .post('/api/students/early-access')
+        .set(createAuthHeader(userId))
+        .send({ courseId });
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ error: 'Failed to process early access signup' });
+      expect(mockUpdateStudent).toHaveBeenCalled();
+    });
+  });
 });
