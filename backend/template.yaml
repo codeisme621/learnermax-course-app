@@ -614,6 +614,7 @@ Resources:
       AutoConfigurationEnabled: 'true'
 
   # CloudWatch Dashboard for Observability
+  # Layout: Business Metrics (rows 0-18), Technical Metrics (rows 18-36)
   ObservabilityDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
@@ -622,125 +623,42 @@ Resources:
         {
           "widgets": [
             {
-              "type": "metric",
+              "type": "text",
               "x": 0,
               "y": 0,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Business Metrics"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 1,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["LearnerMax/Backend", "UserRegistrationSuccess"],
-                  [".", "UserRegistrationFailure"]
+                  [{"expression": "SUM(SEARCH('{LearnerMax/Backend,service,signUpMethod} MetricName=\"UserRegistrationSuccess\"', 'Sum', 300))", "label": "UserRegistrationSuccess", "id": "e1"}],
+                  [{"expression": "SUM(SEARCH('{LearnerMax/Backend,service,signUpMethod} MetricName=\"UserRegistrationFailure\"', 'Sum', 300))", "label": "UserRegistrationFailure", "id": "e2"}]
                 ],
                 "period": 300,
-                "stat": "Sum",
                 "region": "${AWS::Region}",
-                "title": "User Registrations (Business Metric)",
+                "title": "User Registrations",
                 "yAxis": {"left": {"min": 0}}
               }
             },
             {
               "type": "metric",
               "x": 12,
-              "y": 0,
+              "y": 1,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["AWS/Lambda", "Errors", "FunctionName", "${PostConfirmationFunction}"],
-                  ["...", "${StudentOnboardingFunction}"],
-                  ["...", "${ExpressApiFunction}"]
-                ],
-                "period": 300,
-                "stat": "Sum",
-                "region": "${AWS::Region}",
-                "title": "Lambda Errors (Technical Metric)",
-                "yAxis": {"left": {"min": 0}}
-              }
-            },
-            {
-              "type": "metric",
-              "x": 0,
-              "y": 6,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  ["AWS/Lambda", "Duration", "FunctionName", "${PostConfirmationFunction}"],
-                  ["...", "${StudentOnboardingFunction}"],
-                  ["...", "${ExpressApiFunction}"]
-                ],
-                "period": 300,
-                "stat": "Average",
-                "region": "${AWS::Region}",
-                "title": "Lambda Duration (Latency)",
-                "yAxis": {"left": {"min": 0}}
-              }
-            },
-            {
-              "type": "metric",
-              "x": 12,
-              "y": 6,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${StudentOnboardingDLQ.QueueName}"]
-                ],
-                "period": 60,
-                "stat": "Sum",
-                "region": "${AWS::Region}",
-                "title": "Dead Letter Queue Messages",
-                "yAxis": {"left": {"min": 0}}
-              }
-            },
-            {
-              "type": "metric",
-              "x": 0,
-              "y": 12,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  ["LearnerMax/Backend", "DynamoDBPutSuccess"],
-                  [".", "DynamoDBPutFailure"],
-                  [".", "DuplicateUserDetected"]
-                ],
-                "period": 300,
-                "stat": "Sum",
-                "region": "${AWS::Region}",
-                "title": "DynamoDB Operations",
-                "yAxis": {"left": {"min": 0}}
-              }
-            },
-            {
-              "type": "metric",
-              "x": 12,
-              "y": 12,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  ["LearnerMax/Backend", "SNSPublishSuccess"],
-                  [".", "SNSPublishFailure"]
-                ],
-                "period": 300,
-                "stat": "Sum",
-                "region": "${AWS::Region}",
-                "title": "SNS Publishing",
-                "yAxis": {"left": {"min": 0}}
-              }
-            },
-            {
-              "type": "metric",
-              "x": 0,
-              "y": 18,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  ["LearnerMax/Backend", "UserRegistrationSuccess"],
-                  [".", "EnrollmentSuccess"]
+                  [{"expression": "SUM(SEARCH('{LearnerMax/Backend,service,signUpMethod} MetricName=\"UserRegistrationSuccess\"', 'Sum', 86400))", "label": "Signups", "id": "e1"}],
+                  ["LearnerMax/Backend", "EnrollmentSuccess", "service", "EnrollmentService", {"label": "Enrollments"}]
                 ],
                 "period": 86400,
                 "stat": "Sum",
@@ -751,13 +669,13 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 12,
-              "y": 18,
+              "x": 0,
+              "y": 7,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["LearnerMax/Backend", "CourseCompletionSuccess"]
+                  ["LearnerMax/Backend", "CourseCompletionSuccess", "service", "ProgressService"]
                 ],
                 "period": 86400,
                 "stat": "Sum",
@@ -768,13 +686,13 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 0,
-              "y": 24,
+              "x": 12,
+              "y": 7,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["LearnerMax/Backend", "PremiumEarlyAccessSignup"]
+                  ["LearnerMax/Backend", "PremiumEarlyAccessSignup", "service", "StudentService"]
                 ],
                 "period": 86400,
                 "stat": "Sum",
@@ -785,57 +703,166 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 12,
-              "y": 24,
+              "x": 0,
+              "y": 13,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["LearnerMax/Backend", "ApiLatency", {"stat": "p50", "label": "p50"}],
-                  ["...", {"stat": "p90", "label": "p90"}],
-                  ["...", {"stat": "p99", "label": "p99"}]
+                  [{"expression": "100*m2/m1", "label": "Premium Rate %", "id": "e1"}],
+                  [{"expression": "SUM(SEARCH('{LearnerMax/Backend,service,signUpMethod} MetricName=\"UserRegistrationSuccess\"', 'Sum', 86400))", "id": "m1", "visible": false}],
+                  ["LearnerMax/Backend", "PremiumEarlyAccessSignup", "service", "StudentService", {"id": "m2", "visible": false}]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Premium Early Access Rate %",
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 13,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [{"expression": "100*m2/m1", "label": "Completion Rate %", "id": "e1"}],
+                  [{"expression": "SUM(SEARCH('{LearnerMax/Backend,service,signUpMethod} MetricName=\"UserRegistrationSuccess\"', 'Sum', 86400))", "id": "m1", "visible": false}],
+                  ["LearnerMax/Backend", "CourseCompletionSuccess", "service", "ProgressService", {"id": "m2", "visible": false}]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Course Completion Rate %",
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 19,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Technical Metrics & Alerts"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 20,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Errors", "FunctionName", "${PostConfirmationFunction}", {"label": "PostConfirmation"}],
+                  ["...", "${StudentOnboardingFunction}", {"label": "StudentOnboarding"}],
+                  ["...", "${ExpressApiFunction}", {"label": "ExpressApi"}]
                 ],
                 "period": 300,
+                "stat": "Sum",
                 "region": "${AWS::Region}",
-                "title": "API Latency (p50/p90/p99 ms)",
+                "title": "Lambda Errors",
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 20,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${StudentOnboardingDLQ.QueueName}", {"color": "#d13212"}]
+                ],
+                "period": 60,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Dead Letter Queue (Alert: >0 needs attention)",
+                "yAxis": {"left": {"min": 0}},
+                "annotations": {
+                  "horizontal": [{"color": "#d13212", "value": 1, "label": "Alert threshold"}]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 26,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "Http5xxCount", "service", "ExpressApi", {"color": "#d13212"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP 5xx Errors (Alert: any is bad)",
+                "yAxis": {"left": {"min": 0}},
+                "annotations": {
+                  "horizontal": [{"color": "#d13212", "value": 1, "label": "Alert threshold"}]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 26,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["LearnerMax/Backend", "Http4xxCount", "service", "ExpressApi", {"color": "#ff9900"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP 4xx Errors",
                 "yAxis": {"left": {"min": 0}}
               }
             },
             {
               "type": "metric",
               "x": 0,
-              "y": 30,
+              "y": 32,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  ["LearnerMax/Backend", "Http4xxCount", {"color": "#ff9900"}],
-                  [".", "Http5xxCount", {"color": "#d13212"}]
+                  ["LearnerMax/Backend", "ApiLatency", "service", "ExpressApi", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "p90", "label": "p90"}],
+                  ["...", {"stat": "p99", "label": "p99", "color": "#d13212"}]
                 ],
                 "period": 300,
-                "stat": "Sum",
                 "region": "${AWS::Region}",
-                "title": "HTTP Error Counts (4xx/5xx)",
-                "yAxis": {"left": {"min": 0}}
+                "title": "API Latency (p50/p90/p99 ms)",
+                "yAxis": {"left": {"min": 0}},
+                "annotations": {
+                  "horizontal": [{"color": "#ff9900", "value": 2000, "label": "2s threshold"}]
+                }
               }
             },
             {
               "type": "metric",
               "x": 12,
-              "y": 30,
+              "y": 32,
               "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
-                  [{"expression": "100*m2/m1", "label": "Enrollment Rate %", "id": "e1"}],
-                  ["LearnerMax/Backend", "UserRegistrationSuccess", {"id": "m1", "visible": false}],
-                  [".", "EnrollmentSuccess", {"id": "m2", "visible": false}]
+                  ["AWS/Lambda", "Duration", "FunctionName", "${PostConfirmationFunction}", {"label": "PostConfirmation"}],
+                  ["...", "${StudentOnboardingFunction}", {"label": "StudentOnboarding"}],
+                  ["...", "${ExpressApiFunction}", {"label": "ExpressApi"}]
                 ],
-                "period": 86400,
-                "stat": "Sum",
+                "period": 300,
+                "stat": "Average",
                 "region": "${AWS::Region}",
-                "title": "Conversion: Signup to Enrollment %",
-                "yAxis": {"left": {"min": 0, "max": 100}}
+                "title": "Lambda Duration (ms)",
+                "yAxis": {"left": {"min": 0}}
               }
             }
           ]
