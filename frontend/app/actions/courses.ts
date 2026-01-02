@@ -64,7 +64,7 @@ export async function getAllCourses(): Promise<
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      cache: 'no-store', // Always fetch fresh course data
+      next: { tags: ['courses'] }, // Tag-based caching with manual invalidation
     });
 
     console.log('[getAllCourses] Response status:', response.status, response.statusText);
@@ -124,7 +124,7 @@ export async function getCourse(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      cache: 'no-store', // Always fetch fresh course data
+      next: { tags: [`course-${courseId}`] }, // Tag-based caching with manual invalidation
     });
 
     console.log('[getCourse] Response status:', response.status, response.statusText);

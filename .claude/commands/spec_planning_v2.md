@@ -97,21 +97,50 @@ const signedUrl = await generateSignedUrl(lesson.videoKey);
 ```
 ```
 
-### 4. Narrative Temporal Flows & Scenarios
+### 4. Narrative Temporal Flows with MermaidJS
 
-Write specs as numbered sequences showing causality across system layers. Use arrows (→) to show temporal ordering. Capture scenarios that illustrate the feature in action—real user journeys help implementation agents understand context and edge cases.
+Use MermaidJS diagrams to show causality across system layers. Participants should map to system boundaries (Student, Frontend, Backend API, DynamoDB, etc.).
 
-**Example:**
-```markdown
-**Scenario: Student watches a lesson**
-1. Student clicks "Lesson 2: Writing Your First Spec"
-2. Frontend calls `GET /api/lessons/lesson-2/video-url`
-3. Backend verifies enrollment → Generates signed CloudFront URL
-4. Frontend loads video player with signed URL
-5. Student watches to 90% → Frontend calls `POST /api/progress`
-6. Backend updates `completedLessons` array → Recalculates percentage → Saves to DynamoDB
-7. Frontend shows checkmark on lesson, updates progress bar to 40%
+**Sequence Diagrams** - For temporal flows showing request/response chains:
+
+```mermaid
+sequenceDiagram
+    participant Student
+    participant Frontend
+    participant Backend API
+    participant DynamoDB
+
+    Student->>Frontend: Click "Lesson 2"
+    Frontend->>Backend API: GET /api/lessons/lesson-2/video-url
+    Backend API->>Backend API: Verify enrollment
+    Backend API-->>Frontend: Signed CloudFront URL
+    Frontend-->>Student: Load video player
+
+    Note over Student: Watches video to 90%
+
+    Frontend->>Backend API: POST /api/progress
+    Backend API->>DynamoDB: Update completedLessons
+    Backend API-->>Frontend: { percentage: 40 }
+    Frontend-->>Student: Show checkmark, update progress bar
 ```
+
+**Flowcharts** - For decision logic and component relationships:
+
+```mermaid
+flowchart TD
+    LC[Lesson Completed] --> HF{feedbackGiven?}
+    HF -->|Yes| NP[No Prompt]
+    HF -->|No| CL{completedLessons >= threshold?}
+    CL -->|No| NP
+    CL -->|Yes| SP[Show Feedback Modal]
+
+    style SP fill:#90EE90
+```
+
+**Spec-planning conventions:**
+- Participants = system layers (not implementation classes)
+- Use `style X fill:#90EE90` to highlight new components
+- Focus on WHAT happens across boundaries, not HOW it's implemented internally
 
 ### 5. Forward-Looking Requirements
 

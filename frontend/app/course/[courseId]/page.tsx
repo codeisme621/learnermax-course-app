@@ -26,22 +26,11 @@ interface CoursePageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
-  const { courseId } = await params;
-  const courseResult = await getCourse(courseId);
-
-  if ('course' in courseResult) {
-    return {
-      title: `${courseResult.course.name} - LearnWithRico`,
-      description: courseResult.course.description,
-    };
-  }
-
-  return {
-    title: 'Course - LearnWithRico',
-    description: 'Access your course content',
-  };
-}
+// Static metadata - protected page doesn't need SEO
+export const metadata: Metadata = {
+  title: 'Course - LearnWithRico',
+  description: 'Access your course content',
+};
 
 export default async function CoursePage({ params, searchParams }: CoursePageProps) {
   const { courseId } = await params;

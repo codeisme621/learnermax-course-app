@@ -70,7 +70,7 @@ export async function getLessons(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      cache: 'no-store', // Always fetch fresh lesson data
+      next: { tags: [`lessons-${courseId}`] }, // Tag-based caching with manual invalidation
     });
 
     console.log('[getLessons] Response status:', response.status, response.statusText);
