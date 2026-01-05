@@ -7,6 +7,7 @@ export default {
     {
       displayName: 'unit',
       testEnvironment: 'jsdom',
+      setupFiles: ['<rootDir>/jest.polyfills.js'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',

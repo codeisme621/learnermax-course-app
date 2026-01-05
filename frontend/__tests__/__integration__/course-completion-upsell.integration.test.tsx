@@ -1,11 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
-import type { LessonResponse } from '@/app/actions/lessons';
+import type { LessonResponse } from '@/types/lessons';
+import * as progressActions from '@/app/actions/progress';
+
+// Mock server action
+jest.mock('@/app/actions/progress');
 
 // Mock useProgress hook
-const mockMarkComplete = jest.fn();
-const mockMutate = jest.fn();
+const mockMutateProgress = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/hooks/useProgress', () => ({
   useProgress: () => ({
     progress: {
@@ -14,8 +17,7 @@ jest.mock('@/hooks/useProgress', () => ({
       percentage: 67,
       totalLessons: 3,
     },
-    markComplete: mockMarkComplete,
-    mutate: mockMutate,
+    mutate: mockMutateProgress,
   }),
 }));
 
@@ -29,14 +31,6 @@ jest.mock('@/hooks/useStudent', () => ({
     setInterestedInPremium: mockSetInterestedInPremium,
   }),
 }));
-
-jest.mock('@/app/actions/lessons', () => ({
-  getVideoUrl: jest.fn().mockResolvedValue({
-    videoUrl: 'https://example.com/video.mp4',
-    expiresAt: Date.now() / 1000 + 3600, // 1 hour from now
-  }),
-}));
-
 
 // Mock VideoPlayer to simulate ready-to-complete state
 jest.mock('@/components/course/VideoPlayer', () => ({
@@ -166,6 +160,16 @@ describe('Course Completion Upsell - Integration Tests', () => {
     jest.useFakeTimers();
     // Reset mock state
     mockInterestedInPremium = false;
+
+    // Setup default mock for markLessonComplete
+    const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
+    mockMarkLessonComplete.mockResolvedValue({
+      courseId: 'test-course',
+      percentage: 100,
+      completedLessons: ['lesson-1', 'lesson-2', 'lesson-3'],
+      totalLessons: 3,
+      updatedAt: new Date().toISOString(),
+    });
   });
 
   afterEach(() => {
@@ -180,9 +184,6 @@ describe('Course Completion Upsell - Integration Tests', () => {
       // Set up mock state - student not signed up
       mockInterestedInPremium = false;
       mockSetInterestedInPremium.mockResolvedValue(undefined);
-
-      // Mock successful lesson completion
-      mockMarkComplete.mockResolvedValue(undefined);
 
       // Render component on lesson 3 (final lesson)
       render(
@@ -207,7 +208,7 @@ describe('Course Completion Upsell - Integration Tests', () => {
 
       // Verify API call to mark lesson complete
       await waitFor(() => {
-        expect(mockMarkComplete).toHaveBeenCalledWith('lesson-3');
+        expect(progressActions.markLessonComplete).toHaveBeenCalledWith('test-course', 'lesson-3');
       });
 
       // Verify full-screen confetti appears
@@ -266,9 +267,6 @@ describe('Course Completion Upsell - Integration Tests', () => {
       // Set up mock state - student not signed up
       mockInterestedInPremium = false;
 
-      // Mock successful lesson completion
-      mockMarkComplete.mockResolvedValue(undefined);
-
       render(
         <CourseVideoSection
           courseId="test-course"
@@ -318,9 +316,6 @@ describe('Course Completion Upsell - Integration Tests', () => {
 
       // Set up mock state - student already signed up
       mockInterestedInPremium = true;
-
-      // Mock successful lesson completion
-      mockMarkComplete.mockResolvedValue(undefined);
 
       render(
         <CourseVideoSection

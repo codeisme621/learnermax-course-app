@@ -1,19 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PremiumUpsellModal } from '../PremiumUpsellModal';
-import { signUpForEarlyAccess } from '@/app/actions/students';
-
-// Mock the server action
-jest.mock('@/app/actions/students', () => ({
-  signUpForEarlyAccess: jest.fn(),
-}));
-
-const mockSignUpForEarlyAccess = signUpForEarlyAccess as jest.MockedFunction<
-  typeof signUpForEarlyAccess
->;
 
 describe('PremiumUpsellModal', () => {
   const mockOnClose = jest.fn();
+  const mockOnSignup = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -26,6 +17,7 @@ describe('PremiumUpsellModal', () => {
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={false}
+          onSignup={mockOnSignup}
         />
       );
 
@@ -82,6 +74,7 @@ describe('PremiumUpsellModal', () => {
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={true}
+          onSignup={mockOnSignup}
         />
       );
 
@@ -101,29 +94,17 @@ describe('PremiumUpsellModal', () => {
   });
 
   describe('handles successful signup', () => {
-    it('shows loading state, calls API, and displays success message', async () => {
+    it('shows loading state, calls onSignup, and displays success message', async () => {
       const user = userEvent.setup();
 
-      mockSignUpForEarlyAccess.mockResolvedValue({
-        success: true,
-        message: 'Success',
-        student: {
-          studentId: 'student-123',
-          userId: 'user-123',
-          email: 'test@example.com',
-          name: 'Test User',
-          createdAt: '2025-01-01T00:00:00Z',
-          updatedAt: '2025-01-01T00:00:00Z',
-          interestedInPremium: true,
-          premiumInterestDate: '2025-01-01T00:00:00Z',
-        },
-      });
+      mockOnSignup.mockResolvedValue(undefined);
 
       render(
         <PremiumUpsellModal
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={false}
+          onSignup={mockOnSignup}
         />
       );
 
@@ -133,9 +114,9 @@ describe('PremiumUpsellModal', () => {
       // Click the button
       await user.click(button);
 
-      // Wait for API call to complete
+      // Wait for onSignup call to complete
       await waitFor(() => {
-        expect(mockSignUpForEarlyAccess).toHaveBeenCalledWith('premium-spec-course');
+        expect(mockOnSignup).toHaveBeenCalledWith('premium-spec-course');
       });
 
       // Check success message appears
@@ -156,16 +137,14 @@ describe('PremiumUpsellModal', () => {
     it('displays error message and allows retry', async () => {
       const user = userEvent.setup();
 
-      mockSignUpForEarlyAccess.mockResolvedValue({
-        success: false,
-        error: 'Network error occurred',
-      });
+      mockOnSignup.mockRejectedValueOnce(new Error('Network error occurred'));
 
       render(
         <PremiumUpsellModal
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={false}
+          onSignup={mockOnSignup}
         />
       );
 
@@ -185,26 +164,12 @@ describe('PremiumUpsellModal', () => {
       ).toBeInTheDocument();
 
       // Can retry by clicking again
-      mockSignUpForEarlyAccess.mockClear();
-      mockSignUpForEarlyAccess.mockResolvedValue({
-        success: true,
-        message: 'Success',
-        student: {
-          studentId: 'student-123',
-          userId: 'user-123',
-          email: 'test@example.com',
-          name: 'Test User',
-          createdAt: '2025-01-01T00:00:00Z',
-          updatedAt: '2025-01-01T00:00:00Z',
-          interestedInPremium: true,
-          premiumInterestDate: '2025-01-01T00:00:00Z',
-        },
-      });
+      mockOnSignup.mockResolvedValue(undefined);
 
       await user.click(button);
 
       await waitFor(() => {
-        expect(mockSignUpForEarlyAccess).toHaveBeenCalledTimes(1);
+        expect(mockOnSignup).toHaveBeenCalledTimes(2);
       });
     });
   });
@@ -218,6 +183,7 @@ describe('PremiumUpsellModal', () => {
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={false}
+          onSignup={mockOnSignup}
         />
       );
 
@@ -240,6 +206,7 @@ describe('PremiumUpsellModal', () => {
           isOpen={true}
           onClose={mockOnClose}
           isInterestedInPremium={false}
+          onSignup={mockOnSignup}
         />
       );
 

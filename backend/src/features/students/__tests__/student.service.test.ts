@@ -1,6 +1,7 @@
 import { jest, describe, it, beforeAll, beforeEach, afterAll, expect } from '@jest/globals';
 import { StudentService } from '../student.service.js';
 import { studentRepository } from '../student.repository.js';
+import { meetupsRepository } from '../../meetups/meetups.repository.js';
 import type { Student } from '../student.types.js';
 
 describe('StudentService', () => {
@@ -8,12 +9,14 @@ describe('StudentService', () => {
   let mockGet: jest.SpyInstance;
   let mockGetByEmail: jest.SpyInstance;
   let mockUpdate: jest.SpyInstance;
+  let mockGetSignedUpMeetupIds: jest.SpyInstance;
 
   beforeAll(() => {
     // Mock repository methods
     mockGet = jest.spyOn(studentRepository, 'get');
     mockGetByEmail = jest.spyOn(studentRepository, 'getByEmail');
     mockUpdate = jest.spyOn(studentRepository, 'update');
+    mockGetSignedUpMeetupIds = jest.spyOn(meetupsRepository, 'getSignedUpMeetupIds');
   });
 
   beforeEach(() => {
@@ -25,10 +28,37 @@ describe('StudentService', () => {
     mockGet.mockRestore();
     mockGetByEmail.mockRestore();
     mockUpdate.mockRestore();
+    mockGetSignedUpMeetupIds.mockRestore();
   });
 
   describe('getStudent', () => {
-    it('should return student by userId', async () => {
+    it('should return student by userId with signedUpMeetups', async () => {
+      const userId = 'user-123';
+      const student: Student = {
+        userId,
+        email: 'test@example.com',
+        name: 'Test User',
+        emailVerified: true,
+        signUpMethod: 'email',
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      };
+      const signedUpMeetups = ['meetup-1', 'meetup-2'];
+
+      mockGet.mockResolvedValue(student);
+      mockGetSignedUpMeetupIds.mockResolvedValue(signedUpMeetups);
+
+      const result = await service.getStudent(userId);
+
+      expect(result).toEqual({
+        ...student,
+        signedUpMeetups,
+      });
+      expect(mockGet).toHaveBeenCalledWith(userId);
+      expect(mockGetSignedUpMeetupIds).toHaveBeenCalledWith(userId);
+    });
+
+    it('should return student with empty signedUpMeetups when none exist', async () => {
       const userId = 'user-123';
       const student: Student = {
         userId,
@@ -41,11 +71,16 @@ describe('StudentService', () => {
       };
 
       mockGet.mockResolvedValue(student);
+      mockGetSignedUpMeetupIds.mockResolvedValue([]);
 
       const result = await service.getStudent(userId);
 
-      expect(result).toEqual(student);
+      expect(result).toEqual({
+        ...student,
+        signedUpMeetups: [],
+      });
       expect(mockGet).toHaveBeenCalledWith(userId);
+      expect(mockGetSignedUpMeetupIds).toHaveBeenCalledWith(userId);
     });
 
     it('should return undefined if student not found', async () => {
@@ -57,6 +92,8 @@ describe('StudentService', () => {
 
       expect(result).toBeUndefined();
       expect(mockGet).toHaveBeenCalledWith(userId);
+      // Should not call getSignedUpMeetupIds if student doesn't exist
+      expect(mockGetSignedUpMeetupIds).not.toHaveBeenCalled();
     });
   });
 

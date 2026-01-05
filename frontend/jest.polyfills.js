@@ -36,6 +36,7 @@ if (!globalThis.BroadcastChannel) {
 }
 
 // Define all globals BEFORE requiring undici (undici checks for MessagePort)
+// Use writable: true and configurable: true for properties that jest.useFakeTimers needs to override
 Object.defineProperties(globalThis, {
   TextDecoder: { value: TextDecoder },
   TextEncoder: { value: TextEncoder },
@@ -43,7 +44,7 @@ Object.defineProperties(globalThis, {
   TransformStream: { value: TransformStream },
   WritableStream: { value: WritableStream },
   clearImmediate: { value: clearImmediate },
-  performance: { value: performance },
+  performance: { value: performance, writable: true, configurable: true },
   PerformanceObserver: { value: PerformanceObserver },
   Blob: { value: Blob },
   File: { value: File },
@@ -61,3 +62,11 @@ Object.defineProperties(globalThis, {
   Request: { value: Request, configurable: true },
   Response: { value: Response, configurable: true },
 });
+
+// SWR checks document.visibilityState - must be defined before SWR imports
+if (typeof document !== 'undefined') {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    get: () => 'visible',
+  });
+}

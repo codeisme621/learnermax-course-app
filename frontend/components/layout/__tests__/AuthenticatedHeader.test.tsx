@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthenticatedHeader } from '../AuthenticatedHeader';
-import { signOutAction } from '@/app/actions/auth';
 
 // Mock framer motion
 jest.mock('motion/react', () => ({
@@ -24,6 +23,18 @@ jest.mock('next/link', () => {
   return MockLink;
 });
 
+// Mock useProgress hook
+let mockProgressData = {
+  percentage: 0,
+  completedCount: 0,
+  totalLessons: 0,
+  isLoading: false,
+};
+
+jest.mock('@/hooks/useProgress', () => ({
+  useProgress: () => mockProgressData,
+}));
+
 describe('AuthenticatedHeader', () => {
   const mockUser = {
     id: 'user-123',
@@ -35,6 +46,13 @@ describe('AuthenticatedHeader', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset to default mock data
+    mockProgressData = {
+      percentage: 0,
+      completedCount: 0,
+      totalLessons: 0,
+      isLoading: false,
+    };
   });
 
   afterAll(() => {
@@ -49,17 +67,19 @@ describe('AuthenticatedHeader', () => {
   });
 
   it('renders course variant with progress', () => {
-    const courseProgress = {
+    // Set up mock progress data
+    mockProgressData = {
       percentage: 60,
-      completedLessons: 3,
+      completedCount: 3,
       totalLessons: 5,
+      isLoading: false,
     };
 
     render(
       <AuthenticatedHeader
         variant="course"
         user={mockUser}
-        courseProgress={courseProgress}
+        courseId="test-course-id"
       />
     );
 
@@ -117,17 +137,19 @@ describe('AuthenticatedHeader', () => {
   });
 
   it('hides progress on mobile for course variant', () => {
-    const courseProgress = {
+    // Set up mock progress data
+    mockProgressData = {
       percentage: 60,
-      completedLessons: 3,
+      completedCount: 3,
       totalLessons: 5,
+      isLoading: false,
     };
 
     render(
       <AuthenticatedHeader
         variant="course"
         user={mockUser}
-        courseProgress={courseProgress}
+        courseId="test-course-id"
       />
     );
 
@@ -142,17 +164,19 @@ describe('AuthenticatedHeader', () => {
   });
 
   it('shows progress on desktop for course variant', () => {
-    const courseProgress = {
+    // Set up mock progress data
+    mockProgressData = {
       percentage: 60,
-      completedLessons: 3,
+      completedCount: 3,
       totalLessons: 5,
+      isLoading: false,
     };
 
     render(
       <AuthenticatedHeader
         variant="course"
         user={mockUser}
-        courseProgress={courseProgress}
+        courseId="test-course-id"
       />
     );
 

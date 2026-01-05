@@ -1,12 +1,20 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../VideoPlayer';
-import * as lessonsActions from '@/app/actions/lessons';
+import { useVideoUrl } from '@/hooks/useVideoUrl';
 import * as progressActions from '@/app/actions/progress';
 import { simulateVideoProgress } from '../videoTestUtils';
 
-// Mock the server actions
-jest.mock('@/app/actions/lessons');
+// Mock the hooks
+jest.mock('@/hooks/useVideoUrl');
+jest.mock('@/hooks/useProgress', () => ({
+  useProgress: () => ({
+    trackAccess: jest.fn(),
+    mutate: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+// Mock the server action
 jest.mock('@/app/actions/progress');
 
 // Mock next/dynamic to return components immediately (no lazy loading in tests)
@@ -38,36 +46,27 @@ jest.mock('next/dynamic', () => ({
   },
 }));
 
+const mockUseVideoUrl = useVideoUrl as jest.MockedFunction<typeof useVideoUrl>;
+
 describe('VideoPlayer', () => {
   const mockLessonId = 'lesson-1';
   const mockCourseId = 'spec-driven-dev-mini';
   const mockVideoUrl = 'https://cloudfront.example.com/video.mp4';
-  const mockExpiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now (Unix timestamp)
+  const mockExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('Video URL Fetching', () => {
-    it('fetches video URL on mount', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        videoUrl: mockVideoUrl,
-        expiresAt: mockExpiresAt,
-      });
-
-      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
-
-      await waitFor(() => {
-        expect(mockGetVideoUrl).toHaveBeenCalledWith(mockLessonId);
-      });
-    });
-
     it('shows loading state while fetching video URL', () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 1000))
-      );
+      mockUseVideoUrl.mockReturnValue({
+        videoUrl: null,
+        expiresAt: null,
+        isLoading: true,
+        error: null,
+        refreshUrl: jest.fn(),
+      });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
 
@@ -75,10 +74,12 @@ describe('VideoPlayer', () => {
     });
 
     it('renders video player after successful URL fetch', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -89,9 +90,12 @@ describe('VideoPlayer', () => {
     });
 
     it('shows error state when video URL fetch fails', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        error: 'Failed to fetch video URL',
+      mockUseVideoUrl.mockReturnValue({
+        videoUrl: null,
+        expiresAt: null,
+        isLoading: false,
+        error: new Error('Failed to fetch video URL'),
+        refreshUrl: jest.fn(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -103,9 +107,12 @@ describe('VideoPlayer', () => {
     });
 
     it('shows retry button on error', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        error: 'Failed to fetch video URL',
+      mockUseVideoUrl.mockReturnValue({
+        videoUrl: null,
+        expiresAt: null,
+        isLoading: false,
+        error: new Error('Network error'),
+        refreshUrl: jest.fn(),
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -117,11 +124,15 @@ describe('VideoPlayer', () => {
 
     it('refetches video URL when retry button is clicked', async () => {
       const user = userEvent.setup();
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
+      const mockRefreshUrl = jest.fn();
 
-      // First call fails
-      mockGetVideoUrl.mockResolvedValueOnce({
-        error: 'Network error',
+      // First render with error
+      mockUseVideoUrl.mockReturnValue({
+        videoUrl: null,
+        expiresAt: null,
+        isLoading: false,
+        error: new Error('Network error'),
+        refreshUrl: mockRefreshUrl,
       });
 
       render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
@@ -130,25 +141,21 @@ describe('VideoPlayer', () => {
         expect(screen.getByText(/connection failed/i)).toBeInTheDocument();
       });
 
-      // Second call succeeds
-      mockGetVideoUrl.mockResolvedValueOnce({
-        videoUrl: mockVideoUrl,
-        expiresAt: mockExpiresAt,
-      });
-
       const retryButton = screen.getByRole('button', { name: /retry/i });
       await user.click(retryButton);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('video-player')).toBeInTheDocument();
-      });
+      expect(mockRefreshUrl).toHaveBeenCalled();
     });
 
     it('calls onError callback when video fetch fails', async () => {
       const onError = jest.fn();
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
-        error: 'Failed to load video',
+
+      mockUseVideoUrl.mockReturnValue({
+        videoUrl: null,
+        expiresAt: null,
+        isLoading: false,
+        error: new Error('Failed to load video'),
+        refreshUrl: jest.fn(),
       });
 
       render(
@@ -167,10 +174,12 @@ describe('VideoPlayer', () => {
 
   describe('Progress Tracking', () => {
     it('marks lesson complete when 90% watched', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -201,10 +210,12 @@ describe('VideoPlayer', () => {
     });
 
     it('does not mark complete twice for same lesson', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -236,10 +247,12 @@ describe('VideoPlayer', () => {
     });
 
     it('does not mark complete before 90% threshold', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -264,10 +277,13 @@ describe('VideoPlayer', () => {
 
     it('calls onLessonComplete callback after marking complete', async () => {
       const onLessonComplete = jest.fn();
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -302,10 +318,12 @@ describe('VideoPlayer', () => {
     });
 
     it('does not show lesson complete overlay after marking complete', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -341,10 +359,13 @@ describe('VideoPlayer', () => {
   describe('Last Lesson Behavior', () => {
     it('calls onReadyToComplete when last lesson reaches 90%', async () => {
       const onReadyToComplete = jest.fn();
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       render(
@@ -371,10 +392,12 @@ describe('VideoPlayer', () => {
     });
 
     it('does not auto-complete when last lesson reaches 90%', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -403,10 +426,12 @@ describe('VideoPlayer', () => {
     });
 
     it('auto-completes non-last lessons at 90%', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -441,10 +466,12 @@ describe('VideoPlayer', () => {
     });
 
     it('does not show confetti for partial course completion', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -479,48 +506,14 @@ describe('VideoPlayer', () => {
     });
   });
 
-  describe('URL Expiration Handling', () => {
-    it('refetches URL when expiration is less than 2 minutes away', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      const nearExpiryTime = Math.floor(Date.now() / 1000) + 60; // 1 minute from now (Unix timestamp)
-      const newExpiryTime = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now (Unix timestamp)
-
-      // First call returns URL expiring soon
-      mockGetVideoUrl.mockResolvedValueOnce({
-        videoUrl: mockVideoUrl,
-        expiresAt: nearExpiryTime,
-      });
-
-      render(<VideoPlayer lessonId={mockLessonId} courseId={mockCourseId} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('video-player')).toBeInTheDocument();
-      });
-
-      // Mock second call with new URL
-      mockGetVideoUrl.mockResolvedValueOnce({
-        videoUrl: `${mockVideoUrl}?refreshed=true`,
-        expiresAt: newExpiryTime,
-      });
-
-      // Simulate progress (triggers expiration check)
-      await act(async () => {
-        const videoPlayer = screen.getByTestId('video-player');
-        simulateVideoProgress(videoPlayer, 0.5);
-      });
-
-      await waitFor(() => {
-        expect(mockGetVideoUrl).toHaveBeenCalledTimes(2);
-      });
-    });
-  });
-
   describe('Error Handling', () => {
     it('allows retry if marking complete fails', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const mockMarkLessonComplete = jest.spyOn(progressActions, 'markLessonComplete');
@@ -567,10 +560,12 @@ describe('VideoPlayer', () => {
 
   describe('Component Props', () => {
     it('resets state when lessonId changes', async () => {
-      const mockGetVideoUrl = jest.spyOn(lessonsActions, 'getVideoUrl');
-      mockGetVideoUrl.mockResolvedValue({
+      mockUseVideoUrl.mockReturnValue({
         videoUrl: mockVideoUrl,
         expiresAt: mockExpiresAt,
+        isLoading: false,
+        error: null,
+        refreshUrl: jest.fn(),
       });
 
       const { rerender } = render(
@@ -578,15 +573,14 @@ describe('VideoPlayer', () => {
       );
 
       await waitFor(() => {
-        expect(mockGetVideoUrl).toHaveBeenCalledWith('lesson-1');
+        expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
-      // Change lesson
+      // Change lesson - useVideoUrl hook handles this internally via SWR key
       rerender(<VideoPlayer lessonId="lesson-2" courseId={mockCourseId} />);
 
-      await waitFor(() => {
-        expect(mockGetVideoUrl).toHaveBeenCalledWith('lesson-2');
-      });
+      // Component should still render (hook handles the key change)
+      expect(screen.getByTestId('video-player')).toBeInTheDocument();
     });
   });
 });
