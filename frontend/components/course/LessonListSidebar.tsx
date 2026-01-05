@@ -1,5 +1,5 @@
-import { getLessons } from '@/app/actions/lessons';
-import { getProgress } from '@/app/actions/progress';
+import { getAuthToken } from '@/app/actions/auth';
+import { getLessons } from '@/lib/data/lessons';
 import { LessonList } from './LessonList';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -10,18 +10,25 @@ interface LessonListSidebarProps {
 }
 
 /**
- * LessonListSidebar - Server component wrapper that fetches lesson and progress data
- * Renders the LessonList client component with fetched data
+ * LessonListSidebar - Server component wrapper that fetches lesson data
+ * Progress is fetched via SWR hook in the LessonList client component
  */
 export async function LessonListSidebar({
   courseId,
   isMobile = false,
 }: LessonListSidebarProps) {
-  // Fetch lessons and progress in parallel
-  const [lessonsResult, progressResult] = await Promise.all([
-    getLessons(courseId),
-    getProgress(courseId),
-  ]);
+  // Get auth token for cached data fetch
+  const token = await getAuthToken();
+  if (!token) {
+    return (
+      <Card className={cn('p-6', isMobile && 'h-full')}>
+        <p className="text-sm text-muted-foreground">Authentication required</p>
+      </Card>
+    );
+  }
+
+  // Fetch lessons (cached)
+  const lessonsResult = await getLessons(token, courseId);
 
   // Handle errors gracefully
   if ('error' in lessonsResult) {
@@ -33,22 +40,10 @@ export async function LessonListSidebar({
     );
   }
 
-  const lessons = lessonsResult.lessons;
-  const progress = 'error' in progressResult
-    ? {
-        courseId,
-        completedLessons: [],
-        percentage: 0,
-        totalLessons: lessons.length,
-        updatedAt: new Date().toISOString()
-      }
-    : progressResult;
-
   return (
     <LessonList
       courseId={courseId}
-      lessons={lessons}
-      progress={progress}
+      lessons={lessonsResult.lessons}
       isMobile={isMobile}
     />
   );

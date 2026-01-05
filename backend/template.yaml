@@ -21,8 +21,8 @@ Parameters:
 
   AdotLayerArn:
     Type: String
-    Default: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-30-2:1
-    Description: ARN for AWS Distro for OpenTelemetry (ADOT) Lambda layer
+    Default: arn:aws:lambda:us-east-1:615299751070:layer:AWSOpenTelemetryDistroJs:10
+    Description: ARN for AWS OpenTelemetry Distro Lambda layer (supports ARM64)
 
   CloudFrontKeyPairId:
     Type: String
@@ -48,7 +48,6 @@ Parameters:
 
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
-  IsPreview: !Not [!Equals [!Ref Environment, prod]]
 
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
@@ -415,17 +414,15 @@ Resources:
       Handler: dist/src/lambdas/post-confirmation.handler
       Runtime: nodejs22.x
       Architectures:
-        - x86_64
+        - arm64
       MemorySize: 256
       Timeout: 10
       Description: Cognito PostConfirmation trigger - publishes to SNS
       Environment:
         Variables:
           SNS_TOPIC_ARN: !Ref StudentOnboardingTopic
-          # ADOT Auto-instrumentation
-          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
-      Layers:
-        - !Ref AdotLayerArn
+      # ADOT layer removed - x86 collector binary incompatible with ARM64
+      # TODO: Re-add when ARM64-compatible ADOT layer is available
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt StudentOnboardingTopic.TopicName
@@ -446,17 +443,14 @@ Resources:
       Handler: dist/src/lambdas/student-onboarding.handler
       Runtime: nodejs22.x
       Architectures:
-        - x86_64
+        - arm64
       MemorySize: 512
       Timeout: 30
       Description: Processes student onboarding events from SNS
       Environment:
         Variables:
           EDUCATION_TABLE_NAME: !Ref EducationTable
-          # ADOT Auto-instrumentation
-          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
-      Layers:
-        - !Ref AdotLayerArn
+      # ADOT layer removed - x86 collector binary incompatible with ARM64
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable
@@ -477,7 +471,7 @@ Resources:
       Handler: dist/handler.handler
       Runtime: nodejs22.x
       Architectures:
-        - x86_64
+        - arm64
       MemorySize: 512
       Timeout: 30
       Description: Sends transactional emails for enrollment and meetup signup events
@@ -487,10 +481,7 @@ Resources:
           FRONTEND_DOMAIN: !Ref FrontendDomain
           SES_FROM_EMAIL: !Ref SESFromEmail
           SES_REPLY_TO_EMAIL: !Ref SESReplyToEmail
-          # ADOT Auto-instrumentation
-          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-handler
-      Layers:
-        - !Ref AdotLayerArn
+      # ADOT layer removed - x86 collector binary incompatible with ARM64
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EducationTable
@@ -511,6 +502,7 @@ Resources:
             Topic: !Ref TransactionalEmailTopic
 
   # Express.js API Function using Lambda Web Adapter
+  # Uses Provisioned Concurrency in production for zero cold starts
   ExpressApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -518,10 +510,17 @@ Resources:
       Handler: run.sh
       Runtime: nodejs22.x
       Architectures:
-      - x86_64
-      MemorySize: 1024
+        - arm64
+      MemorySize: 2048
       Timeout: 30
       Description: Express.js API running on Lambda with Web Adapter
+      # Provisioned Concurrency disabled - account concurrency quota too low (10)
+      # TODO: Request quota increase via AWS Service Quotas, then uncomment:
+      # AutoPublishAlias: live
+      # ProvisionedConcurrencyConfig: !If
+      #   - IsProd
+      #   - ProvisionedConcurrentExecutions: 4
+      #   - !Ref AWS::NoValue
       Environment:
         Variables:
           # Lambda Web Adapter configuration
@@ -540,10 +539,9 @@ Resources:
           # SNS Topic for transactional emails
           TRANSACTIONAL_EMAIL_TOPIC_ARN: !Ref TransactionalEmailTopic
       Layers:
-        # Lambda Web Adapter Layer
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
-        # ADOT Layer
-        - !Ref AdotLayerArn
+        # Lambda Web Adapter Layer (ARM64)
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:25
+        # ADOT layer removed - x86 collector binary incompatible with ARM64
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EducationTable

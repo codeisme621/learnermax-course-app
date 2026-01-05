@@ -1,4 +1,4 @@
-import type { LessonResponse } from '@/app/actions/lessons';
+import type { LessonResponse } from '@/types/lessons';
 import type { ProgressResponse } from '@/app/actions/progress';
 
 /**
@@ -79,3 +79,4 @@ export function getNextLesson(
 
   return null;
 }
+

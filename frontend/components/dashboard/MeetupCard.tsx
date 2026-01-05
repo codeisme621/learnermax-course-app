@@ -5,14 +5,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, Video, CalendarDays } from 'lucide-react';
-import { signupForMeetup, type MeetupResponse } from '@/app/actions/meetups';
+import type { MeetupData } from '@/lib/data/meetups';
+import { useStudent } from '@/hooks/useStudent';
 
 export interface MeetupCardProps {
-  meetup: MeetupResponse;
+  meetup: MeetupData;
 }
 
 export function MeetupCard({ meetup }: MeetupCardProps) {
-  const [isSignedUp, setIsSignedUp] = useState(meetup.isSignedUp);
+  const { signedUpMeetups, signupForMeetup } = useStudent();
+  const isSignedUp = signedUpMeetups.includes(meetup.meetupId);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,13 +29,11 @@ export function MeetupCard({ meetup }: MeetupCardProps) {
       const result = await signupForMeetup(meetup.meetupId);
 
       // Check if result is an error object
-      if (result && 'error' in result) {
+      if (result && result.error) {
         setError(result.error);
         console.error('Signup error:', result.error);
-      } else {
-        // Success - update UI optimistically
-        setIsSignedUp(true);
       }
+      // Success case is handled by SWR optimistic update in the hook
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign up. Please try again.';
       setError(errorMessage);

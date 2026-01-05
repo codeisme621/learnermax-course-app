@@ -10,13 +10,11 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { LessonList } from './LessonList';
-import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
+import type { LessonResponse } from '@/types/lessons';
 
 interface MobileLessonMenuProps {
   courseId: string;
   lessons: LessonResponse[];
-  progress: ProgressResponse;
   currentLessonId?: string;
 }
 
@@ -24,8 +22,9 @@ interface MobileLessonMenuProps {
  * MobileLessonMenu - Slide-in drawer for mobile lesson navigation
  * Only visible on mobile (lg:hidden)
  * Client component that manages drawer state
+ * Note: Progress is fetched via SWR hook in LessonList
  */
-export function MobileLessonMenu({ courseId, lessons, progress, currentLessonId }: MobileLessonMenuProps) {
+export function MobileLessonMenu({ courseId, lessons, currentLessonId }: MobileLessonMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -50,7 +49,6 @@ export function MobileLessonMenu({ courseId, lessons, progress, currentLessonId 
           <LessonList
             courseId={courseId}
             lessons={lessons}
-            progress={progress}
             currentLessonId={currentLessonId}
             isMobile
           />

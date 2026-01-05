@@ -1,15 +1,16 @@
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
-import { getCourse } from '@/app/actions/courses';
-import { checkEnrollment } from '@/app/actions/enrollments';
-import { getProgress } from '@/app/actions/progress';
-import { getLessons } from '@/app/actions/lessons';
-import { getStudent } from '@/app/actions/students';
+import { getAuthToken } from '@/app/actions/auth';
+import { getCourse } from '@/lib/data/courses';
+import { getLessons } from '@/lib/data/lessons';
+import { checkEnrollment } from '@/lib/data/enrollments';
+import { getProgress } from '@/lib/data/progress';
 import { Card } from '@/components/ui/card';
 import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { CourseVideoSection } from '@/components/course/CourseVideoSection';
 import { CollapsibleLessonSidebar } from '@/components/course/CollapsibleLessonSidebar';
-import { determineCurrentLesson } from '@/lib/course-utils';
+import CoursePageLoading from './loading';
 import {
   CheckCircle,
   Clock,
@@ -26,115 +27,95 @@ interface CoursePageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
-  const { courseId } = await params;
-  const courseResult = await getCourse(courseId);
+// Static metadata - protected page doesn't need SEO
+export const metadata: Metadata = {
+  title: 'Course - LearnWithRico',
+  description: 'Access your course content',
+};
 
-  if ('course' in courseResult) {
-    return {
-      title: `${courseResult.course.name} - LearnWithRico`,
-      description: courseResult.course.description,
-    };
-  }
-
-  return {
-    title: 'Course - LearnWithRico',
-    description: 'Access your course content',
-  };
-}
-
-export default async function CoursePage({ params, searchParams }: CoursePageProps) {
-  const { courseId } = await params;
-  const search = searchParams ? await searchParams : undefined;
-
+// Dynamic content loader - all auth and data fetching inside Suspense
+async function CoursePageLoader({ courseId, search }: { courseId: string; search?: { lesson?: string } }) {
   // Check authentication
   const session = await auth();
   if (!session) {
     redirect(`/signin?callbackUrl=/course/${courseId}`);
   }
 
+  // Get auth token for data fetching
+  const token = await getAuthToken();
+  if (!token) {
+    redirect(`/signin?callbackUrl=/course/${courseId}`);
+  }
+
+  // Parallel fetch: course (cached), lessons (cached), enrollment + progress (not cached)
+  const [courseResult, lessonsResult, isEnrolled, progress] = await Promise.all([
+    getCourse(token, courseId),
+    getLessons(token, courseId),
+    checkEnrollment(token, courseId),
+    getProgress(token, courseId),
+  ]);
+
   // Check enrollment
-  const isEnrolled = await checkEnrollment(courseId);
   if (!isEnrolled) {
     redirect('/dashboard?error=not-enrolled');
   }
 
-  // Fetch course data
-  const courseResult = await getCourse(courseId);
+  // Handle course fetch error
   if ('error' in courseResult) {
     redirect('/dashboard?error=course-not-found');
   }
 
   const course = courseResult.course;
 
-  // Fetch lessons, progress, and student data
-  const [lessonsResult, progressResult, student] = await Promise.all([
-    getLessons(courseId),
-    getProgress(courseId),
-    getStudent(),
-  ]);
-
-  // Handle errors
+  // Handle lessons fetch error
   if ('error' in lessonsResult) {
     redirect('/dashboard?error=lessons-not-found');
   }
 
   const lessons = lessonsResult.lessons;
-  const progress = 'error' in progressResult
-    ? {
-        courseId,
-        completedLessons: [],
-        percentage: 0,
-        totalLessons: lessons.length,
-        updatedAt: new Date().toISOString(),
-      }
-    : progressResult;
+  const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
 
-  // Determine which lesson to display
-  const currentLesson = determineCurrentLesson(lessons, progress, search);
+  // Determine which lesson to display:
+  // 1. URL param lesson if specified
+  // 2. lastAccessedLesson from progress (resume where user left off)
+  // 3. First lesson (fallback)
+  const requestedLessonId = search?.lesson;
+  const lastAccessedLesson = progress?.lastAccessedLesson
+    ? lessons.find(l => l.lessonId === progress.lastAccessedLesson)
+    : null;
+  const currentLesson = requestedLessonId
+    ? lessons.find(l => l.lessonId === requestedLessonId) || sortedLessons[0]
+    : lastAccessedLesson || sortedLessons[0];
 
   if (!currentLesson) {
     redirect('/dashboard?error=no-lessons');
   }
 
-  // Auto-redirect to last accessed lesson if no query param and target is not first lesson
-  const requestedLesson = search?.lesson;
-  if (!requestedLesson && lessons.length > 0 && currentLesson.lessonId !== lessons[0]?.lessonId) {
-    redirect(`/course/${courseId}?lesson=${currentLesson.lessonId}`);
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Authenticated Header with Course Progress */}
+      {/* Authenticated Header with Course Progress (fetched via SWR) */}
       <AuthenticatedHeader
         variant="course"
         user={session.user}
-        courseProgress={{
-          percentage: progress.percentage,
-          completedLessons: progress.completedLessons.length,
-          totalLessons: progress.totalLessons,
-        }}
+        courseId={courseId}
       />
 
       {/* Main Layout: Flexbox with Left Sidebar */}
       <main className="flex pt-16">
-        {/* Left Sidebar: Collapsible Lesson Navigation */}
+        {/* Left Sidebar: Collapsible Lesson Navigation (fetches progress via SWR) */}
         <CollapsibleLessonSidebar
           course={course}
           lessons={lessons}
           currentLessonId={currentLesson.lessonId}
-          progress={progress}
         />
 
         {/* Main Content: Video Player and Course Info */}
         <div className="flex-1 p-4 md:p-6 lg:p-8">
-          {/* Video Player Section */}
+          {/* Video Player Section (fetches progress via SWR) */}
           <CourseVideoSection
             courseId={courseId}
             initialLesson={currentLesson}
             lessons={lessons}
-            initialProgress={progress}
-            student={student}
             pricingModel={course.pricingModel}
           />
 
@@ -179,5 +160,16 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
         </div>
       </main>
     </div>
+  );
+}
+
+export default async function CoursePage({ params, searchParams }: CoursePageProps) {
+  const { courseId } = await params;
+  const search = searchParams ? await searchParams : undefined;
+
+  return (
+    <Suspense fallback={<CoursePageLoading />}>
+      <CoursePageLoader courseId={courseId} search={search} />
+    </Suspense>
   );
 }

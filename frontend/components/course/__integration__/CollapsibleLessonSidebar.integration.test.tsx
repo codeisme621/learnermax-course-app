@@ -8,7 +8,23 @@ import userEvent from '@testing-library/user-event';
 import { CollapsibleLessonSidebar } from '../CollapsibleLessonSidebar';
 import type { Course } from '@/app/actions/courses';
 import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
+
+// Mock useProgress hook
+jest.mock('@/hooks/useProgress', () => ({
+  useProgress: () => ({
+    progress: {
+      courseId: 'course-1',
+      completedLessons: ['lesson-1'],
+      lastAccessedLesson: 'lesson-2',
+      percentage: 33,
+      totalLessons: 3,
+    },
+    isLoading: false,
+    percentage: 33,
+    completedCount: 1,
+    totalLessons: 3,
+  }),
+}));
 
 // Mock next/link
 jest.mock('next/link', () => {
@@ -60,22 +76,12 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
     },
   ];
 
-  const mockProgress: ProgressResponse = {
-    courseId: 'course-1',
-    completedLessons: ['lesson-1'],
-    lastAccessedLesson: 'lesson-2',
-    percentage: 33,
-    totalLessons: 3,
-    updatedAt: '2024-01-01T00:00:00Z',
-  };
-
   test('renders_expandedSidebar_showsCourseTitleAndLessons', () => {
     render(
       <CollapsibleLessonSidebar
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
       />
     );
 
@@ -99,7 +105,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
       />
     );
 
@@ -128,7 +133,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
         defaultCollapsed={true}
       />
     );
@@ -155,7 +159,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
       />
     );
 
@@ -182,7 +185,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
       />
     );
 
@@ -205,7 +207,6 @@ describe('CollapsibleLessonSidebar Integration Tests', () => {
         course={mockCourse}
         lessons={mockLessons}
         currentLessonId="lesson-2"
-        progress={mockProgress}
       />
     );
 

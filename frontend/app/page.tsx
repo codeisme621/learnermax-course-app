@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cacheLife } from 'next/cache';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { HeroSection } from '@/components/landing/HeroSection';
@@ -15,10 +16,6 @@ const fallbackMetadata: Metadata = {
   description:
     'Turn AI into your superpower: master Spec-Driven Development and produce world-class code that sets you apart.',
 };
-
-// Force static generation (no revalidation)
-// This tells Next.js to generate the page once at build time
-export const revalidate = false;
 
 // Dynamic metadata generation based on course data
 export async function generateMetadata(): Promise<Metadata> {
@@ -48,12 +45,15 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-// Main page component - runs at build time
+// Main page component - cached for maximum duration (equivalent to SSG)
 export default async function HomePage() {
-  console.log('[HomePage] Fetching course data for SSG at build time...');
+  'use cache';
+  cacheLife('max'); // Cache indefinitely until redeployment
+
+  console.log('[HomePage] Fetching course data (cached)...');
 
   try {
-    // This fetch happens once during build, not on each request
+    // This fetch happens once during prerendering, then cached
     const course = await getCourseForLanding('spec-driven-dev-mini');
 
     console.log('[HomePage] Successfully fetched course data:', {

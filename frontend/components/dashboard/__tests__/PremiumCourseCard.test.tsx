@@ -1,15 +1,20 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PremiumCourseCard } from '../PremiumCourseCard';
-import { signUpForEarlyAccess } from '@/app/actions/students';
 import type { Course } from '@/app/actions/courses';
 
-// Mock the server action
-jest.mock('@/app/actions/students', () => ({
-  signUpForEarlyAccess: jest.fn(),
-}));
+// Mock the useStudent hook
+const mockSetInterestedInPremium = jest.fn();
+let mockInterestedInPremium = false;
+let mockIsLoading = false;
 
-const mockSignUpForEarlyAccess = signUpForEarlyAccess as jest.MockedFunction<typeof signUpForEarlyAccess>;
+jest.mock('@/hooks/useStudent', () => ({
+  useStudent: () => ({
+    interestedInPremium: mockInterestedInPremium,
+    setInterestedInPremium: mockSetInterestedInPremium,
+    isLoading: mockIsLoading,
+  }),
+}));
 
 describe('PremiumCourseCard', () => {
   const mockPremiumCourse: Course = {
@@ -32,17 +37,14 @@ describe('PremiumCourseCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockInterestedInPremium = false;
+    mockIsLoading = false;
   });
 
   describe('Loading State', () => {
-    it('renders loading skeleton when isLoadingStudent is true', () => {
-      const { container } = render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={true}
-        />
-      );
+    it('renders loading skeleton when isLoading is true', () => {
+      mockIsLoading = true;
+      const { container } = render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // Check for skeleton elements (they have data-slot="skeleton" attribute)
       const skeletons = container.querySelectorAll('[data-slot="skeleton"]');
@@ -55,13 +57,7 @@ describe('PremiumCourseCard', () => {
 
   describe('Course Display', () => {
     it('renders course information correctly with COMING SOON badge when loaded', () => {
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // Course name and description
       expect(screen.getByText('Advanced Spec-Driven Development Mastery')).toBeInTheDocument();
@@ -75,15 +71,7 @@ describe('PremiumCourseCard', () => {
     });
 
     it('shows premium crown icon for premium courses', () => {
-      // Note: The component now always shows a Crown icon for premium courses
-      // instead of the course image
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // Crown icon should be visible (multiple instances - one in header, one in badge)
       expect(screen.getByText('PREMIUM')).toBeInTheDocument();
@@ -91,13 +79,7 @@ describe('PremiumCourseCard', () => {
 
     it('shows placeholder when imageUrl is not provided', () => {
       const courseWithoutImage = { ...mockPremiumCourse, imageUrl: '' };
-      render(
-        <PremiumCourseCard
-          course={courseWithoutImage}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={courseWithoutImage} />);
 
       expect(screen.getByText('PREMIUM')).toBeInTheDocument();
     });
@@ -105,13 +87,7 @@ describe('PremiumCourseCard', () => {
 
   describe('Early Access Not Signed Up State', () => {
     it('shows Join Early Access button when not signed up', () => {
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
       expect(button).toBeInTheDocument();
@@ -122,25 +98,11 @@ describe('PremiumCourseCard', () => {
       const user = userEvent.setup();
 
       // Mock successful signup with delay to capture loading state
-      mockSignUpForEarlyAccess.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          success: true,
-          message: "You're on the early access list!",
-          student: {
-            studentId: 'student-123',
-            interestedInPremium: true,
-            premiumInterestDate: '2025-01-15T14:30:00Z',
-          },
-        }), 100))
+      mockSetInterestedInPremium.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
       );
 
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
       await user.click(button);
@@ -150,44 +112,20 @@ describe('PremiumCourseCard', () => {
         expect(screen.getByText('Signing up...')).toBeInTheDocument();
       });
 
-      // Wait for success state
-      await waitFor(() => {
-        expect(screen.getByText(/You're on the early access list/i)).toBeInTheDocument();
-      });
-
-      // Button should no longer exist
-      expect(screen.queryByRole('button', { name: /join early access/i })).not.toBeInTheDocument();
-
-      // Should have called the API
-      expect(mockSignUpForEarlyAccess).toHaveBeenCalledWith('premium-spec-course');
+      // Should have called setInterestedInPremium with courseId
+      expect(mockSetInterestedInPremium).toHaveBeenCalledWith('premium-spec-course');
     });
 
     it('shows error message when signup fails', async () => {
       const user = userEvent.setup();
 
-      // Mock failed signup with delay to capture loading state
-      mockSignUpForEarlyAccess.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          success: false,
-          error: 'Network error',
-        }), 100))
-      );
+      // Mock failed signup
+      mockSetInterestedInPremium.mockRejectedValue(new Error('Network error'));
 
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
       await user.click(button);
-
-      // Wait for loading state to appear
-      await waitFor(() => {
-        expect(screen.getByText('Signing up...')).toBeInTheDocument();
-      });
 
       // Wait for error message
       await waitFor(() => {
@@ -202,23 +140,11 @@ describe('PremiumCourseCard', () => {
       const user = userEvent.setup();
 
       // Mock first call fails, second succeeds
-      mockSignUpForEarlyAccess
-        .mockResolvedValueOnce({
-          success: false,
-          error: 'Network error',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          message: "You're on the early access list!",
-        });
+      mockSetInterestedInPremium
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce(undefined);
 
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
 
@@ -233,27 +159,19 @@ describe('PremiumCourseCard', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(screen.getByText(/You're on the early access list/i)).toBeInTheDocument();
+        expect(mockSetInterestedInPremium).toHaveBeenCalledTimes(2);
       });
-
-      expect(mockSignUpForEarlyAccess).toHaveBeenCalledTimes(2);
     });
 
     it('prevents multiple simultaneous signup requests', async () => {
       const user = userEvent.setup();
 
       // Mock slow response
-      mockSignUpForEarlyAccess.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 500))
+      mockSetInterestedInPremium.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 500))
       );
 
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
 
@@ -263,19 +181,14 @@ describe('PremiumCourseCard', () => {
       await user.click(button);
 
       // Should only call API once (button is disabled during loading)
-      expect(mockSignUpForEarlyAccess).toHaveBeenCalledTimes(1);
+      expect(mockSetInterestedInPremium).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Early Access Already Signed Up State', () => {
     it('shows checkmark status when already signed up', () => {
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={true}
-          isLoadingStudent={false}
-        />
-      );
+      mockInterestedInPremium = true;
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // Should show success message
       expect(screen.getByText(/You're on the early access list/i)).toBeInTheDocument();
@@ -285,29 +198,18 @@ describe('PremiumCourseCard', () => {
     });
 
     it('does not allow signup when already signed up', () => {
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={true}
-          isLoadingStudent={false}
-        />
-      );
+      mockInterestedInPremium = true;
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // No button exists, so can't click
       expect(screen.queryByRole('button', { name: /join early access/i })).not.toBeInTheDocument();
-      expect(mockSignUpForEarlyAccess).not.toHaveBeenCalled();
+      expect(mockSetInterestedInPremium).not.toHaveBeenCalled();
     });
   });
 
   describe('Styling and Visual Design', () => {
     it('applies premium styling to card', () => {
-      const { container } = render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      const { container } = render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       // Check for hover effects (now uses shadow-xl)
       const card = container.querySelector('.hover\\:shadow-xl');
@@ -315,26 +217,14 @@ describe('PremiumCourseCard', () => {
     });
 
     it('truncates long course descriptions', () => {
-      const { container } = render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      const { container } = render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const description = container.querySelector('.line-clamp-2');
       expect(description).toBeInTheDocument();
     });
 
     it('has full-width button for better mobile UX', () => {
-      render(
-        <PremiumCourseCard
-          course={mockPremiumCourse}
-          isInterestedInPremium={false}
-          isLoadingStudent={false}
-        />
-      );
+      render(<PremiumCourseCard course={mockPremiumCourse} />);
 
       const button = screen.getByRole('button', { name: /join early access/i });
       expect(button).toHaveClass('w-full');

@@ -6,39 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, CheckCircle2, Crown, Sparkles, Target, Zap, Star } from 'lucide-react';
-import { signUpForEarlyAccess } from '@/app/actions/students';
-import type { Course } from '@/app/actions/courses';
+import { useStudent } from '@/hooks/useStudent';
+import type { Course } from '@/types/courses';
 
 interface PremiumCourseCardProps {
   course: Course;
-  isInterestedInPremium: boolean;
-  isLoadingStudent: boolean;
 }
 
-export function PremiumCourseCard({
-  course,
-  isInterestedInPremium,
-  isLoadingStudent,
-}: PremiumCourseCardProps) {
+export function PremiumCourseCard({ course }: PremiumCourseCardProps) {
+  const { interestedInPremium, setInterestedInPremium, isLoading: isLoadingStudent } = useStudent();
+
   const [isLoading, setIsLoading] = useState(false);
-  const [hasSignedUp, setHasSignedUp] = useState(isInterestedInPremium);
   const [error, setError] = useState<string | null>(null);
 
   const handleEarlyAccessSignup = async () => {
     setIsLoading(true);
     setError(null);
 
-    const result = await signUpForEarlyAccess(course.courseId);
-
-    if (result.success) {
-      setHasSignedUp(true);
+    try {
+      await setInterestedInPremium(course.courseId);
       console.log('[PremiumCourseCard] Early access signup successful');
-    } else {
+    } catch (err) {
       setError('Failed to sign up. Please try again.');
-      console.error('[PremiumCourseCard] Early access signup failed', { error: result.error });
+      console.error('[PremiumCourseCard] Early access signup failed', { error: err });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   // Show loading skeleton while student profile is being fetched
@@ -132,7 +125,7 @@ export function PremiumCourseCard({
 
       {/* Card Footer with Early Access CTA */}
       <CardFooter className="pt-0 pb-5">
-        {hasSignedUp ? (
+        {interestedInPremium ? (
           <div className="w-full flex items-center justify-center gap-2 text-green-600 dark:text-green-400 text-sm font-semibold p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800/50">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <span>You&apos;re on the early access list!</span>

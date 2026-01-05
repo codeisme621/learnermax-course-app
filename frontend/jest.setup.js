@@ -1,3 +1,18 @@
+// Polyfills for SWR which checks document.visibilityState
+// Make it enumerable and non-configurable to persist through test lifecycle
+if (typeof document !== 'undefined') {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: false,
+    enumerable: true,
+    get: () => 'visible',
+  });
+  Object.defineProperty(document, 'hidden', {
+    configurable: false,
+    enumerable: true,
+    get: () => false,
+  });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require('@testing-library/jest-dom');
 

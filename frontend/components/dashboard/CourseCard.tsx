@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, Award, Loader2, AlertCircle, Play, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import type { Course } from '@/app/actions/courses';
+import type { Course } from '@/types/courses';
 import type { Enrollment } from '@/app/actions/enrollments';
 import type { ProgressResponse } from '@/app/actions/progress';
 

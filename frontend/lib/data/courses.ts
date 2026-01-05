@@ -1,70 +1,40 @@
-'use server';
+'use cache';
 
-import { getAuthToken } from './auth';
-
-/**
- * Server actions for course-related operations
- * These actions fetch course data from the backend API
- */
-
-import { Lesson } from './lessons';
+import { cacheLife, cacheTag } from 'next/cache';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-// Course data types matching backend structure
-export interface CourseModule {
-  moduleId: string;
-  moduleName: string;
-  lessons: Lesson[];
-}
+// Re-export types for convenience
+export type { Course, CourseModule } from '@/types/courses';
 
-export interface Course {
-  courseId: string;
-  name: string;
-  description: string;
-  instructor: string;
-  pricingModel: 'free' | 'paid';
-  price?: number;
-  imageUrl: string;
-  learningObjectives: string[];
-  curriculum: CourseModule[];
-  comingSoon?: boolean;
-  estimatedDuration?: string;
-  totalLessons?: number | null;
-}
+import type { Course } from '@/types/courses';
 
 /**
  * Get all available courses
- * Protected endpoint - requires authentication
+ * Cached with 'max' profile - rarely changes, invalidate via script
  *
+ * @param token - Auth token (passed as argument for cache key)
  * @returns Array of courses or error
  */
-export async function getAllCourses(): Promise<
-  { courses: Course[] } | { error: string }
-> {
-  console.log('[getAllCourses] Starting fetch');
+export async function getAllCourses(
+  token: string
+): Promise<{ courses: Course[] } | { error: string }> {
+  'use cache';
+  cacheLife('max');
+  cacheTag('courses');
+
+  console.log('[getAllCourses] Starting cached fetch');
 
   try {
-    // Get ID token for authentication
-    const token = await getAuthToken();
-
-    if (!token) {
-      console.error('[getAllCourses] No auth token available');
-      return { error: 'Authentication required' };
-    }
-
     const endpoint = `${API_URL}/api/courses`;
     console.log('[getAllCourses] Fetching from:', endpoint);
-    console.log('[getAllCourses] API_URL:', API_URL);
-    console.log('[getAllCourses] ID token length:', token.length);
 
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-      cache: 'no-store', // Always fetch fresh course data
     });
 
     console.log('[getAllCourses] Response status:', response.status, response.statusText);
@@ -75,7 +45,6 @@ export async function getAllCourses(): Promise<
         status: response.status,
         statusText: response.statusText,
         body: errorText,
-        url: endpoint,
       });
       return { error: `Failed to fetch courses: ${response.statusText}` };
     }
@@ -85,9 +54,11 @@ export async function getAllCourses(): Promise<
     return { courses };
   } catch (error) {
     console.error('[getAllCourses] Exception occurred:', error);
-    console.error('[getAllCourses] API_URL:', API_URL);
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      return { error: 'Failed to connect to backend. Please check if backend is running and NEXT_PUBLIC_API_URL is correct.' };
+      return {
+        error:
+          'Failed to connect to backend. Please check if backend is running and NEXT_PUBLIC_API_URL is correct.',
+      };
     }
     return { error: 'Failed to fetch courses' };
   }
@@ -95,36 +66,32 @@ export async function getAllCourses(): Promise<
 
 /**
  * Get a single course by ID
- * Protected endpoint - requires authentication
+ * Cached with 'max' profile - rarely changes, invalidate via script
  *
+ * @param token - Auth token (passed as argument for cache key)
  * @param courseId - The ID of the course to fetch
  * @returns Course data or error
  */
 export async function getCourse(
+  token: string,
   courseId: string
 ): Promise<{ course: Course } | { error: string }> {
+  'use cache';
+  cacheLife('max');
+  cacheTag(`course-${courseId}`);
+
   console.log('[getCourse] Fetching course with ID:', courseId);
 
   try {
-    // Get ID token for authentication
-    const token = await getAuthToken();
-
-    if (!token) {
-      console.error('[getCourse] No auth token available');
-      return { error: 'Authentication required' };
-    }
-
     const endpoint = `${API_URL}/api/courses/${courseId}`;
     console.log('[getCourse] Fetching from:', endpoint);
-    console.log('[getCourse] ID token length:', token.length);
 
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-      cache: 'no-store', // Always fetch fresh course data
     });
 
     console.log('[getCourse] Response status:', response.status, response.statusText);
@@ -135,7 +102,6 @@ export async function getCourse(
         status: response.status,
         statusText: response.statusText,
         body: errorText,
-        url: endpoint,
       });
 
       if (response.status === 404) {
@@ -149,7 +115,6 @@ export async function getCourse(
     return { course };
   } catch (error) {
     console.error('[getCourse] Exception occurred:', error);
-    console.error('[getCourse] API_URL:', API_URL);
     return { error: 'Failed to fetch course' };
   }
 }

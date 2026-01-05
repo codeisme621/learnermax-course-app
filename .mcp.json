@@ -17,6 +17,10 @@
         "--executable-path",
         "/usr/bin/chromium-browser"
       ]
+    },
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
     }
   }
 }

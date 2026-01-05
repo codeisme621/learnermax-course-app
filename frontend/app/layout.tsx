@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { SWRProvider } from "@/lib/swr-config";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
@@ -33,7 +34,9 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} font-sans antialiased`}
       >
         <SessionProvider>
-          {children}
+          <SWRProvider>
+            {children}
+          </SWRProvider>
         </SessionProvider>
         <Analytics />
       </body>
