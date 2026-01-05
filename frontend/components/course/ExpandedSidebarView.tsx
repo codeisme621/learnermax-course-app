@@ -3,31 +3,33 @@
 import Link from 'next/link';
 import { ChevronLeft, PlayCircle, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { Course } from '@/app/actions/courses';
-import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
+import { useProgress } from '@/hooks/useProgress';
+import type { Course } from '@/types/courses';
+import type { LessonResponse } from '@/types/lessons';
 
 interface ExpandedSidebarViewProps {
   course: Course;
   lessons: LessonResponse[];
   currentLessonId: string;
-  progress: ProgressResponse;
   onCollapse: () => void;
 }
 
 /**
  * ExpandedSidebarView - Full sidebar view with course title, lessons, and progress
  * Shown by default on desktop, can be collapsed
+ * Uses SWR hook for progress data (shared cache with other components)
  */
 export function ExpandedSidebarView({
   course,
   lessons,
   currentLessonId,
-  progress,
   onCollapse,
 }: ExpandedSidebarViewProps) {
+  // Use SWR hook for progress - shares cache with LessonList and VideoPlayer
+  const { progress, isLoading, percentage, completedCount, totalLessons } = useProgress(course.courseId);
+  const completedLessons = progress?.completedLessons ?? [];
   // Sort lessons by order
   const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
 
@@ -50,9 +52,9 @@ export function ExpandedSidebarView({
       {/* Lessons List */}
       <nav className="p-2" aria-label="Course lessons">
         {sortedLessons.map((lesson) => {
-          const isCompleted = progress.completedLessons.includes(lesson.lessonId);
+          const isCompleted = completedLessons.includes(lesson.lessonId);
           const isCurrent = lesson.lessonId === currentLessonId;
-          const isLastAccessed = lesson.lessonId === progress.lastAccessedLesson;
+          const isLastAccessed = lesson.lessonId === progress?.lastAccessedLesson;
 
           return (
             <Link
@@ -97,15 +99,24 @@ export function ExpandedSidebarView({
 
       {/* Progress Summary */}
       <div className="p-4 border-t border-border">
-        <div className="text-sm font-medium mb-2">
-          {progress.completedLessons.length} of {progress.totalLessons} lessons • {progress.percentage}%
-        </div>
-        <div className="w-full bg-secondary rounded-full h-2">
-          <div
-            className="bg-primary rounded-full h-2 transition-all"
-            style={{ width: `${progress.percentage}%` }}
-          />
-        </div>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-4 w-32 mb-2" />
+            <Skeleton className="h-2 w-full" />
+          </>
+        ) : (
+          <>
+            <div className="text-sm font-medium mb-2">
+              {completedCount} of {totalLessons || lessons.length} lessons • {percentage}%
+            </div>
+            <div className="w-full bg-secondary rounded-full h-2">
+              <div
+                className="bg-primary rounded-full h-2 transition-all"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

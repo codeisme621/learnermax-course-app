@@ -6,11 +6,11 @@ import dynamic from 'next/dynamic';
 import { ArrowRight } from 'lucide-react';
 import { VideoPlayer } from './VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { getProgress, markLessonComplete } from '@/app/actions/progress';
 import { getNextLesson } from '@/lib/course-utils';
-import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
-import type { Student } from '@/app/actions/students';
+import { useStudent } from '@/hooks/useStudent';
+import { useProgress } from '@/hooks/useProgress';
+import { markLessonComplete } from '@/app/actions/progress';
+import type { LessonResponse } from '@/types/lessons';
 
 // Dynamically import components
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
@@ -20,23 +20,24 @@ interface CourseVideoSectionProps {
   courseId: string;
   initialLesson: LessonResponse;
   lessons: LessonResponse[];
-  initialProgress: ProgressResponse;
-  student: Student | null;
   pricingModel: 'free' | 'paid';
 }
 
 /**
  * CourseVideoSection - Video player section with Next Lesson button
  * Client component that manages video playback and progress updates
+ * Uses SWR hook for progress data (shared cache with sidebar and header)
  */
 export function CourseVideoSection({
   courseId,
   initialLesson,
   lessons,
-  initialProgress: _initialProgress,
-  student,
   pricingModel,
 }: CourseVideoSectionProps) {
+  // Use SWR hook for student data - allows optimistic updates to propagate to dashboard
+  const { interestedInPremium, setInterestedInPremium } = useStudent();
+  // Use SWR hook for progress cache revalidation
+  const { mutate: mutateProgress } = useProgress(courseId);
   const [currentLesson, setCurrentLesson] = useState<LessonResponse>(initialLesson);
   const [isRefreshingProgress, setIsRefreshingProgress] = useState(false);
 
@@ -49,24 +50,21 @@ export function CourseVideoSection({
   // Update currentLesson when initialLesson changes (from URL navigation)
   useEffect(() => {
     setCurrentLesson(initialLesson);
+    // Reset ready-to-complete state when switching lessons
+    setIsReadyToComplete(false);
   }, [initialLesson]);
 
-  // Handle lesson completion
+  // Handle lesson completion - revalidate SWR cache
   const handleLessonComplete = async () => {
-    console.log('[CourseVideoSection] Lesson completed, refetching progress');
+    console.log('[CourseVideoSection] Lesson completed, revalidating progress cache');
     setIsRefreshingProgress(true);
 
     try {
-      const updatedProgress = await getProgress(courseId);
-      if ('error' in updatedProgress) {
-        console.error('[CourseVideoSection] Failed to refetch progress:', updatedProgress.error);
-      } else {
-        // Progress successfully refetched (logged for debugging)
-        // Note: Progress is managed by parent page component via server-side refetch
-        console.log('[CourseVideoSection] Progress updated:', updatedProgress);
-      }
+      // Revalidate SWR cache - this will refetch progress data
+      await mutateProgress();
+      console.log('[CourseVideoSection] Progress cache revalidated');
     } catch (error) {
-      console.error('[CourseVideoSection] Error refetching progress:', error);
+      console.error('[CourseVideoSection] Error revalidating progress:', error);
     } finally {
       setIsRefreshingProgress(false);
     }
@@ -86,15 +84,17 @@ export function CourseVideoSection({
     setIsCompletingCourse(true);
 
     try {
-      // Mark the final lesson as complete
+      // Call server action directly (like the old working code)
       const result = await markLessonComplete(courseId, currentLesson.lessonId);
       console.log('[CourseVideoSection] markLessonComplete result:', result);
 
       if ('error' in result) {
-        console.error('[CourseVideoSection] Failed to mark lesson complete:', result.error);
-        // TODO: Show error toast
-        return;
+        throw new Error(result.error);
       }
+
+      // Refresh SWR cache so sidebar/header update
+      await mutateProgress();
+      console.log('[CourseVideoSection] Lesson marked complete, cache refreshed');
 
       // Show confetti + modal simultaneously
       console.log('[CourseVideoSection] Showing full-screen confetti + modal');
@@ -109,9 +109,6 @@ export function CourseVideoSection({
       setTimeout(() => {
         setShowFullScreenConfetti(false);
       }, 5000);
-
-      // Refetch progress to update UI
-      handleLessonComplete();
     } catch (error) {
       console.error('[CourseVideoSection] Error completing course:', error);
     } finally {
@@ -141,7 +138,8 @@ export function CourseVideoSection({
         <PremiumUpsellModal
           isOpen={showUpsellModal}
           onClose={() => setShowUpsellModal(false)}
-          isInterestedInPremium={student?.interestedInPremium || false}
+          isInterestedInPremium={interestedInPremium}
+          onSignup={setInterestedInPremium}
         />
       )}
 

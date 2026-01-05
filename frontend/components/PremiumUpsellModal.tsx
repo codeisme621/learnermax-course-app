@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { signUpForEarlyAccess } from '@/app/actions/students';
 import {
   Dialog,
   DialogContent,
@@ -16,36 +15,34 @@ interface PremiumUpsellModalProps {
   isOpen: boolean;
   onClose: () => void;
   isInterestedInPremium: boolean;
+  onSignup?: (courseId: string) => Promise<void>;
 }
 
 export function PremiumUpsellModal({
   isOpen,
   onClose,
   isInterestedInPremium,
+  onSignup,
 }: PremiumUpsellModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSignedUp, setHasSignedUp] = useState(isInterestedInPremium);
   const [error, setError] = useState<string | null>(null);
 
   const handleEarlyAccessSignup = async () => {
+    if (!onSignup) return;
+
     setIsLoading(true);
     setError(null);
 
     console.log('[PremiumUpsellModal] Early access signup initiated');
 
-    const result = await signUpForEarlyAccess('premium-spec-course');
-
-    if (result.success) {
-      console.log('[PremiumUpsellModal] Signup successful', {
-        studentId: result.student?.studentId,
-      });
+    try {
+      await onSignup('premium-spec-course');
+      console.log('[PremiumUpsellModal] Signup successful');
       setHasSignedUp(true);
-    } else {
-      console.error('[PremiumUpsellModal] Signup failed', {
-        error: result.error,
-        courseId: 'premium-spec-course',
-      });
-      setError(result.error || 'Failed to sign up. Please try again.');
+    } catch (err) {
+      console.error('[PremiumUpsellModal] Signup failed', { error: err });
+      setError(err instanceof Error ? err.message : 'Failed to sign up. Please try again.');
     }
 
     setIsLoading(false);

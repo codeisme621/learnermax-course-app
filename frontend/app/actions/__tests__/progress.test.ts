@@ -1,8 +1,8 @@
 /**
- * Unit tests for progress server actions
- * Following existing test pattern with jest.fn() mocking
+ * Unit tests for progress server actions (mutations only)
+ * Note: getProgress was removed - progress is now fetched via SWR hooks
  */
-import { getProgress, markLessonComplete, trackLessonAccess } from '../progress';
+import { markLessonComplete, trackLessonAccess } from '../progress';
 import * as auth from '../auth';
 
 // Mock the auth module
@@ -22,80 +22,6 @@ describe('progress server actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.NEXT_PUBLIC_API_URL = mockApiUrl;
-  });
-
-  describe('getProgress', () => {
-    it('successfully fetches student progress', async () => {
-      const mockProgress = {
-        courseId: 'spec-driven-dev-mini',
-        completedLessons: ['lesson-1', 'lesson-2'],
-        lastAccessedLesson: 'lesson-2',
-        percentage: 67,
-        totalLessons: 3,
-        updatedAt: new Date().toISOString(),
-      };
-
-      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockProgress,
-      } as Response);
-
-      const result = await getProgress(mockCourseId);
-
-      expect(auth.getAuthToken).toHaveBeenCalled();
-      expect(mockFetch).toHaveBeenCalledWith(
-        `${mockApiUrl}/api/progress/${mockCourseId}`,
-        expect.objectContaining({
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mockToken}`,
-          },
-          cache: 'no-store',
-        })
-      );
-
-      expect(result).toEqual(mockProgress);
-    });
-
-    it('returns error when not authenticated', async () => {
-      (auth.getAuthToken as jest.Mock).mockResolvedValue(null);
-
-      const result = await getProgress(mockCourseId);
-
-      expect(result).toEqual({
-        error: 'Authentication required',
-      });
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it('returns error for 404 course not found', async () => {
-      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        text: async () => JSON.stringify({ error: 'Course not found' }),
-      } as Response);
-
-      const result = await getProgress(mockCourseId);
-
-      expect(result).toEqual({
-        error: 'Course not found',
-      });
-    });
-
-    it('handles network errors', async () => {
-      (auth.getAuthToken as jest.Mock).mockResolvedValue(mockToken);
-      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
-
-      const result = await getProgress(mockCourseId);
-
-      expect(result).toEqual({
-        error: 'Failed to connect to backend. Please check if backend is running.',
-      });
-    });
   });
 
   describe('markLessonComplete', () => {

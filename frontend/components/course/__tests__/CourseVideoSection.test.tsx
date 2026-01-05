@@ -18,6 +18,14 @@ jest.mock('../VideoPlayer', () => {
 // Mock progress actions
 jest.mock('@/app/actions/progress');
 
+// Mock useStudent hook
+jest.mock('@/hooks/useStudent', () => ({
+  useStudent: () => ({
+    interestedInPremium: false,
+    setInterestedInPremium: jest.fn(),
+  }),
+}));
+
 // Mock Next.js Link component
 jest.mock('next/link', () => {
   const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
@@ -73,7 +81,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -90,7 +97,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -106,7 +112,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -123,7 +128,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[2]} // Last lesson
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -139,7 +143,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -154,7 +157,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -170,7 +172,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -186,7 +187,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[1]} // No description
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -209,7 +209,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -233,7 +232,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -256,7 +254,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -278,7 +275,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[0]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );
@@ -296,7 +292,6 @@ describe('CourseVideoSection', () => {
         initialLesson={mockLessons[1]}
         lessons={mockLessons}
         initialProgress={mockProgress}
-        student={null}
         pricingModel="free"
       />
     );

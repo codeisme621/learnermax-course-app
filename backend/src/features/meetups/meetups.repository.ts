@@ -102,4 +102,13 @@ export const meetupsRepository = {
 
     return signups;
   },
+
+  /**
+   * Get all signed-up meetup IDs for a student
+   * Used by student service to populate signedUpMeetups field
+   */
+  async getSignedUpMeetupIds(userId: string): Promise<string[]> {
+    const signups = await this.getStudentSignups(userId);
+    return signups.map((s) => s.meetupId);
+  },
 };

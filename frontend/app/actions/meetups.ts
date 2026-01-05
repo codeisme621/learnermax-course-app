@@ -21,58 +21,6 @@ export interface MeetupResponse {
 }
 
 /**
- * Fetch all meetups with user signup status
- *
- * @returns Array of meetups or error object
- */
-export async function getMeetups(): Promise<MeetupResponse[] | { error: string }> {
-  const token = await getAuthToken();
-
-  if (!token) {
-    console.error('[meetups] No auth token available');
-    return { error: 'Authentication required' };
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/meetups`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store', // Always fetch fresh data
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[meetups] Backend returned error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-      });
-      return { error: `Failed to fetch meetups: ${response.statusText}` };
-    }
-
-    const meetups: MeetupResponse[] = await response.json();
-
-    console.log('[meetups] Fetched meetups successfully', {
-      count: meetups.length,
-      meetupIds: meetups.map(m => m.meetupId),
-    });
-
-    return meetups;
-  } catch (error) {
-    if (error instanceof TypeError) {
-      console.error('[meetups] Network error - backend may be unreachable:', error);
-      return { error: 'Unable to connect to server. Please check your internet connection.' };
-    }
-
-    console.error('[meetups] Unexpected error fetching meetups:', error);
-    return { error: 'An unexpected error occurred while fetching meetups' };
-  }
-}
-
-/**
  * Sign up for a meetup
  *
  * @param meetupId - The ID of the meetup to sign up for

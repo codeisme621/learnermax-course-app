@@ -8,12 +8,35 @@ import { CourseVideoSection } from '../CourseVideoSection';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/app/actions/__integration__/setup';
 import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
 import { simulateVideoProgress } from '../videoTestUtils';
 
 // Mock auth
 jest.mock('@/app/actions/auth', () => ({
   getAuthToken: jest.fn().mockResolvedValue('mock-jwt-token'),
+}));
+
+// Mock useProgress hook
+const mockMarkComplete = jest.fn();
+const mockMutate = jest.fn();
+jest.mock('@/hooks/useProgress', () => ({
+  useProgress: () => ({
+    progress: {
+      courseId: 'test-course-1',
+      completedLessons: [],
+      percentage: 0,
+      totalLessons: 2,
+    },
+    markComplete: mockMarkComplete,
+    mutate: mockMutate,
+  }),
+}));
+
+// Mock useStudent hook
+jest.mock('@/hooks/useStudent', () => ({
+  useStudent: () => ({
+    interestedInPremium: false,
+    setInterestedInPremium: jest.fn(),
+  }),
 }));
 
 // Mock next/dynamic for react-confetti
@@ -95,8 +118,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -117,8 +138,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -153,8 +172,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -198,8 +215,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -235,8 +250,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -255,8 +268,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -276,8 +287,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[2]} // Last lesson
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -298,8 +307,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[0]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -317,8 +324,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[1]}
           lessons={mockLessons}
-          initialProgress={mockProgress}
-          student={null}
           pricingModel="free"
         />
       );
@@ -341,12 +346,6 @@ describe('CourseVideoSection Integration Tests', () => {
           courseId={mockCourseId}
           initialLesson={mockLessons[2]}
           lessons={mockLessons}
-          initialProgress={{
-            ...mockProgress,
-            completedLessons: ['lesson-1', 'lesson-2'],
-            percentage: 67,
-          }}
-          student={null}
           pricingModel="free"
         />
       );

@@ -9,4 +9,6 @@ export interface Student {
   // Premium early access fields
   interestedInPremium?: boolean;
   premiumInterestDate?: string;
+  // Meetup signups (populated from meetups repository)
+  signedUpMeetups?: string[];
 }

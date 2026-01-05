@@ -1,29 +1,33 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MeetupCard } from '../MeetupCard';
-import type { MeetupResponse } from '@/app/actions/meetups';
-import * as meetupsActions from '@/app/actions/meetups';
+import type { MeetupData } from '@/lib/data/meetups';
 
-// Mock the meetups actions
-jest.mock('@/app/actions/meetups', () => ({
-  ...jest.requireActual('@/app/actions/meetups'),
-  signupForMeetup: jest.fn(),
+// Mock the useStudent hook
+const mockSignupForMeetup = jest.fn();
+let mockSignedUpMeetups: string[] = [];
+
+jest.mock('@/hooks/useStudent', () => ({
+  useStudent: () => ({
+    signedUpMeetups: mockSignedUpMeetups,
+    signupForMeetup: mockSignupForMeetup,
+  }),
 }));
 
 describe('MeetupCard', () => {
-  const mockMeetup: MeetupResponse = {
+  const mockMeetup: MeetupData = {
     meetupId: 'spec-driven-dev-weekly',
     title: 'Spec Driven Development',
     description: 'Weekly discussion on spec-driven workflows, best practices, and Q&A',
     nextOccurrence: '2025-01-25T16:00:00.000Z', // Saturday 10 AM CST
     isRunning: false,
-    isSignedUp: false,
     duration: 60,
     hostName: 'Rico Martinez',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSignedUpMeetups = [];
   });
 
   describe('MeetupCard_notSignedUp_showsSignupButton', () => {
@@ -52,16 +56,16 @@ describe('MeetupCard', () => {
 
   describe('MeetupCard_signedUpNotRunning_showsRegisteredBadge', () => {
     it('displays Registered badge when signed up', () => {
-      const signedUpMeetup = { ...mockMeetup, isSignedUp: true };
-      render(<MeetupCard meetup={signedUpMeetup} />);
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
+      render(<MeetupCard meetup={mockMeetup} />);
 
       expect(screen.getByText('✓ Registered')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Sign Up for Meetup/i })).not.toBeInTheDocument();
     });
 
     it('displays confirmation message with calendar mention', () => {
-      const signedUpMeetup = { ...mockMeetup, isSignedUp: true };
-      render(<MeetupCard meetup={signedUpMeetup} />);
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
+      render(<MeetupCard meetup={mockMeetup} />);
 
       expect(screen.getByText(/Calendar invite sent to your email/)).toBeInTheDocument();
     });
@@ -69,10 +73,10 @@ describe('MeetupCard', () => {
 
   describe('MeetupCard_signedUpAndRunning_showsJoinZoomButton', () => {
     it('displays LIVE badge when meeting is running', () => {
-      const runningMeetup: MeetupResponse = {
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
+      const runningMeetup: MeetupData = {
         ...mockMeetup,
         isRunning: true,
-        isSignedUp: true,
         zoomLink: 'https://zoom.us/j/123456789',
       };
 
@@ -82,10 +86,10 @@ describe('MeetupCard', () => {
     });
 
     it('displays Join Live Now button when running and signed up', () => {
-      const runningMeetup: MeetupResponse = {
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
+      const runningMeetup: MeetupData = {
         ...mockMeetup,
         isRunning: true,
-        isSignedUp: true,
         zoomLink: 'https://zoom.us/j/123456789',
       };
 
@@ -96,10 +100,9 @@ describe('MeetupCard', () => {
     });
 
     it('does not show Join Live Now button if not signed up', () => {
-      const runningMeetup: MeetupResponse = {
+      const runningMeetup: MeetupData = {
         ...mockMeetup,
         isRunning: true,
-        isSignedUp: false,
       };
 
       render(<MeetupCard meetup={runningMeetup} />);
@@ -111,23 +114,21 @@ describe('MeetupCard', () => {
   describe('MeetupCard_clickSignup_callsSignupAction', () => {
     it('calls signupForMeetup when Sign Up button is clicked', async () => {
       const user = userEvent.setup();
-      const mockSignup = meetupsActions.signupForMeetup as jest.MockedFunction<typeof meetupsActions.signupForMeetup>;
-      mockSignup.mockResolvedValue(undefined); // Success
+      mockSignupForMeetup.mockResolvedValue({}); // Success
 
       render(<MeetupCard meetup={mockMeetup} />);
 
       const signupButton = screen.getByRole('button', { name: /Sign Up for Meetup/i });
       await user.click(signupButton);
 
-      expect(mockSignup).toHaveBeenCalledWith('spec-driven-dev-weekly');
+      expect(mockSignupForMeetup).toHaveBeenCalledWith('spec-driven-dev-weekly');
     });
 
     it('shows loading state during signup', async () => {
       const user = userEvent.setup();
-      const mockSignup = meetupsActions.signupForMeetup as jest.MockedFunction<typeof meetupsActions.signupForMeetup>;
 
       // Make signup take some time
-      mockSignup.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(undefined), 100)));
+      mockSignupForMeetup.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({}), 100)));
 
       render(<MeetupCard meetup={mockMeetup} />);
 
@@ -143,26 +144,9 @@ describe('MeetupCard', () => {
       });
     });
 
-    it('updates UI to show Registered after successful signup', async () => {
-      const user = userEvent.setup();
-      const mockSignup = meetupsActions.signupForMeetup as jest.MockedFunction<typeof meetupsActions.signupForMeetup>;
-      mockSignup.mockResolvedValue(undefined); // Success
-
-      render(<MeetupCard meetup={mockMeetup} />);
-
-      const signupButton = screen.getByRole('button', { name: /Sign Up for Meetup/i });
-      await user.click(signupButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('✓ Registered')).toBeInTheDocument();
-        expect(screen.getByText(/Calendar invite sent to your email/)).toBeInTheDocument();
-      });
-    });
-
     it('displays error message if signup fails', async () => {
       const user = userEvent.setup();
-      const mockSignup = meetupsActions.signupForMeetup as jest.MockedFunction<typeof meetupsActions.signupForMeetup>;
-      mockSignup.mockResolvedValue({ error: 'Failed to sign up. Please try again.' });
+      mockSignupForMeetup.mockResolvedValue({ error: 'Failed to sign up. Please try again.' });
 
       render(<MeetupCard meetup={mockMeetup} />);
 
@@ -180,13 +164,13 @@ describe('MeetupCard', () => {
 
   describe('MeetupCard_clickJoinLive_opensNewTab', () => {
     it('opens Zoom link in new tab when Join Live Now button is clicked', async () => {
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
       const user = userEvent.setup();
       const mockWindowOpen = jest.spyOn(window, 'open').mockImplementation();
 
-      const runningMeetup: MeetupResponse = {
+      const runningMeetup: MeetupData = {
         ...mockMeetup,
         isRunning: true,
-        isSignedUp: true,
         zoomLink: 'https://zoom.us/j/123456789',
       };
 
@@ -205,12 +189,12 @@ describe('MeetupCard', () => {
     });
 
     it('does not open window if zoomLink is missing', async () => {
+      mockSignedUpMeetups = ['spec-driven-dev-weekly'];
       const mockWindowOpen = jest.spyOn(window, 'open').mockImplementation();
 
-      const runningMeetupNoLink: MeetupResponse = {
+      const runningMeetupNoLink: MeetupData = {
         ...mockMeetup,
         isRunning: true,
-        isSignedUp: true,
         // zoomLink intentionally omitted
       };
 

@@ -1,8 +1,17 @@
 import { Youtube, Linkedin } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { cacheLife } from 'next/cache';
 
-export function Footer() {
+// Cached function for the current year - computed once during prerendering
+async function getCurrentYear() {
+  'use cache';
+  cacheLife('max'); // Year rarely changes, cache indefinitely until redeployment
+  return new Date().getFullYear();
+}
+
+export async function Footer() {
+  const year = await getCurrentYear();
   const socialLinks = [
     { icon: Youtube, href: 'https://www.youtube.com/@LearnerWithRico', label: 'YouTube' },
     { icon: Linkedin, href: 'https://www.linkedin.com/in/rico-romero-647508131', label: 'LinkedIn' },
@@ -38,7 +47,7 @@ export function Footer() {
         <Separator className="mb-8" />
 
         <div className="text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} LearnWithRico. All rights reserved.</p>
+          <p>© {year} LearnWithRico. All rights reserved.</p>
         </div>
       </div>
     </footer>

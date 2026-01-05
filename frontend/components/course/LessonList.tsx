@@ -4,31 +4,36 @@ import Link from 'next/link';
 import { BookOpen, CheckCircle, Clock, PlayCircle, Circle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
+import { useProgress } from '@/hooks/useProgress';
+import type { LessonResponse } from '@/types/lessons';
 
 interface LessonListProps {
   courseId: string;
   lessons: LessonResponse[];
-  progress: ProgressResponse;
   currentLessonId?: string;
   isMobile?: boolean;
 }
 
 /**
  * LessonList - Client component that displays lessons with progress
- * Accepts lessons and progress as props (data fetched by parent)
+ * Uses SWR hook for progress data (shared cache with other components)
  */
 export function LessonList({
   courseId,
   lessons,
-  progress,
   currentLessonId,
   isMobile = false,
 }: LessonListProps) {
+  // Use SWR hook for progress - shares cache with VideoPlayer and other components
+  const { progress, isLoading, percentage, completedCount, totalLessons } = useProgress(courseId);
+
   // Sort lessons by order
   const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
+
+  // Get completed lessons from SWR data
+  const completedLessons = progress?.completedLessons ?? [];
 
   return (
     <Card className={cn('p-6', isMobile && 'h-full')}>
@@ -39,7 +44,7 @@ export function LessonList({
 
       <div className="space-y-2">
         {sortedLessons.map((lesson) => {
-          const isCompleted = progress.completedLessons.includes(lesson.lessonId);
+          const isCompleted = completedLessons.includes(lesson.lessonId);
           const isCurrent = currentLessonId === lesson.lessonId;
 
           return (
@@ -93,12 +98,16 @@ export function LessonList({
         <div className="text-sm text-muted-foreground mb-2">
           Course Progress
         </div>
-        <Progress value={progress.percentage} className="h-2 mb-2" />
+        {isLoading ? (
+          <Skeleton className="h-2 mb-2" />
+        ) : (
+          <Progress value={percentage} className="h-2 mb-2" />
+        )}
         <div className="flex justify-between text-sm">
           <span>
-            {progress.completedLessons.length} of {progress.totalLessons} lessons
+            {completedCount} of {totalLessons || lessons.length} lessons
           </span>
-          <span className="font-semibold">{progress.percentage}%</span>
+          <span className="font-semibold">{percentage}%</span>
         </div>
       </div>
     </Card>

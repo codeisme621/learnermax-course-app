@@ -1,165 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Session } from 'next-auth';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
 import { BookOpen, Loader2, AlertCircle, Users } from 'lucide-react';
-import { enrollInCourse, getUserEnrollments, type Enrollment } from '@/app/actions/enrollments';
-import { getAllCourses, type Course } from '@/app/actions/courses';
-import { getProgress, type ProgressResponse } from '@/app/actions/progress';
-import { getMeetups, type MeetupResponse } from '@/app/actions/meetups';
-import { getStudent, type Student } from '@/app/actions/students';
+import { useEnrollments } from '@/hooks/useEnrollments';
+import { useProgress } from '@/hooks/useProgress';
+import type { Course } from '@/lib/data/courses';
+import type { MeetupData } from '@/lib/data/meetups';
 import { CourseCard } from './CourseCard';
 import { PremiumCourseCard } from './PremiumCourseCard';
 import { MeetupCard } from './MeetupCard';
 
 interface DashboardContentProps {
   session: Session;
+  courses: Course[];
+  meetups: MeetupData[];
 }
 
-export function DashboardContent({ session }: DashboardContentProps) {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [progressMap, setProgressMap] = useState<Map<string, ProgressResponse>>(new Map());
-  const [meetups, setMeetups] = useState<MeetupResponse[]>([]);
-  const [student, setStudent] = useState<Student | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingStudent, setIsLoadingStudent] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Dashboard content with SWR for user-specific data
+ * Courses and meetups are passed from SSR, user data fetched via SWR
+ */
+export function DashboardContent({ session, courses, meetups }: DashboardContentProps) {
+  const { enrollments, enroll, isEnrolled, getEnrollment, isLoading: isLoadingEnrollments } = useEnrollments();
 
-  // Create enrollment lookup map for O(1) checks
-  const enrollmentMap = new Map<string, Enrollment>();
-  enrollments.forEach((enrollment) => {
-    enrollmentMap.set(enrollment.courseId, enrollment);
-  });
-
+  // Check for pending enrollment on mount
   useEffect(() => {
-    async function initializeDashboard() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Step 1: Check for pending enrollment in sessionStorage
-        const pendingCourseId = sessionStorage.getItem('pendingEnrollmentCourseId');
-
-        if (pendingCourseId) {
-          console.log('Auto-enrolling in course:', pendingCourseId);
-          const enrollResult = await enrollInCourse(pendingCourseId);
-
-          if (enrollResult.success) {
-            console.log('Auto-enrollment successful:', enrollResult);
-          } else {
-            console.error('Auto-enrollment failed:', enrollResult.error);
-          }
-
-          // Always clear sessionStorage after attempt (success or failure)
+    const pendingCourseId = sessionStorage.getItem('pendingEnrollmentCourseId');
+    if (pendingCourseId) {
+      console.log('Auto-enrolling in course:', pendingCourseId);
+      enroll(pendingCourseId)
+        .then(() => {
+          console.log('Auto-enrollment successful');
+        })
+        .catch((err) => {
+          console.error('Auto-enrollment failed:', err);
+        })
+        .finally(() => {
           sessionStorage.removeItem('pendingEnrollmentCourseId');
-        }
-
-        // Step 2: Fetch all dashboard data in parallel
-        console.log('[DashboardContent] Fetching student profile');
-        const [coursesResult, enrollmentsResult, meetupsResult, studentResult] = await Promise.all([
-          getAllCourses(),
-          getUserEnrollments(),
-          getMeetups(),
-          getStudent(),
-        ]);
-
-        // Handle student profile
-        if (studentResult) {
-          setStudent(studentResult);
-          console.log('[DashboardContent] Student profile loaded', {
-            interestedInPremium: studentResult.interestedInPremium,
-          });
-        } else {
-          console.warn('[DashboardContent] Failed to fetch student profile');
-        }
-        setIsLoadingStudent(false);
-
-        // Handle courses
-        if ('courses' in coursesResult) {
-          setCourses(coursesResult.courses);
-        } else {
-          setError('Failed to load courses');
-        }
-
-        // Handle enrollments
-        if (enrollmentsResult) {
-          setEnrollments(enrollmentsResult);
-
-          // Step 4: Fetch progress for each enrolled course in parallel
-          console.log('Fetching progress for enrolled courses:', enrollmentsResult.length);
-          const progressPromises = enrollmentsResult.map((enrollment) =>
-            getProgress(enrollment.courseId).then((result) => [enrollment.courseId, result] as const)
-          );
-
-          const progressEntries = await Promise.all(progressPromises);
-
-          // Filter out errors and create Map
-          const validProgressEntries = progressEntries.filter(
-            ([courseId, result]) => {
-              if ('error' in result) {
-                console.warn('Failed to fetch progress for course', { courseId, error: result.error });
-                return false;
-              }
-              return true;
-            }
-          ) as [string, ProgressResponse][];
-
-          const newProgressMap = new Map(validProgressEntries);
-          setProgressMap(newProgressMap);
-
-          console.log('Dashboard data loaded', {
-            coursesCount: courses.length,
-            enrollmentsCount: enrollmentsResult.length,
-            progressFetchedCount: newProgressMap.size,
-            progressFailedCount: enrollmentsResult.length - newProgressMap.size,
-          });
-        }
-
-        // Handle meetups (non-critical - fail gracefully)
-        if (Array.isArray(meetupsResult)) {
-          setMeetups(meetupsResult);
-          console.log('Meetups loaded successfully', { count: meetupsResult.length });
-        } else if (meetupsResult && 'error' in meetupsResult) {
-          console.error('Failed to load meetups (continuing anyway):', meetupsResult.error);
-          // Don't set error state - meetups are non-critical
-        }
-
-      } catch (err) {
-        console.error('Dashboard initialization error:', err);
-        setError('Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
-      }
+        });
     }
-
-    initializeDashboard();
-  }, []); // Run once on mount
+  }, [enroll]);
 
   // Handler for manual enrollment from course card
   const handleEnroll = async (courseId: string) => {
-    const result = await enrollInCourse(courseId);
-
-    if (result.success) {
-      // Refresh enrollments to show updated state
-      const updatedEnrollments = await getUserEnrollments();
-      if (updatedEnrollments) {
-        setEnrollments(updatedEnrollments);
-
-        // Fetch progress for the newly enrolled course
-        const progressResult = await getProgress(courseId);
-        if (!('error' in progressResult)) {
-          setProgressMap((prev) => new Map(prev).set(courseId, progressResult));
-        }
-      }
-    } else {
-      // Error will be shown in CourseCard component
-      throw new Error(result.error || 'Failed to enroll');
-    }
+    await enroll(courseId);
   };
+
+  const isLoading = isLoadingEnrollments;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -202,21 +93,8 @@ export function DashboardContent({ session }: DashboardContentProps) {
             </div>
           )}
 
-          {/* Error State */}
-          {error && !isLoading && (
-            <Card className="p-6">
-              <div className="flex items-center gap-3 text-destructive">
-                <AlertCircle className="w-6 h-6" />
-                <div>
-                  <h3 className="font-semibold">Error Loading Courses</h3>
-                  <p className="text-sm">{error}</p>
-                </div>
-              </div>
-            </Card>
-          )}
-
           {/* Empty State */}
-          {!isLoading && !error && courses.length === 0 && (
+          {!isLoading && courses.length === 0 && (
             <Card className="p-12">
               <div className="text-center text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -226,7 +104,7 @@ export function DashboardContent({ session }: DashboardContentProps) {
           )}
 
           {/* Course Cards Grid with Staggered Animation */}
-          {!isLoading && !error && courses.length > 0 && (
+          {!isLoading && courses.length > 0 && (
             <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
               {courses.map((course, index) => (
                 <motion.div
@@ -240,16 +118,11 @@ export function DashboardContent({ session }: DashboardContentProps) {
                   }}
                 >
                   {course.comingSoon ? (
-                    <PremiumCourseCard
-                      course={course}
-                      isInterestedInPremium={student?.interestedInPremium || false}
-                      isLoadingStudent={isLoadingStudent}
-                    />
+                    <PremiumCourseCard course={course} />
                   ) : (
-                    <CourseCard
+                    <CourseCardWithProgress
                       course={course}
-                      enrollment={enrollmentMap.get(course.courseId)}
-                      progress={progressMap.get(course.courseId)}
+                      enrollment={getEnrollment(course.courseId)}
                       onEnroll={handleEnroll}
                     />
                   )}
@@ -306,5 +179,29 @@ export function DashboardContent({ session }: DashboardContentProps) {
         )}
       </motion.div>
     </div>
+  );
+}
+
+/**
+ * CourseCard wrapper that fetches progress via SWR
+ */
+function CourseCardWithProgress({
+  course,
+  enrollment,
+  onEnroll,
+}: {
+  course: Course;
+  enrollment?: ReturnType<typeof useEnrollments>['enrollments'][number];
+  onEnroll: (courseId: string) => Promise<void>;
+}) {
+  const { progress } = useProgress(enrollment ? course.courseId : '');
+
+  return (
+    <CourseCard
+      course={course}
+      enrollment={enrollment}
+      progress={progress ?? undefined}
+      onEnroll={onEnroll}
+    />
   );
 }

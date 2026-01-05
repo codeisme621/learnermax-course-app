@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { getVideoUrl } from '@/app/actions/lessons';
-import { markLessonComplete, trackLessonAccess } from '@/app/actions/progress';
+import { useVideoUrl } from '@/hooks/useVideoUrl';
+import { useProgress } from '@/hooks/useProgress';
+import { markLessonComplete } from '@/app/actions/progress';
 
 interface VideoPlayerProps {
   lessonId: string;
@@ -52,11 +53,13 @@ export function VideoPlayer({
   isLastLesson = false,
   onReadyToComplete,
 }: VideoPlayerProps) {
-  // Video URL state
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use SWR hook for trackAccess and cache revalidation (mutate)
+  const { trackAccess, mutate: mutateProgress } = useProgress(courseId);
+
+  // Use SWR hook for video URL (auto-refreshes every 5 min)
+  const { videoUrl, expiresAt, isLoading, error: urlError, refreshUrl } = useVideoUrl(lessonId);
+
+  // Video playback error state (separate from URL fetch errors)
   const [videoError, setVideoError] = useState<string | null>(null);
 
   // Progress tracking state
@@ -70,52 +73,41 @@ export function VideoPlayer({
   // Video element ref for progress tracking
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Fetch video URL on mount or when lessonId changes
+  // Track lesson access on mount or when lessonId changes
   useEffect(() => {
-    // Track lesson access (fire-and-forget) - catches ALL navigation methods
-    trackLessonAccess(courseId, lessonId);
+    trackAccess(lessonId);
+    // Reset completion state for new lesson
+    setHasMarkedComplete(false);
+    setVideoError(null);
+    isMarkingComplete.current = false;
+  }, [lessonId, trackAccess]);
 
-    async function fetchVideo() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        setVideoError(null); // Reset video playback errors too
-        setHasMarkedComplete(false); // Reset completion state for new lesson
+  // Cleanup: Pause video when component unmounts or video changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-        const result = await getVideoUrl(lessonId);
+    return () => {
+      video.pause();
+      video.src = '';
+    };
+  }, [videoUrl]);
 
-        if ('error' in result) {
-          console.error('[VideoPlayer] getVideoUrl error:', result.error);
-          throw new Error(result.error);
-        }
-
-        console.log('[VideoPlayer] Fetched video URL, expires at:', new Date(result.expiresAt * 1000).toISOString());
-        console.log('[VideoPlayer] Video URL:', result.videoUrl);
-
-        setVideoUrl(result.videoUrl);
-        setExpiresAt(new Date(result.expiresAt * 1000));
-      } catch (err) {
-        const rawError = err instanceof Error ? err.message : 'Failed to load video';
-        const friendlyError = getUserFriendlyError(rawError);
-        setError(friendlyError);
-        onError?.(err instanceof Error ? err : new Error(rawError));
-      } finally {
-        setIsLoading(false);
-      }
+  // Notify parent of URL fetch errors
+  useEffect(() => {
+    if (urlError) {
+      const friendlyError = getUserFriendlyError(urlError.message);
+      onError?.(new Error(friendlyError));
     }
-
-    fetchVideo();
-  }, [lessonId, courseId, onError]);
+  }, [urlError, onError]);
 
   // Debug: Log when videoUrl changes
   useEffect(() => {
     if (videoUrl) {
       console.log('[VideoPlayer] Rendering player with URL:', videoUrl);
-      console.log('[VideoPlayer] Loading state:', isLoading);
-      console.log('[VideoPlayer] Error state:', error);
-      console.log('[VideoPlayer] Video error state:', videoError);
+      console.log('[VideoPlayer] Expires at:', expiresAt?.toISOString());
     }
-  }, [videoUrl, isLoading, error, videoError]);
+  }, [videoUrl, expiresAt]);
 
   // Handle progress updates with native video element
   useEffect(() => {
@@ -123,7 +115,6 @@ export function VideoPlayer({
     if (!video) return;
 
     const handleTimeUpdate = async () => {
-      console.log('[VideoPlayer] Handle Time update:', video.currentTime);
       const duration = video.duration;
       const currentTime = video.currentTime;
 
@@ -131,14 +122,12 @@ export function VideoPlayer({
 
       const played = currentTime / duration;
 
-      console.log('[VideoPlayer] Video played percentage:', played);
-
       // Check if 90% watched and haven't marked complete yet
       if (played >= 0.9 && !hasMarkedComplete && !isMarkingComplete.current) {
         // If this is the last lesson, notify parent instead of auto-completing
         if (isLastLesson) {
           console.log('[VideoPlayer] Last lesson reached 90%, notifying parent');
-          setHasMarkedComplete(true); // Prevent multiple notifications
+          setHasMarkedComplete(true);
           onReadyToComplete?.();
           return;
         }
@@ -149,6 +138,7 @@ export function VideoPlayer({
         setHasMarkedComplete(true);
 
         try {
+          // Call server action directly (like the old working code)
           const result = await markLessonComplete(courseId, lessonId);
           console.log('[VideoPlayer] markLessonComplete result:', result);
 
@@ -156,81 +146,40 @@ export function VideoPlayer({
             throw new Error(result.error);
           }
 
-          console.log('[VideoPlayer] Lesson complete');
+          // Refresh SWR cache so sidebar/header update
+          await mutateProgress();
+          console.log('[VideoPlayer] Lesson marked complete, cache refreshed');
           onLessonComplete?.();
         } catch (err) {
           console.error('Failed to mark lesson complete:', err);
-          // Reset flags to allow retry
           setHasMarkedComplete(false);
           isMarkingComplete.current = false;
         } finally {
           isMarkingComplete.current = false;
         }
       }
-
-      // Check URL expiration (refetch if < 2 minutes remaining)
-      if (expiresAt) {
-        const now = new Date();
-        const timeRemaining = expiresAt.getTime() - now.getTime();
-        const twoMinutesInMs = 2 * 60 * 1000;
-
-        if (timeRemaining < twoMinutesInMs && timeRemaining > 0) {
-          // Refetch video URL
-          try {
-            const result = await getVideoUrl(lessonId);
-            if ('error' in result) {
-              console.error('Failed to refresh video URL:', result.error);
-            } else {
-              setVideoUrl(result.videoUrl);
-              setExpiresAt(new Date(result.expiresAt * 1000));
-              // Update video src
-              if (video) {
-                video.src = result.videoUrl;
-              }
-            }
-          } catch (err) {
-            console.error('Failed to refresh video URL:', err);
-          }
-        }
-      }
     };
 
-    // Listen to timeupdate events to track progress
     video.addEventListener('timeupdate', handleTimeUpdate);
     return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [hasMarkedComplete, courseId, lessonId, expiresAt, onLessonComplete, onCourseComplete]);
+    // videoUrl in deps ensures effect re-runs when video element appears
+  }, [hasMarkedComplete, lessonId, courseId, isLastLesson, onLessonComplete, onReadyToComplete, mutateProgress, videoUrl]);
 
   // Handle video playback errors (codec issues, streaming failures, etc.)
-  const handleVideoError = (error: unknown, data?: unknown) => {
-    console.error('[VideoPlayer] Video playback error:', error);
-    console.error('[VideoPlayer] Error details:', data);
-    console.error('[VideoPlayer] Current video URL:', videoUrl);
+  const handleVideoError = () => {
     const errorMessage = 'Unable to play this video. Try again or contact support if the issue persists';
     setVideoError(errorMessage);
     onError?.(new Error(errorMessage));
   };
 
-  // Retry loading video
+  // Retry loading video using SWR's mutate
   const handleRetry = () => {
-    setError(null);
     setVideoError(null);
-    setIsLoading(true);
-    getVideoUrl(lessonId)
-      .then((result) => {
-        if ('error' in result) {
-          throw new Error(result.error);
-        }
-        setVideoUrl(result.videoUrl);
-        setExpiresAt(new Date(result.expiresAt * 1000));
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        const rawError = err instanceof Error ? err.message : 'Failed to load video';
-        const friendlyError = getUserFriendlyError(rawError);
-        setError(friendlyError);
-        setIsLoading(false);
-      });
+    refreshUrl();
   };
+
+  // Derive display error from URL error or video playback error
+  const displayError = urlError ? getUserFriendlyError(urlError.message) : videoError;
 
   return (
     <div
@@ -248,9 +197,9 @@ export function VideoPlayer({
       )}
 
       {/* Error state */}
-      {(error || videoError) && !isLoading && (
+      {displayError && !isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black p-8">
-          <div className="text-red-500 text-lg text-center max-w-md">{error || videoError}</div>
+          <div className="text-red-500 text-lg text-center max-w-md">{displayError}</div>
           <button
             onClick={handleRetry}
             className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors"
@@ -261,7 +210,7 @@ export function VideoPlayer({
       )}
 
       {/* Video player */}
-      {videoUrl && !error && !videoError && (
+      {videoUrl && !displayError && (
         <div className="w-full h-full" data-testid="video-player" data-url={videoUrl}>
           <video
             ref={videoRef}
@@ -275,10 +224,7 @@ export function VideoPlayer({
             onLoadedData={() => {
               console.log('[VideoPlayer] Native video loaded successfully');
             }}
-            onError={(e) => {
-              console.error('[VideoPlayer] Native video error:', e);
-              handleVideoError(e);
-            }}
+            onError={() => handleVideoError()}
             onPlay={() => {
               console.log('[VideoPlayer] Native video started playing');
             }}
@@ -287,7 +233,6 @@ export function VideoPlayer({
           </video>
         </div>
       )}
-
     </div>
   );
 }

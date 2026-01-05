@@ -11,12 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { FeedbackModal } from '@/components/modals/FeedbackModal';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { MessageCircle, LogOut } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
+import { useProgress } from '@/hooks/useProgress';
 
 export interface AuthenticatedHeaderProps {
   variant: 'dashboard' | 'course';
@@ -26,11 +27,7 @@ export interface AuthenticatedHeaderProps {
     email?: string | null;
     image?: string | null;
   };
-  courseProgress?: {
-    percentage: number;
-    completedLessons: number;
-    totalLessons: number;
-  };
+  courseId?: string; // Required for course variant to fetch progress via SWR
 }
 
 function getUserInitials(name?: string | null): string {
@@ -47,9 +44,14 @@ function getUserInitials(name?: string | null): string {
 export function AuthenticatedHeader({
   variant,
   user,
-  courseProgress,
+  courseId,
 }: AuthenticatedHeaderProps) {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+
+  // Use SWR hook for progress when in course variant
+  const { percentage, completedCount, totalLessons, isLoading: isLoadingProgress } = useProgress(
+    variant === 'course' && courseId ? courseId : ''
+  );
 
   const handleSignOut = async () => {
     console.log('User signed out from header', {
@@ -71,7 +73,7 @@ export function AuthenticatedHeader({
   if (process.env.NODE_ENV === 'development') {
     console.log('AuthenticatedHeader rendered', {
       variant,
-      hasProgress: !!courseProgress,
+      hasProgress: variant === 'course' && !isLoadingProgress,
     });
   }
 
@@ -92,23 +94,33 @@ export function AuthenticatedHeader({
           </Link>
 
           {/* Course Progress - Only in course variant */}
-          {variant === 'course' && courseProgress && (
+          {variant === 'course' && courseId && (
             <div className="flex items-center gap-2 flex-1 max-w-xs md:max-w-md mx-2">
-              {/* Hide full text on mobile, show on tablet+ */}
-              <div className="hidden md:block text-sm font-medium whitespace-nowrap">
-                {courseProgress.completedLessons} of {courseProgress.totalLessons} lessons • {courseProgress.percentage}%
-              </div>
-              {/* Show only percentage on mobile */}
-              <div className="md:hidden text-xs font-medium">
-                {courseProgress.percentage}%
-              </div>
-              {/* Progress bar - always visible */}
-              <div className="flex-1 bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary rounded-full h-2 transition-all"
-                  style={{ width: `${courseProgress.percentage}%` }}
-                />
-              </div>
+              {isLoadingProgress ? (
+                <>
+                  <Skeleton className="hidden md:block h-4 w-32" />
+                  <Skeleton className="md:hidden h-3 w-8" />
+                  <Skeleton className="flex-1 h-2" />
+                </>
+              ) : (
+                <>
+                  {/* Hide full text on mobile, show on tablet+ */}
+                  <div className="hidden md:block text-sm font-medium whitespace-nowrap">
+                    {completedCount} of {totalLessons} lessons • {percentage}%
+                  </div>
+                  {/* Show only percentage on mobile */}
+                  <div className="md:hidden text-xs font-medium">
+                    {percentage}%
+                  </div>
+                  {/* Progress bar - always visible */}
+                  <div className="flex-1 bg-secondary rounded-full h-2">
+                    <div
+                      className="bg-primary rounded-full h-2 transition-all"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 

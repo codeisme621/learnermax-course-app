@@ -36,56 +36,6 @@ export interface EarlyAccessResult {
 }
 
 /**
- * Get current student profile
- *
- * @returns Student profile or null if error/not authenticated
- */
-export async function getStudent(): Promise<Student | null> {
-  console.log('[getStudent] Fetching current student profile');
-
-  try {
-    const token = await getAuthToken();
-
-    if (!token) {
-      console.warn('[getStudent] Not authenticated - no auth token');
-      return null;
-    }
-
-    console.log('[getStudent] ID token obtained, length:', token.length);
-    const apiUrl = getApiUrl();
-    const endpoint = `${apiUrl}/api/students/me`;
-    console.log('[getStudent] Calling endpoint:', endpoint);
-
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store', // Always fetch fresh student data
-    });
-
-    console.log('[getStudent] Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[getStudent] Backend returned error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-      });
-      return null;
-    }
-
-    const student: Student = await response.json();
-    console.log('[getStudent] Successfully fetched student profile');
-    return student;
-  } catch (error) {
-    console.error('[getStudent] Exception occurred:', error);
-    return null;
-  }
-}
-
-/**
  * Sign up for early access to a premium course
  *
  * @param courseId - The ID of the premium course

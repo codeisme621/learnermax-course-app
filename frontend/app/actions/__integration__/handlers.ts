@@ -3,9 +3,9 @@
  * These handlers mock the backend API at the network level
  */
 import { http, HttpResponse } from 'msw';
-import type { LessonResponse, VideoUrlResponse } from '../lessons';
+import type { LessonResponse, VideoUrlResponse } from '@/types/lessons';
 import type { ProgressResponse } from '../progress';
-import type { Course } from '../courses';
+import type { Course } from '@/types/courses';
 import type { Enrollment } from '../enrollments';
 import type { MeetupResponse } from '../meetups';
 import type { Student } from '../students';

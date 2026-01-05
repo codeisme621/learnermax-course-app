@@ -5,15 +5,13 @@ import { cn } from '@/lib/utils';
 import { CollapsedSidebarView } from './CollapsedSidebarView';
 import { ExpandedSidebarView } from './ExpandedSidebarView';
 import { MobileLessonMenu } from './MobileLessonMenu';
-import type { Course } from '@/app/actions/courses';
-import type { LessonResponse } from '@/app/actions/lessons';
-import type { ProgressResponse } from '@/app/actions/progress';
+import type { Course } from '@/types/courses';
+import type { LessonResponse } from '@/types/lessons';
 
 interface CollapsibleLessonSidebarProps {
   course: Course;
   lessons: LessonResponse[];
   currentLessonId: string;
-  progress: ProgressResponse;
   defaultCollapsed?: boolean;
 }
 
@@ -21,12 +19,12 @@ interface CollapsibleLessonSidebarProps {
  * CollapsibleLessonSidebar - Main sidebar component for course lessons
  * - Desktop: Shows collapsible sidebar on left (default expanded)
  * - Mobile: Shows hamburger menu with slide-out drawer
+ * Note: Progress is fetched via SWR hooks in child components
  */
 export function CollapsibleLessonSidebar({
   course,
   lessons,
   currentLessonId,
-  progress,
   defaultCollapsed = false,
 }: CollapsibleLessonSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
@@ -47,7 +45,6 @@ export function CollapsibleLessonSidebar({
             course={course}
             lessons={lessons}
             currentLessonId={currentLessonId}
-            progress={progress}
             onCollapse={() => setIsCollapsed(true)}
           />
         )}
@@ -58,7 +55,6 @@ export function CollapsibleLessonSidebar({
         <MobileLessonMenu
           courseId={course.courseId}
           lessons={lessons}
-          progress={progress}
           currentLessonId={currentLessonId}
         />
       </div>
