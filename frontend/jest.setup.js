@@ -13,6 +13,16 @@ if (typeof document !== 'undefined') {
   });
 }
 
+// Mock IntersectionObserver for components that use visibility detection
+global.IntersectionObserver = class IntersectionObserver {
+  constructor(callback) {
+    this.callback = callback;
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require('@testing-library/jest-dom');
 

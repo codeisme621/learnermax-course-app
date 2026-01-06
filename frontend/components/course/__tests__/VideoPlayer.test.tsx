@@ -3,14 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../VideoPlayer';
 import { useVideoUrl } from '@/hooks/useVideoUrl';
 import * as progressActions from '@/app/actions/progress';
-import { simulateVideoProgress } from '../videoTestUtils';
+import { simulateVideoProgress, simulateVideoLoaded, simulateVideoLoadedAndProgress } from '../videoTestUtils';
 
 // Mock the hooks
 jest.mock('@/hooks/useVideoUrl');
+
+// Create stable mock functions outside the mock to prevent effect re-runs
+const mockTrackAccess = jest.fn();
+const mockMutateProgress = jest.fn().mockResolvedValue(undefined);
+
 jest.mock('@/hooks/useProgress', () => ({
   useProgress: () => ({
-    trackAccess: jest.fn(),
-    mutate: jest.fn().mockResolvedValue(undefined),
+    trackAccess: mockTrackAccess,
+    mutate: mockMutateProgress,
   }),
 }));
 
@@ -56,6 +61,9 @@ describe('VideoPlayer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackAccess.mockClear();
+    mockMutateProgress.mockClear();
+    mockMutateProgress.mockResolvedValue(undefined);
   });
 
   describe('Video URL Fetching', () => {
@@ -198,11 +206,9 @@ describe('VideoPlayer', () => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
-      // Simulate 90% progress
-      await act(async () => {
-        const videoPlayer = screen.getByTestId('video-player');
-        simulateVideoProgress(videoPlayer, 0.9);
-      });
+      // Simulate video loaded and 90% progress (don't wrap in act - the function handles it)
+      const videoPlayer = screen.getByTestId('video-player');
+      await simulateVideoLoadedAndProgress(videoPlayer, 0.9);
 
       await waitFor(() => {
         expect(mockMarkLessonComplete).toHaveBeenCalledWith(mockCourseId, mockLessonId);
@@ -231,6 +237,12 @@ describe('VideoPlayer', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
       });
 
       // Simulate 90% progress multiple times
@@ -307,6 +319,12 @@ describe('VideoPlayer', () => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
+      });
+
       await act(async () => {
         const videoPlayer = screen.getByTestId('video-player');
         simulateVideoProgress(videoPlayer, 0.9);
@@ -339,6 +357,12 @@ describe('VideoPlayer', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
       });
 
       await act(async () => {
@@ -381,6 +405,12 @@ describe('VideoPlayer', () => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
+      });
+
       await act(async () => {
         const videoPlayer = screen.getByTestId('video-player');
         simulateVideoProgress(videoPlayer, 0.9);
@@ -412,6 +442,12 @@ describe('VideoPlayer', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
       });
 
       await act(async () => {
@@ -455,6 +491,12 @@ describe('VideoPlayer', () => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
       });
 
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
+      });
+
       await act(async () => {
         const videoPlayer = screen.getByTestId('video-player');
         simulateVideoProgress(videoPlayer, 0.9);
@@ -487,6 +529,12 @@ describe('VideoPlayer', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
       });
 
       await act(async () => {
@@ -534,6 +582,12 @@ describe('VideoPlayer', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('video-player')).toBeInTheDocument();
+      });
+
+      // Simulate video loaded (required for progress tracking)
+      await act(async () => {
+        const videoPlayer = screen.getByTestId('video-player');
+        simulateVideoLoaded(videoPlayer);
       });
 
       // First attempt at 90%

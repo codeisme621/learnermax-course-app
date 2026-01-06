@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useVideoUrl } from '@/hooks/useVideoUrl';
 import { useProgress } from '@/hooks/useProgress';
 import { markLessonComplete } from '@/app/actions/progress';
@@ -38,12 +38,12 @@ function getUserFriendlyError(errorMessage: string): string {
 }
 
 /**
- * Simplified VideoPlayer component
+ * VideoPlayer component
  *
  * Key principles:
  * - Only render <video> when we have a valid URL
  * - Use key={lessonId} for clean remount on lesson change
- * - Minimal state and refs
+ * - Use onLoadedData to trigger progress tracking setup (ensures video is ready)
  */
 export function VideoPlayer({
   lessonId,
@@ -55,12 +55,13 @@ export function VideoPlayer({
   onReadyToComplete,
 }: VideoPlayerProps) {
   // Hooks
-  const { videoUrl, isLoading, error: urlError, refreshUrl } = useVideoUrl(lessonId);
+  const { videoUrl, isLoading, error: urlError, refreshUrl } = useVideoUrl(courseId, lessonId);
   const { trackAccess, mutate: mutateProgress } = useProgress(courseId);
 
   // State
   const [videoError, setVideoError] = useState<string | null>(null);
   const [hasMarkedComplete, setHasMarkedComplete] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -68,26 +69,21 @@ export function VideoPlayer({
   const wasPlayingBeforeHidden = useRef(false);
 
   // Pause video when it becomes invisible (navigated away, scrolled out of view)
-  // This handles Next.js App Router caching where component stays mounted
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Check if video is actually visible (has dimensions and offsetParent)
-    // Skip check if in fullscreen mode (offsetParent is null in fullscreen)
     const checkVisibility = () => {
-      if (document.fullscreenElement) return; // Don't pause in fullscreen
+      if (document.fullscreenElement) return;
       if (!video.paused && video.offsetParent === null) {
         console.log('[VideoPlayer] Video not visible (hidden), pausing');
         video.pause();
       }
     };
 
-    // Use IntersectionObserver for scroll-based visibility
-    // Skip if in fullscreen mode
     const observer = new IntersectionObserver(
       (entries) => {
-        if (document.fullscreenElement) return; // Don't pause in fullscreen
+        if (document.fullscreenElement) return;
         entries.forEach((entry) => {
           if (!entry.isIntersecting && !video.paused) {
             console.log('[VideoPlayer] Video scrolled out of view, pausing');
@@ -99,21 +95,17 @@ export function VideoPlayer({
     );
 
     observer.observe(video);
-
-    // Also poll for visibility since IntersectionObserver may miss hidden state
     const visibilityInterval = setInterval(checkVisibility, 500);
 
     return () => {
       observer.disconnect();
       clearInterval(visibilityInterval);
-      // Pause video when effect cleans up (navigation away or URL change)
-      // But not if in fullscreen mode
       if (video && !video.paused && !document.fullscreenElement) {
         console.log('[VideoPlayer] Effect cleanup, pausing video');
         video.pause();
       }
     };
-  }, [videoUrl]); // Re-run when video URL changes (new video element)
+  }, [isVideoReady]); // Run when video becomes ready
 
   // Pause video when page becomes hidden (tab switch) and resume when visible
   useEffect(() => {
@@ -122,14 +114,12 @@ export function VideoPlayer({
       if (!video) return;
 
       if (document.hidden) {
-        // Tab becoming hidden - remember if video was playing
         wasPlayingBeforeHidden.current = !video.paused;
         if (!video.paused) {
           console.log('[VideoPlayer] Page hidden, pausing video');
           video.pause();
         }
       } else {
-        // Tab becoming visible - resume if video was playing before
         if (wasPlayingBeforeHidden.current) {
           console.log('[VideoPlayer] Page visible, resuming video');
           video.play().catch(err => {
@@ -159,6 +149,7 @@ export function VideoPlayer({
     trackAccess(lessonId);
     setHasMarkedComplete(false);
     setVideoError(null);
+    setIsVideoReady(false); // Reset video ready state
     isMarkingComplete.current = false;
   }, [lessonId, trackAccess]);
 
@@ -170,9 +161,20 @@ export function VideoPlayer({
   }, [urlError, onError]);
 
   // Progress tracking - mark complete at 90%
+  // Only runs when isVideoReady is true (after onLoadedData fires)
   useEffect(() => {
+    if (!isVideoReady) {
+      console.log('[VideoPlayer] Progress effect: waiting for video to be ready');
+      return;
+    }
+
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) {
+      console.log('[VideoPlayer] Progress effect: no video ref despite isVideoReady');
+      return;
+    }
+
+    console.log('[VideoPlayer] Setting up timeupdate listener for progress tracking');
 
     const handleTimeUpdate = async () => {
       const { duration, currentTime } = video;
@@ -207,9 +209,14 @@ export function VideoPlayer({
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [hasMarkedComplete, lessonId, courseId, isLastLesson, onLessonComplete, onReadyToComplete, mutateProgress]);
+  }, [isVideoReady, hasMarkedComplete, lessonId, courseId, isLastLesson, onLessonComplete, onReadyToComplete, mutateProgress]);
 
   // Handlers
+  const handleVideoLoaded = useCallback(() => {
+    console.log('[VideoPlayer] Video loaded successfully, setting isVideoReady=true');
+    setIsVideoReady(true);
+  }, []);
+
   const handleVideoError = () => {
     setVideoError('Unable to play this video. Try again or contact support if the issue persists');
     onError?.(new Error('Video playback failed'));
@@ -217,6 +224,7 @@ export function VideoPlayer({
 
   const handleRetry = () => {
     setVideoError(null);
+    setIsVideoReady(false);
     refreshUrl();
   };
 
@@ -274,7 +282,7 @@ export function VideoPlayer({
         playsInline
         autoPlay={autoPlay}
         className="w-full h-full"
-        onLoadedData={() => console.log('[VideoPlayer] Video loaded successfully')}
+        onLoadedData={handleVideoLoaded}
         onError={handleVideoError}
         onPlay={() => console.log('[VideoPlayer] Video started playing')}
       >

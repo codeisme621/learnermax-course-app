@@ -28,12 +28,15 @@ const EXPIRY_BUFFER_SECONDS = 10 * 60;
  * - Prevents unnecessary API calls during lesson navigation
  * - Provides manual refresh capability
  *
+ * @param courseId - The course ID (required for unique cache key)
  * @param lessonId - The lesson ID to fetch video URL for
  * @returns Video URL data with loading/error states
  */
-export function useVideoUrl(lessonId: string | null): UseVideoUrlReturn {
+export function useVideoUrl(courseId: string | null, lessonId: string | null): UseVideoUrlReturn {
   const { cache } = useSWRConfig();
-  const cacheKey = lessonId ? `video-url-${lessonId}` : null;
+  // Cache key includes courseId because lessonIds are not globally unique
+  // (e.g., "intro" could exist in multiple courses)
+  const cacheKey = courseId && lessonId ? `video-url-${courseId}-${lessonId}` : null;
 
   // Custom fetcher that checks expiry before making API call
   const smartFetcher = async (): Promise<VideoUrlData | null> => {
