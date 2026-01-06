@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ArrowRight } from 'lucide-react';
@@ -47,8 +47,35 @@ export function CourseVideoSection({
   const [isReadyToComplete, setIsReadyToComplete] = useState(false);
   const [isCompletingCourse, setIsCompletingCourse] = useState(false);
 
+  // Track lesson changes to determine auto-play behavior
+  // Initial load (from dashboard): don't auto-play
+  // Internal navigation (sidebar/Next Lesson): auto-play
+  const previousLessonIdRef = useRef<string | null>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+
   // Update currentLesson when initialLesson changes (from URL navigation)
   useEffect(() => {
+    const currentLessonId = initialLesson.lessonId;
+    const previousLessonId = previousLessonIdRef.current;
+
+    // Determine if this is initial load or internal navigation
+    const isInitialLoad = previousLessonId === null;
+    const isLessonChange = previousLessonId !== null && previousLessonId !== currentLessonId;
+
+    if (isInitialLoad) {
+      // First lesson load (from dashboard or direct URL) - don't auto-play
+      setShouldAutoPlay(false);
+      console.log('[CourseVideoSection] Initial load, not auto-playing');
+    } else if (isLessonChange) {
+      // Lesson changed via internal navigation - auto-play
+      setShouldAutoPlay(true);
+      console.log('[CourseVideoSection] Lesson changed, will auto-play');
+    }
+    // If same lesson (re-render), don't change autoPlay state
+
+    // Update ref for next comparison
+    previousLessonIdRef.current = currentLessonId;
+
     setCurrentLesson(initialLesson);
     // Reset ready-to-complete state when switching lessons
     setIsReadyToComplete(false);
@@ -151,6 +178,7 @@ export function CourseVideoSection({
           onLessonComplete={handleLessonComplete}
           onCourseComplete={handleCourseComplete}
           isLastLesson={!nextLesson}
+          autoPlay={shouldAutoPlay}
           onReadyToComplete={() => {
             console.log('[CourseVideoSection] Last lesson ready to complete');
             setIsReadyToComplete(true);

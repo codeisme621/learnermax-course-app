@@ -46,8 +46,27 @@ Parameters:
     Default: support@learnwithrico.com
     Description: Reply-to email address for transactional emails
 
+  ProdProvisionedConcurrency:
+    Type: Number
+    Default: 4
+    Description: Provisioned concurrency for production Lambda (0 to disable)
+
+  PreviewProvisionedConcurrency:
+    Type: Number
+    Default: 4
+    Description: Provisioned concurrency for preview Lambda (0 to disable)
+
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
+  HasProdProvisionedConcurrency: !And
+    - !Condition IsProd
+    - !Not [!Equals [!Ref ProdProvisionedConcurrency, 0]]
+  HasPreviewProvisionedConcurrency: !And
+    - !Not [!Condition IsProd]
+    - !Not [!Equals [!Ref PreviewProvisionedConcurrency, 0]]
+  HasProvisionedConcurrency: !Or
+    - !Condition HasProdProvisionedConcurrency
+    - !Condition HasPreviewProvisionedConcurrency
 
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
@@ -514,13 +533,14 @@ Resources:
       MemorySize: 2048
       Timeout: 30
       Description: Express.js API running on Lambda with Web Adapter
-      # Provisioned Concurrency disabled - account concurrency quota too low (10)
-      # TODO: Request quota increase via AWS Service Quotas, then uncomment:
-      # AutoPublishAlias: live
-      # ProvisionedConcurrencyConfig: !If
-      #   - IsProd
-      #   - ProvisionedConcurrentExecutions: 4
-      #   - !Ref AWS::NoValue
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig: !If
+        - HasProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !If
+            - IsProd
+            - !Ref ProdProvisionedConcurrency
+            - !Ref PreviewProvisionedConcurrency
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # Lambda Web Adapter configuration
@@ -535,7 +555,7 @@ Resources:
           CLOUDFRONT_DOMAIN: !GetAtt VideoCloudFrontDistribution.DomainName
           CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
           CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
-          VIDEO_URL_EXPIRY_MINUTES: 30
+          VIDEO_URL_EXPIRY_MINUTES: 180
           # SNS Topic for transactional emails
           TRANSACTIONAL_EMAIL_TOPIC_ARN: !Ref TransactionalEmailTopic
       Layers:
