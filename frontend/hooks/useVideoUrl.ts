@@ -1,6 +1,6 @@
 'use client';
 
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { fetchVideoUrl } from '@/lib/fetchers';
 
 interface VideoUrlData {
@@ -16,29 +16,60 @@ interface UseVideoUrlReturn {
   refreshUrl: () => Promise<VideoUrlData | null | undefined>;
 }
 
+// Buffer time before expiry to trigger refresh (10 minutes in seconds)
+const EXPIRY_BUFFER_SECONDS = 10 * 60;
+
 /**
- * SWR hook for fetching video URLs with automatic refresh
+ * SWR hook for fetching video URLs with expiry-aware caching
  *
  * Features:
- * - Auto-refreshes every 5 minutes (video URLs expire after 30 min)
- * - Deduplicates requests within 1 minute
- * - Revalidates on window focus
+ * - Caches video URLs based on their expiry time (3 hours)
+ * - Only refetches when URL is expired or about to expire (within 10 min)
+ * - Prevents unnecessary API calls during lesson navigation
  * - Provides manual refresh capability
  *
  * @param lessonId - The lesson ID to fetch video URL for
  * @returns Video URL data with loading/error states
  */
 export function useVideoUrl(lessonId: string | null): UseVideoUrlReturn {
+  const { cache } = useSWRConfig();
+  const cacheKey = lessonId ? `video-url-${lessonId}` : null;
+
+  // Custom fetcher that checks expiry before making API call
+  const smartFetcher = async (): Promise<VideoUrlData | null> => {
+    // Check if we have valid cached data
+    if (cacheKey) {
+      const cachedEntry = cache.get(cacheKey);
+      const cachedData = cachedEntry?.data as VideoUrlData | null | undefined;
+
+      if (cachedData?.expiresAt) {
+        const now = Math.floor(Date.now() / 1000);
+        const timeToExpiry = cachedData.expiresAt - now;
+
+        // If URL is still valid (with buffer), use cached data
+        if (timeToExpiry > EXPIRY_BUFFER_SECONDS) {
+          console.log('[useVideoUrl] Using cached URL, expires in', Math.round(timeToExpiry / 60), 'minutes');
+          return cachedData;
+        }
+        console.log('[useVideoUrl] Cached URL expiring soon, refreshing');
+      }
+    }
+
+    // Fetch new URL
+    console.log('[useVideoUrl] Fetching new URL for:', lessonId);
+    return fetchVideoUrl(lessonId!);
+  };
+
   const { data, error, isLoading, mutate } = useSWR<VideoUrlData | null>(
-    lessonId ? `video-url-${lessonId}` : null,
-    () => fetchVideoUrl(lessonId!),
+    cacheKey,
+    smartFetcher,
     {
-      refreshInterval: 5 * 60 * 1000, // 5 minutes - refresh before URL expires
-      revalidateOnFocus: true,
-      dedupingInterval: 60 * 1000, // 1 minute - prevent duplicate requests
+      revalidateOnFocus: false, // Don't refetch on focus - URLs valid for 3 hours
+      revalidateOnReconnect: false, // Don't refetch on reconnect
+      dedupingInterval: 5 * 60 * 1000, // 5 minutes - prevent duplicate requests
       shouldRetryOnError: true,
       errorRetryCount: 3,
-      errorRetryInterval: 5000, // 5 seconds between retries
+      errorRetryInterval: 5000,
     }
   );
 

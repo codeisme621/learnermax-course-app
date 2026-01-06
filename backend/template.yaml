@@ -535,7 +535,7 @@ Resources:
           CLOUDFRONT_DOMAIN: !GetAtt VideoCloudFrontDistribution.DomainName
           CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
           CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
-          VIDEO_URL_EXPIRY_MINUTES: 30
+          VIDEO_URL_EXPIRY_MINUTES: 180
           # SNS Topic for transactional emails
           TRANSACTIONAL_EMAIL_TOPIC_ARN: !Ref TransactionalEmailTopic
       Layers:
