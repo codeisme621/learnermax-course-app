@@ -1,0 +1,24 @@
+{
+  "name": "@learnermax/video-encoder",
+  "version": "1.0.0",
+  "description": "Video encoding Lambda functions for HLS transcoding",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "NODE_OPTIONS=--experimental-vm-modules vitest"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.30.0",
+    "@aws-sdk/client-dynamodb": "^3.958.0",
+    "@aws-sdk/client-mediaconvert": "^3.958.0",
+    "@aws-sdk/lib-dynamodb": "^3.958.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.0.0",
+    "aws-sdk-client-mock": "^4.1.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.8"
+  }
+}

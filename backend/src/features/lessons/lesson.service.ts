@@ -33,6 +33,7 @@ export class LessonService {
       description: lesson.description,
       lengthInMins: lesson.lengthInMins,
       order: lesson.order,
+      hlsManifestKey: lesson.hlsManifestKey, // Include for HLS playback (when available)
       // videoKey intentionally excluded - only used internally for signed URL generation
     }));
   }

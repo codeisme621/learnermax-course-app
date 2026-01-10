@@ -29,6 +29,7 @@ export interface LessonResponse {
   lengthInMins?: number;   // Optional: 15, 30, 45
   order: number;           // Display order in course: 1, 2, 3, 4, 5
   isCompleted?: boolean;   // Populated when fetching with student context (from Progress entity)
+  hlsManifestKey?: string; // HLS manifest path for video playback (when available)
   // NOTE: videoKey intentionally excluded - internal only, never exposed to frontend
 }
 
