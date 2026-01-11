@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useVideoUrl } from '@/hooks/useVideoUrl';
+import { useEffect, useState, useRef } from 'react';
+import Hls from 'hls.js';
 import { useProgress } from '@/hooks/useProgress';
 import { markLessonComplete } from '@/app/actions/progress';
 
 interface VideoPlayerProps {
   lessonId: string;
   courseId: string;
+  manifestUrl: string | null;  // HLS manifest URL (replaces useVideoUrl)
   onLessonComplete?: () => void;
   onCourseComplete?: () => void;
   onError?: (error: Error) => void;
@@ -34,20 +35,28 @@ function getUserFriendlyError(errorMessage: string): string {
   if (lowerError.includes('authentication') || lowerError.includes('auth')) {
     return 'Please sign in to continue';
   }
+  // HLS-specific errors
+  if (lowerError.includes('manifestloaderror') || lowerError.includes('manifestparseerror')) {
+    return 'Unable to load video. Please try again';
+  }
+  if (lowerError.includes('fragsloaderror')) {
+    return 'Video playback interrupted. Check your connection';
+  }
   return errorMessage || 'Failed to load video';
 }
 
 /**
- * VideoPlayer component
+ * VideoPlayer component with HLS.js support
  *
- * Key principles:
- * - Only render <video> when we have a valid URL
- * - Use key={lessonId} for clean remount on lesson change
- * - Use onLoadedData to trigger progress tracking setup (ensures video is ready)
+ * Key features:
+ * - Uses HLS.js for adaptive bitrate streaming on Chrome/Firefox
+ * - Falls back to native HLS on Safari
+ * - Preserves all existing behaviors: pause on scroll/tab, progress tracking, etc.
  */
 export function VideoPlayer({
   lessonId,
   courseId,
+  manifestUrl,
   onLessonComplete,
   onError,
   autoPlay = false,
@@ -55,20 +64,99 @@ export function VideoPlayer({
   onReadyToComplete,
 }: VideoPlayerProps) {
   // Hooks
-  const { videoUrl, isLoading, error: urlError, refreshUrl } = useVideoUrl(courseId, lessonId);
   const { trackAccess, mutate: mutateProgress } = useProgress(courseId);
 
   // State
   const [videoError, setVideoError] = useState<string | null>(null);
   const [hasMarkedComplete, setHasMarkedComplete] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const isMarkingComplete = useRef(false);
   const wasPlayingBeforeHidden = useRef(false);
 
-  // Pause video when it becomes invisible (navigated away, scrolled out of view)
+  // ========== HLS.js Initialization ==========
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !manifestUrl) return;
+
+    setIsLoading(true);
+    setVideoError(null);
+
+    // Safari has native HLS support
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      console.log('[VideoPlayer] Using native HLS (Safari)');
+      video.src = manifestUrl;
+
+      const handleCanPlay = () => {
+        setIsLoading(false);
+        setIsVideoReady(true);
+      };
+
+      video.addEventListener('canplay', handleCanPlay);
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+      };
+    }
+
+    // Use HLS.js for other browsers
+    if (Hls.isSupported()) {
+      console.log('[VideoPlayer] Using HLS.js');
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 30,
+        maxBufferLength: 60,
+        startLevel: -1, // Auto-select quality
+        xhrSetup: (xhr) => {
+          xhr.withCredentials = true; // Send cookies with requests
+        },
+      });
+
+      hls.loadSource(manifestUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('[VideoPlayer] HLS manifest parsed, video ready');
+        setIsLoading(false);
+        setIsVideoReady(true);
+      });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          console.error('[VideoPlayer] HLS fatal error:', data.type, data.details);
+          setVideoError(getUserFriendlyError(`HLS Error: ${data.details}`));
+          onError?.(new Error(`HLS Error: ${data.details}`));
+
+          // Attempt recovery for network/media errors
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            console.log('[VideoPlayer] Attempting to recover from network error');
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            console.log('[VideoPlayer] Attempting to recover from media error');
+            hls.recoverMediaError();
+          }
+        }
+      });
+
+      hlsRef.current = hls;
+
+      return () => {
+        console.log('[VideoPlayer] Destroying HLS instance');
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    }
+
+    // HLS not supported
+    setVideoError('HLS not supported in this browser');
+    onError?.(new Error('HLS not supported in this browser'));
+  }, [manifestUrl, onError]);
+
+  // ========== PRESERVED: Scroll visibility pause ==========
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -105,9 +193,9 @@ export function VideoPlayer({
         video.pause();
       }
     };
-  }, [isVideoReady]); // Run when video becomes ready
+  }, [isVideoReady]);
 
-  // Pause video when page becomes hidden (tab switch) and resume when visible
+  // ========== PRESERVED: Tab visibility pause/resume ==========
   useEffect(() => {
     const handleVisibilityChange = () => {
       const video = videoRef.current;
@@ -133,7 +221,7 @@ export function VideoPlayer({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Cleanup: pause video on unmount
+  // ========== PRESERVED: Cleanup on unmount ==========
   useEffect(() => {
     return () => {
       const video = videoRef.current;
@@ -144,35 +232,34 @@ export function VideoPlayer({
     };
   }, []);
 
-  // Track access and reset state when lesson changes
+  // ========== PRESERVED: Track access and reset state ==========
   useEffect(() => {
     trackAccess(lessonId);
     setHasMarkedComplete(false);
     setVideoError(null);
-    setIsVideoReady(false); // Reset video ready state
+    setIsVideoReady(false);
+    setIsLoading(true);
     isMarkingComplete.current = false;
   }, [lessonId, trackAccess]);
 
-  // Notify parent of URL fetch errors
+  // ========== Autoplay when video ready and autoPlay prop is true ==========
   useEffect(() => {
-    if (urlError) {
-      onError?.(new Error(getUserFriendlyError(urlError.message)));
-    }
-  }, [urlError, onError]);
+    const video = videoRef.current;
+    if (!video || !isVideoReady || !autoPlay) return;
 
-  // Progress tracking - mark complete at 90%
-  // Only runs when isVideoReady is true (after onLoadedData fires)
+    console.log('[VideoPlayer] Autoplay enabled and video ready, starting playback');
+    video.play().catch(err => {
+      // Browser may block autoplay if user hasn't interacted with page
+      console.log('[VideoPlayer] Autoplay blocked:', err.message);
+    });
+  }, [isVideoReady, autoPlay]);
+
+  // ========== PRESERVED: Progress tracking at 90% ==========
   useEffect(() => {
-    if (!isVideoReady) {
-      console.log('[VideoPlayer] Progress effect: waiting for video to be ready');
-      return;
-    }
+    if (!isVideoReady) return;
 
     const video = videoRef.current;
-    if (!video) {
-      console.log('[VideoPlayer] Progress effect: no video ref despite isVideoReady');
-      return;
-    }
+    if (!video) return;
 
     console.log('[VideoPlayer] Setting up timeupdate listener for progress tracking');
 
@@ -211,43 +298,63 @@ export function VideoPlayer({
     return () => video.removeEventListener('timeupdate', handleTimeUpdate);
   }, [isVideoReady, hasMarkedComplete, lessonId, courseId, isLastLesson, onLessonComplete, onReadyToComplete, mutateProgress]);
 
-  // Handlers
-  const handleVideoLoaded = useCallback(() => {
-    console.log('[VideoPlayer] Video loaded successfully, setting isVideoReady=true');
-    setIsVideoReady(true);
-  }, []);
+  // ========== Retry handler for HLS ==========
+  const handleRetry = () => {
+    setVideoError(null);
+    setIsVideoReady(false);
+    setIsLoading(true);
+
+    // Destroy existing HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    // Re-trigger initialization by forcing video reload
+    const video = videoRef.current;
+    if (video && manifestUrl) {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = manifestUrl;
+        video.load();
+      } else if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          xhrSetup: (xhr) => { xhr.withCredentials = true; },
+        });
+        hls.loadSource(manifestUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          setIsVideoReady(true);
+        });
+        hlsRef.current = hls;
+      }
+    }
+  };
 
   const handleVideoError = () => {
     setVideoError('Unable to play this video. Try again or contact support if the issue persists');
     onError?.(new Error('Video playback failed'));
   };
 
-  const handleRetry = () => {
-    setVideoError(null);
-    setIsVideoReady(false);
-    refreshUrl();
-  };
+  // ========== RENDER ==========
 
-  // Derive display state
-  const displayError = urlError ? getUserFriendlyError(urlError.message) : videoError;
-
-  // Loading state
-  if (isLoading) {
+  // No manifest URL
+  if (!manifestUrl) {
     return (
       <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-          <p className="text-white text-lg">Loading video...</p>
+          <p className="text-white text-lg">Video not available</p>
         </div>
       </div>
     );
   }
 
   // Error state
-  if (displayError) {
+  if (videoError) {
     return (
       <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex flex-col items-center justify-center gap-4 p-8">
-        <div className="text-red-500 text-lg text-center max-w-md">{displayError}</div>
+        <div className="text-red-500 text-lg text-center max-w-md">{videoError}</div>
         <button
           onClick={handleRetry}
           className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors"
@@ -258,31 +365,27 @@ export function VideoPlayer({
     );
   }
 
-  // No URL yet (shouldn't happen if not loading/error, but safety check)
-  if (!videoUrl) {
-    return (
-      <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-          <p className="text-white text-lg">Loading video...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Video player - only rendered when we have a valid URL
+  // Video player
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden" data-testid="video-player">
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            <p className="text-white text-lg">Loading video...</p>
+          </div>
+        </div>
+      )}
+
       <video
         ref={videoRef}
         key={lessonId}
-        src={videoUrl}
         controls
         controlsList="nodownload"
         playsInline
-        autoPlay={autoPlay}
+        autoPlay={autoPlay && isVideoReady}
         className="w-full h-full"
-        onLoadedData={handleVideoLoaded}
         onError={handleVideoError}
         onPlay={() => console.log('[VideoPlayer] Video started playing')}
       >

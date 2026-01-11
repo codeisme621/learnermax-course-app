@@ -11,6 +11,7 @@
         "@aws-lambda-powertools/metrics": "^2.30.0",
         "@aws-lambda-powertools/tracer": "^2.30.0",
         "@aws-sdk/client-dynamodb": "^3.958.0",
+        "@aws-sdk/client-s3": "^3.966.0",
         "@aws-sdk/client-secrets-manager": "^3.958.0",
         "@aws-sdk/client-sns": "^3.958.0",
         "@aws-sdk/cloudfront-signer": "^3.957.0",
@@ -40,8 +41,9 @@
         "typescript": "^5.0.0"
     },
     "scripts": {
-        "build": "pnpm run email:build && tsc",
+        "build": "pnpm run email:build && pnpm run video-encoder:build && tsc",
         "email:build": "cd email && pnpm install && pnpm build",
+        "video-encoder:build": "cd video-encoder && pnpm install && pnpm build",
         "email:dev": "cd email && pnpm dev",
         "start": "node dist/app.js",
         "dev": "tsc && node dist/app.js",

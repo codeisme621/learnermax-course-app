@@ -36,6 +36,16 @@ Parameters:
     Type: String
     Description: CloudFront key group ID (created manually via create-key-group API)
 
+  VideoCdnDomain:
+    Type: String
+    Default: ''
+    Description: Custom domain for video CDN (e.g., video.learnwithrico.com). Leave empty to use CloudFront default domain.
+
+  VideoCdnCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN of ACM certificate for video CDN custom domain (required if VideoCdnDomain is set)
+
   SESFromEmail:
     Type: String
     Default: support@learnwithrico.com
@@ -67,6 +77,7 @@ Conditions:
   HasProvisionedConcurrency: !Or
     - !Condition HasProdProvisionedConcurrency
     - !Condition HasPreviewProvisionedConcurrency
+  HasVideoCdnDomain: !Not [!Equals [!Ref VideoCdnDomain, '']]
 
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
@@ -220,6 +231,7 @@ Resources:
   # S3 Bucket for Video Storage
   VideoStorageBucket:
     Type: AWS::S3::Bucket
+    DependsOn: VideoEncoderFunctionS3Permission
     Properties:
       BucketName: !Sub learnermax-videos-${Environment}
       PublicAccessBlockConfiguration:
@@ -234,6 +246,15 @@ Resources:
           - Id: DeleteOldVersions
             Status: Enabled
             NoncurrentVersionExpirationInDays: 30
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt VideoEncoderFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/raw/
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -271,11 +292,38 @@ Resources:
         Enabled: true
         HttpVersion: http2and3
         PriceClass: PriceClass_100
+        Aliases: !If
+          - HasVideoCdnDomain
+          - - !Ref VideoCdnDomain
+          - !Ref AWS::NoValue
         Origins:
           - Id: S3VideoOrigin
             DomainName: !GetAtt VideoStorageBucket.RegionalDomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${VideoCloudFrontOAI}
+        # HLS Cache Behavior: /courses/* uses signed cookies for all segment requests
+        # In preview environment, signed cookies are disabled for easier testing
+        CacheBehaviors:
+          - PathPattern: /courses/*
+            TargetOriginId: S3VideoOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized managed policy
+            OriginRequestPolicyId: !Ref VideoCookieForwardingPolicy
+            ResponseHeadersPolicyId: !Ref VideoResponseHeadersPolicy
+            # Only require signed cookies in production (preview allows public access for testing)
+            TrustedKeyGroups: !If
+              - IsProd
+              - - !Ref CloudFrontKeyGroupId
+              - !Ref AWS::NoValue
+        # Default behavior: for legacy MP4 files (signed URLs)
         DefaultCacheBehavior:
           TargetOriginId: S3VideoOrigin
           ViewerProtocolPolicy: redirect-to-https
@@ -289,18 +337,26 @@ Resources:
           Compress: true
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized managed policy
           ResponseHeadersPolicyId: !Ref VideoResponseHeadersPolicy
-          TrustedKeyGroups:
-            - !Ref CloudFrontKeyGroupId
-        ViewerCertificate:
-          CloudFrontDefaultCertificate: true
+          # Only require signed cookies/URLs in production (preview allows public access for testing)
+          TrustedKeyGroups: !If
+            - IsProd
+            - - !Ref CloudFrontKeyGroupId
+            - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - HasVideoCdnDomain
+          - AcmCertificateArn: !Ref VideoCdnCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
 
-  # CloudFront Response Headers Policy for CORS
+  # CloudFront Response Headers Policy for CORS (with credentials for signed cookies)
+  # Note: With credentials=true, cannot use wildcard '*' for headers
   VideoResponseHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
       ResponseHeadersPolicyConfig:
         Name: !Sub learnermax-video-cors-${Environment}
-        Comment: CORS policy for video player access from frontend
+        Comment: CORS policy for video player access from frontend (with credentials)
         CorsConfig:
           AccessControlAllowOrigins:
             Items:
@@ -308,19 +364,150 @@ Resources:
               - http://localhost:3000
           AccessControlAllowHeaders:
             Items:
-              - '*'
+              - Accept
+              - Accept-Encoding
+              - Accept-Language
+              - Authorization
+              - Content-Type
+              - Origin
+              - Range
+              - X-Requested-With
           AccessControlAllowMethods:
             Items:
               - GET
               - HEAD
               - OPTIONS
-          AccessControlAllowCredentials: false
+          AccessControlAllowCredentials: true
           AccessControlExposeHeaders:
             Items:
               - Content-Length
               - Content-Range
               - ETag
           OriginOverride: true
+
+  # CloudFront Origin Request Policy for Cookie Forwarding (Signed Cookies)
+  VideoCookieForwardingPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub learnermax-video-cookies-${Environment}
+        Comment: Forward CloudFront signed cookies to origin for HLS validation
+        CookiesConfig:
+          CookieBehavior: whitelist
+          Cookies:
+            - CloudFront-Policy
+            - CloudFront-Signature
+            - CloudFront-Key-Pair-Id
+        HeadersConfig:
+          HeaderBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: none
+
+  # ============================================================================
+  # MediaConvert Video Encoding Pipeline
+  # ============================================================================
+
+  # IAM Role for MediaConvert to access S3
+  MediaConvertRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub learnermax-mediaconvert-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: mediaconvert.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: MediaConvertS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub arn:aws:s3:::learnermax-videos-${Environment}/*
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: LearnerMax
+
+  # Lambda: Trigger HLS encoding on S3 upload to uploads/raw/
+  # Note: S3 event configured separately to avoid circular dependency
+  VideoEncoderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub learnermax-video-encoder-${Environment}
+      CodeUri: ./video-encoder/
+      Handler: dist/src/handler.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 30
+      Description: Triggers MediaConvert HLS encoding on video upload
+      Environment:
+        Variables:
+          MEDIACONVERT_ROLE_ARN: !GetAtt MediaConvertRole.Arn
+          VIDEO_BUCKET: !Sub learnermax-videos-${Environment}
+      Policies:
+        - Statement:
+            - Sid: MediaConvertCreateJob
+              Effect: Allow
+              Action:
+                - mediaconvert:CreateJob
+                - mediaconvert:DescribeEndpoints
+              Resource: '*'
+            - Sid: PassRoleToMediaConvert
+              Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: !GetAtt MediaConvertRole.Arn
+
+  # Permission for S3 to invoke VideoEncoderFunction
+  VideoEncoderFunctionS3Permission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VideoEncoderFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub arn:aws:s3:::learnermax-videos-${Environment}
+      SourceAccount: !Ref AWS::AccountId
+
+  # Lambda: Update lesson metadata when MediaConvert job completes
+  UpdateLessonMetadataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub learnermax-update-lesson-metadata-${Environment}
+      CodeUri: ./video-encoder/
+      Handler: dist/src/update-metadata.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 30
+      Description: Updates lesson DynamoDB record with HLS manifest key
+      Environment:
+        Variables:
+          EDUCATION_TABLE_NAME: !Ref EducationTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EducationTable
+      Events:
+        MediaConvertComplete:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.mediaconvert
+              detail-type:
+                - MediaConvert Job State Change
+              detail:
+                status:
+                  - COMPLETE
 
   # SNS Topic for Student Onboarding
   StudentOnboardingTopic:

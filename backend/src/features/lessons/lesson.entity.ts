@@ -25,7 +25,8 @@ export interface LessonEntity {
   courseId: string;        // "spec-driven-dev-mini"
   title: string;           // "Introduction to Spec-Driven Development"
   description?: string;    // Optional: "In this lesson, you'll learn..."
-  videoKey: string;        // "courses/spec-driven-dev-mini/lesson-1.mp4"
+  videoKey: string;        // "courses/spec-driven-dev-mini/lesson-1.mp4" (legacy MP4)
+  hlsManifestKey?: string; // "courses/spec-driven-dev-mini/lesson-1/master.m3u8" (HLS)
   lengthInMins?: number;   // Optional: 15 (can be derived from video metadata later)
   thumbnailKey?: string;   // Optional: "courses/spec-driven-dev-mini/thumbnails/lesson-1.jpg"
   order: number;           // 1, 2, 3, 4, 5 (determines display order)

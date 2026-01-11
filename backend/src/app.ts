@@ -6,6 +6,7 @@ import lessonRoutes from './features/lessons/lesson.routes.js';
 import progressRoutes from './features/progress/progress.routes.js';
 import meetupsRoutes from './features/meetups/meetups.routes.js';
 import feedbackRoutes from './features/feedback/feedback.routes.js';
+import videoAccessRoutes from './features/video-access/video-access.routes.js';
 import { createLogger } from './lib/logger.js';
 import { observabilityMiddleware } from './middleware/observability.middleware.js';
 
@@ -43,6 +44,7 @@ app.use('/api/lessons', lessonRoutes);  // Includes /api/lessons/:lessonId/video
 app.use('/api/progress', progressRoutes);  // Includes /api/progress/:courseId and POST /api/progress
 app.use('/api/meetups', meetupsRoutes);  // Includes GET /api/meetups and POST /api/meetups/:meetupId/signup
 app.use('/api/feedback', feedbackRoutes);  // POST /api/feedback
+app.use('/api/courses', videoAccessRoutes);  // GET /api/courses/:courseId/video-access
 
 // Start server (only in production, not during tests)
 if (process.env.NODE_ENV !== 'test') {

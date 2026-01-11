@@ -12,6 +12,9 @@ import { useProgress } from '@/hooks/useProgress';
 import { markLessonComplete } from '@/app/actions/progress';
 import type { LessonResponse } from '@/types/lessons';
 
+// CloudFront domain for HLS video streaming
+const VIDEO_CDN_DOMAIN = process.env.NEXT_PUBLIC_VIDEO_CDN_DOMAIN;
+
 // Dynamically import components
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 const PremiumUpsellModal = dynamic(() => import('@/components/PremiumUpsellModal').then(mod => ({ default: mod.PremiumUpsellModal })), { ssr: false });
@@ -175,6 +178,11 @@ export function CourseVideoSection({
         <VideoPlayer
           lessonId={currentLesson.lessonId}
           courseId={courseId}
+          manifestUrl={
+            currentLesson.hlsManifestKey && VIDEO_CDN_DOMAIN
+              ? `https://${VIDEO_CDN_DOMAIN}/${currentLesson.hlsManifestKey}`
+              : null
+          }
           onLessonComplete={handleLessonComplete}
           onCourseComplete={handleCourseComplete}
           isLastLesson={!nextLesson}
