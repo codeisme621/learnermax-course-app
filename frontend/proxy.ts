@@ -29,17 +29,21 @@ const VIDEO_CDN_DOMAIN = process.env.NEXT_PUBLIC_VIDEO_CDN_DOMAIN || ''; // e.g.
  */
 async function handleVideoAccess(request: NextRequest): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
+  console.log('[VideoAccess] Processing request:', pathname);
 
   // Only process course pages: /course/{courseId} or /course/{courseId}/lesson/{lessonId}
   const courseMatch = pathname.match(/^\/course\/([^/]+)/);
   if (!courseMatch) {
+    console.log('[VideoAccess] Not a course page, skipping');
     return null; // Not a course page, skip
   }
 
   const courseId = courseMatch[1];
+  console.log('[VideoAccess] Course page detected:', courseId);
 
   // Check if CloudFront cookies already exist (session cookies persist until browser close)
   if (request.cookies.has('CloudFront-Policy')) {
+    console.log('[VideoAccess] CloudFront cookies already exist, skipping');
     return null; // Already have cookies, skip
   }
 
@@ -48,9 +52,11 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
     req: request,
     secret: process.env.AUTH_SECRET,
   });
+  console.log('[VideoAccess] Token retrieved:', { hasToken: !!token, hasIdToken: !!token?.id_token });
 
   if (!token?.id_token) {
     // No session or no id_token, let auth middleware handle
+    console.log('[VideoAccess] No id_token in token, skipping');
     return null;
   }
 
@@ -126,10 +132,13 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
  * 1. Try to set video access cookies for course pages
  * 2. Fall through to NextAuth proxy for auth handling
  */
-export async function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
+  console.log('[Proxy] Request:', request.nextUrl.pathname);
+
   // Try to set video access cookies first (for course pages only)
   const videoResponse = await handleVideoAccess(request);
   if (videoResponse) {
+    console.log('[Proxy] VideoAccess returned response with cookies');
     return videoResponse;
   }
 
