@@ -302,6 +302,7 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${VideoCloudFrontOAI}
         # HLS Cache Behavior: /courses/* uses signed cookies for all segment requests
+        # In preview environment, signed cookies are disabled for easier testing
         CacheBehaviors:
           - PathPattern: /courses/*
             TargetOriginId: S3VideoOrigin
@@ -317,8 +318,11 @@ Resources:
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized managed policy
             OriginRequestPolicyId: !Ref VideoCookieForwardingPolicy
             ResponseHeadersPolicyId: !Ref VideoResponseHeadersPolicy
-            TrustedKeyGroups:
-              - !Ref CloudFrontKeyGroupId
+            # Only require signed cookies in production (preview allows public access for testing)
+            TrustedKeyGroups: !If
+              - IsProd
+              - - !Ref CloudFrontKeyGroupId
+              - !Ref AWS::NoValue
         # Default behavior: for legacy MP4 files (signed URLs)
         DefaultCacheBehavior:
           TargetOriginId: S3VideoOrigin
@@ -333,8 +337,11 @@ Resources:
           Compress: true
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized managed policy
           ResponseHeadersPolicyId: !Ref VideoResponseHeadersPolicy
-          TrustedKeyGroups:
-            - !Ref CloudFrontKeyGroupId
+          # Only require signed cookies/URLs in production (preview allows public access for testing)
+          TrustedKeyGroups: !If
+            - IsProd
+            - - !Ref CloudFrontKeyGroupId
+            - !Ref AWS::NoValue
         ViewerCertificate: !If
           - HasVideoCdnDomain
           - AcmCertificateArn: !Ref VideoCdnCertificateArn
