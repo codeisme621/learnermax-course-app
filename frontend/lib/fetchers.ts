@@ -98,30 +98,5 @@ export async function fetchProgress(courseId: string): Promise<{
   }
 }
 
-/**
- * Fetch signed video URL for a lesson via API route
- * Returns video URL with expiration timestamp
- * Used by useVideoUrl hook with auto-refresh
- */
-export async function fetchVideoUrl(lessonId: string): Promise<{
-  videoUrl: string;
-  expiresAt: number;
-} | null> {
-  try {
-    return await baseFetcher(`/api/lessons/${lessonId}/video-url`);
-  } catch (error) {
-    if ((error as Error & { status: number }).status === 401) {
-      return null; // Not authenticated
-    }
-    if ((error as Error & { status: number }).status === 403) {
-      return null; // Not enrolled
-    }
-    if ((error as Error & { status: number }).status === 404) {
-      return null; // Lesson not found
-    }
-    throw error;
-  }
-}
-
 // Export API URL for direct use if needed
 export { API_URL };

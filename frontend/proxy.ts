@@ -48,9 +48,20 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
   }
 
   // Get the NextAuth JWT token which contains id_token
+  const cookieNames = Array.from(request.cookies.getAll()).map(c => c.name);
+  console.log('[VideoAccess] Available cookies:', cookieNames);
+
+  // Determine if we're in a secure context (HTTPS)
+  // In production (HTTPS), Auth.js v5 uses __Secure-authjs.session-token
+  // In development (HTTP), it uses authjs.session-token
+  const isSecure = request.nextUrl.protocol === 'https:';
+  const cookieName = isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token';
+  console.log('[VideoAccess] Looking for cookie:', cookieName, 'isSecure:', isSecure);
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    cookieName,
   });
   console.log('[VideoAccess] Token retrieved:', { hasToken: !!token, hasIdToken: !!token?.id_token });
 
