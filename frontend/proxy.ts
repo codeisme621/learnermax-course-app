@@ -13,69 +13,54 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { auth } from '@/lib/auth';
+import { getAuthToken } from '@/app/actions/auth';
 
 // Environment variables
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || ''; // e.g., .learnwithrico.com
-const VIDEO_CDN_DOMAIN = process.env.NEXT_PUBLIC_VIDEO_CDN_DOMAIN || ''; // e.g., video.learnwithrico.com
 
 /**
  * Handle video access for course pages.
  * Sets CloudFront signed cookies if user is enrolled.
  *
+ * Uses the established auth() pattern from the codebase to get the session,
+ * matching how getAuthToken() works in server actions.
+ *
  * @returns NextResponse with cookies if successful, null to continue to auth
  */
 async function handleVideoAccess(request: NextRequest): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
-  console.log('[VideoAccess] Processing request:', pathname);
 
   // Only process course pages: /course/{courseId} or /course/{courseId}/lesson/{lessonId}
   const courseMatch = pathname.match(/^\/course\/([^/]+)/);
   if (!courseMatch) {
-    console.log('[VideoAccess] Not a course page, skipping');
     return null; // Not a course page, skip
   }
 
   const courseId = courseMatch[1];
-  console.log('[VideoAccess] Course page detected:', courseId);
 
   // Check if CloudFront cookies already exist (session cookies persist until browser close)
   if (request.cookies.has('CloudFront-Policy')) {
-    console.log('[VideoAccess] CloudFront cookies already exist, skipping');
     return null; // Already have cookies, skip
   }
 
-  // Get the NextAuth JWT token which contains id_token
-  const cookieNames = Array.from(request.cookies.getAll()).map(c => c.name);
-  console.log('[VideoAccess] Available cookies:', cookieNames);
+  // Get auth token using the established pattern from server actions
+  const token = await getAuthToken();
 
-  // Determine if we're in a secure context (HTTPS)
-  // In production (HTTPS), Auth.js v5 uses __Secure-authjs.session-token
-  // In development (HTTP), it uses authjs.session-token
-  const isSecure = request.nextUrl.protocol === 'https:';
-  const cookieName = isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token';
-  console.log('[VideoAccess] Looking for cookie:', cookieName, 'isSecure:', isSecure);
-
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    cookieName,
-  });
-  console.log('[VideoAccess] Token retrieved:', { hasToken: !!token, hasIdToken: !!token?.id_token });
-
-  if (!token?.id_token) {
-    // No session or no id_token, let auth middleware handle
-    console.log('[VideoAccess] No id_token in token, skipping');
+  if (!token) {
+    // No session or no id_token, let auth middleware handle redirect
+    console.log('[VideoAccess] No auth token, skipping video access check');
     return null;
   }
 
   // Call backend to verify enrollment and get signed cookies
   try {
     const res = await fetch(`${API_URL}/api/courses/${courseId}/video-access`, {
-      headers: {
-        Authorization: `Bearer ${token.id_token}`,
+        method: 'GET',
+        headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -144,12 +129,9 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
  * 2. Fall through to NextAuth proxy for auth handling
  */
 export default async function proxy(request: NextRequest) {
-  console.log('[Proxy] Request:', request.nextUrl.pathname);
-
   // Try to set video access cookies first (for course pages only)
   const videoResponse = await handleVideoAccess(request);
   if (videoResponse) {
-    console.log('[Proxy] VideoAccess returned response with cookies');
     return videoResponse;
   }
 
