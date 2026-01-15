@@ -116,6 +116,57 @@ cat scripts/.sam-logs.log  # Check logs
 ./scripts/stop-sam-logs.sh
 ```
 
+## Video CDN Custom Domain Setup (Production)
+
+For production, you'll want a custom domain for the video CDN to enable cookie-based authentication. This requires an ACM certificate and Route53 CNAME record.
+
+> **Note**: Preview environment allows public video access, so this setup is only needed for production.
+
+### Step 1: Create ACM Certificate
+
+**`setup-video-cdn-domain.sh`** - Create ACM certificate with automatic DNS validation
+
+```bash
+# Default: video.learnwithrico.com
+./scripts/setup-video-cdn-domain.sh
+
+# Custom domain:
+./scripts/setup-video-cdn-domain.sh video.yourdomain.com YOUR_HOSTED_ZONE_ID
+```
+
+This will:
+1. Request an ACM certificate in us-east-1 (required for CloudFront)
+2. Create DNS validation record in Route53
+3. Wait for certificate validation (~2-5 minutes)
+4. Output the certificate ARN for samconfig.toml
+
+### Step 2: Deploy Backend with Custom Domain
+
+Update `backend/samconfig.toml` [prod.deploy.parameters]:
+```toml
+"VideoCdnDomain=video.learnwithrico.com",
+"VideoCdnCertificateArn=arn:aws:acm:us-east-1:123456789:certificate/abc-123-def"
+```
+
+Then deploy:
+```bash
+cd backend && sam build && sam deploy --config-env prod
+```
+
+### Step 3: Create CNAME Record
+
+**`create-video-cdn-cname.sh`** - Point video subdomain to CloudFront
+
+```bash
+# Auto-detect CloudFront domain from prod stack:
+./scripts/create-video-cdn-cname.sh
+
+# Or specify manually:
+./scripts/create-video-cdn-cname.sh d1234.cloudfront.net video.yourdomain.com YOUR_HOSTED_ZONE_ID
+```
+
+This creates the CNAME record: `video.learnwithrico.com -> dXXXX.cloudfront.net`
+
 ## Prerequisites
 
 ### Frontend
