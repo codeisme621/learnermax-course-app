@@ -31,6 +31,7 @@ const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || ''; // e.g., .learnwithrico.c
  */
 async function handleVideoAccess(request: NextRequest): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
+  console.log('[VideoAccess] Processing request:', pathname);
 
   // Only process course pages: /course/{courseId} or /course/{courseId}/lesson/{lessonId}
   const courseMatch = pathname.match(/^\/course\/([^/]+)/);
@@ -39,14 +40,18 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
   }
 
   const courseId = courseMatch[1];
+  console.log('[VideoAccess] Course page detected:', courseId);
 
   // Check if CloudFront cookies already exist (session cookies persist until browser close)
   if (request.cookies.has('CloudFront-Policy')) {
+    console.log('[VideoAccess] CloudFront cookies exist, skipping');
     return null; // Already have cookies, skip
   }
 
   // Get auth token using the established pattern from server actions
+  console.log('[VideoAccess] Getting auth token...');
   const token = await getAuthToken();
+  console.log('[VideoAccess] Token result:', !!token);
 
   if (!token) {
     // No session or no id_token, let auth middleware handle redirect
