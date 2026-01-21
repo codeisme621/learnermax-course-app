@@ -739,7 +739,8 @@ Resources:
           COGNITO_USER_POOL_ID: !Ref LearnerMaxUserPool
           COGNITO_CLIENT_ID: !Ref LearnerMaxUserPoolClient
           # Video infrastructure configuration
-          CLOUDFRONT_DOMAIN: !GetAtt VideoCloudFrontDistribution.DomainName
+          # Use custom domain if set, otherwise use CloudFront default domain
+          CLOUDFRONT_DOMAIN: !If [HasVideoCdnDomain, !Ref VideoCdnDomain, !GetAtt VideoCloudFrontDistribution.DomainName]
           CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontPublicKeyId
           CLOUDFRONT_PRIVATE_KEY_SECRET_NAME: !Sub learnermax/cloudfront-private-key-${Environment}
           VIDEO_URL_EXPIRY_MINUTES: 180

@@ -2,6 +2,13 @@
   "jest.rootPath": "",
   // One entry per project in your monorepo
   "jest.virtualFolders": [
-    
+    {
+      "name": "frontend",
+      "rootPath": "frontend"
+    },
+    {
+      "name": "backend",
+      "rootPath": "backend"
+    }
   ]
 }
