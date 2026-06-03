@@ -40,3 +40,15 @@ next-env.d.ts
 .playwright-mcp/
 
 scripts/.vercel-logs*
+
+# harness runtime counters (per-node state, never commit; .harness/env IS committed)
+.harness/feedback-rounds-*
+.harness/local-check-attempts-*
+.harness/implement-attempts-*
+.harness/planning-attempts-*
+.harness/validate-attempts-*
+.harness/stuck-*
+.harness/human-review-*
+.harness/sessions-*.tsv
+.harness/last-main-sha
+.harness/learn-running
