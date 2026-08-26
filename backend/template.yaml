@@ -58,12 +58,12 @@ Parameters:
 
   ProdProvisionedConcurrency:
     Type: Number
-    Default: 4
+    Default: 0
     Description: Provisioned concurrency for production Lambda (0 to disable)
 
   PreviewProvisionedConcurrency:
     Type: Number
-    Default: 4
+    Default: 0
     Description: Provisioned concurrency for preview Lambda (0 to disable)
 
 Conditions:
@@ -803,20 +803,6 @@ Resources:
             UserPoolArn: !GetAtt LearnerMaxUserPool.Arn
             Identity:
               Header: Authorization
-
-  ApplicationResourceGroup:
-    Type: AWS::ResourceGroups::Group
-    Properties:
-      Name:
-        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
-      ResourceQuery:
-        Type: CLOUDFORMATION_STACK_1_0
-  ApplicationInsightsMonitoring:
-    Type: AWS::ApplicationInsights::Application
-    Properties:
-      ResourceGroupName:
-        Ref: ApplicationResourceGroup
-      AutoConfigurationEnabled: 'true'
 
   # CloudWatch Dashboard for Observability
   # Layout: Business Metrics (rows 0-18), Technical Metrics (rows 18-36)
