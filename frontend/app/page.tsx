@@ -7,14 +7,16 @@ import { TrustIndicators } from '@/components/landing/TrustIndicators';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { CourseMetadataSection } from '@/components/landing/CourseMetadataSection';
 import { CtaSection } from '@/components/landing/CtaSection';
+import { FaqSection } from '@/components/landing/FaqSection';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { getCourseForLanding } from '@/lib/api/courses';
 
 // Fallback metadata if course data fetch fails
+const pageDescription = 'Go from ad-hoc AI coding to reliable autonomous engineering systems you can trust, measure, and improve.';
+
 const fallbackMetadata: Metadata = {
-  title: 'Spec-Driven Development with Context Engineering - LearnWithRico',
-  description:
-    'Turn AI into your superpower: master Spec-Driven Development and produce world-class code that sets you apart.',
+  title: 'Agentic Engineering — Build Reliable Coding Agents | LearnWithRico',
+  description: pageDescription,
 };
 
 // Dynamic metadata generation based on course data
@@ -23,19 +25,19 @@ export async function generateMetadata(): Promise<Metadata> {
     const course = await getCourseForLanding('spec-driven-dev-mini');
 
     return {
-      title: `${course.title} - LearnWithRico`,
-      description: course.description,
+      title: fallbackMetadata.title,
+      description: pageDescription,
       openGraph: {
-        title: course.title,
-        description: course.subtitle,
+        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        description: pageDescription,
         type: 'website',
         locale: 'en_US',
         siteName: 'LearnWithRico',
       },
       twitter: {
         card: 'summary_large_image',
-        title: course.title,
-        description: course.subtitle,
+        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        description: pageDescription,
       },
     };
   } catch (error) {
@@ -71,6 +73,7 @@ export default async function HomePage() {
           <BenefitsSection />
           <CourseMetadataSection course={course} />
           <CtaSection />
+          <FaqSection />
         </main>
         <Footer />
         <ScrollToTop />

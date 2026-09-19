@@ -29,17 +29,17 @@ describe('CtaSection', () => {
 
   it('renders section heading', () => {
     render(<CtaSection />);
-    expect(screen.getByText(/take control of your ai coding workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/lead the shift to autonomous development/i)).toBeInTheDocument();
   });
 
   it('renders CTA button', () => {
     render(<CtaSection />);
-    expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /join the founding cohort/i })).toBeInTheDocument();
   });
 
   it('stores courseId in sessionStorage and navigates when Get Started clicked', () => {
     render(<CtaSection />);
-    const getStartedButton = screen.getByRole('button', { name: /get started/i });
+    const getStartedButton = screen.getByRole('button', { name: /join the founding cohort/i });
 
     getStartedButton.click();
 

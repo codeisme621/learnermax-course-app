@@ -61,20 +61,20 @@ describe('HeroSection', () => {
     sessionStorage.clear();
   });
 
-  it('renders course title and subtitle', () => {
+  it('renders the agentic engineering promise', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByText(mockCourse.title)).toBeInTheDocument();
-    expect(screen.getByText(mockCourse.subtitle)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /build reliable coding agents/i })).toBeInTheDocument();
+    expect(screen.getByText(/autonomous systems they can trust/i)).toBeInTheDocument();
   });
 
   it('renders enroll CTA button', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('button', { name: /enroll now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /join the founding cohort/i })).toBeInTheDocument();
   });
 
   it('stores courseId in sessionStorage and navigates when enroll button clicked', () => {
     render(<HeroSection course={mockCourse} />);
-    const enrollButton = screen.getByRole('button', { name: /enroll now/i });
+    const enrollButton = screen.getByRole('button', { name: /join the founding cohort/i });
 
     enrollButton.click();
 
@@ -82,9 +82,9 @@ describe('HeroSection', () => {
     expect(mockPush).toHaveBeenCalledWith('/enroll');
   });
 
-  it('renders course stats', () => {
+  it('renders offer assurances', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByText('Students')).toBeInTheDocument();
-    expect(screen.getByText('Rating')).toBeInTheDocument();
+    expect(screen.getByText(/weekly live office hours/i)).toBeInTheDocument();
+    expect(screen.getByText(/30-day guarantee/i)).toBeInTheDocument();
   });
 });

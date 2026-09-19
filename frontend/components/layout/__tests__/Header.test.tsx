@@ -40,8 +40,8 @@ describe('Header (Public)', () => {
     render(<Header />);
 
     expect(screen.getByText('LearnWithRico')).toBeInTheDocument();
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
-    expect(screen.getByText('Enroll Now')).toBeInTheDocument();
+    expect(screen.getByText('Sign in')).toBeInTheDocument();
+    expect(screen.getByText('Join cohort')).toBeInTheDocument();
   });
 
   it('logo links to home page', () => {
@@ -54,14 +54,14 @@ describe('Header (Public)', () => {
   it('sign in button links to signin page', () => {
     render(<Header />);
 
-    const signInLink = screen.getByText('Sign In').closest('a');
+    const signInLink = screen.getByText('Sign in').closest('a');
     expect(signInLink).toHaveAttribute('href', '/signin');
   });
 
   it('enroll now button stores course ID and navigates', () => {
     render(<Header />);
 
-    const enrollButton = screen.getByText('Enroll Now');
+    const enrollButton = screen.getByText('Join cohort');
     fireEvent.click(enrollButton);
 
     expect(sessionStorage.getItem('pendingEnrollmentCourseId')).toBe('spec-driven-dev-mini');
