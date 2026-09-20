@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Check, Code2, GraduationCap, MessagesSquare } from 'lucide-react';
 import type { CourseData } from '@/types/landing';
 
@@ -31,10 +32,15 @@ export function CourseMetadataSection({ course }: CourseMetadataSectionProps) {
           <div className="rounded-2xl bg-[#f3f5f1] p-8 md:p-10"><MessagesSquare className="h-7 w-7 text-emerald-700" /><p className="eyebrow mt-8">You are not doing this alone</p><h3 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">When your agent gets stuck, you have someone to ask.</h3><p className="mt-5 leading-7 text-slate-600">Bring your questions, your repository, and the failures you cannot explain. In weekly live office hours, Rico will help you reason through the problem and get your system moving again.</p></div>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#07110f] text-white">
             <div className="grid min-h-full sm:grid-cols-[.72fr_1.28fr]">
-              <div className="relative flex min-h-64 items-center justify-center overflow-hidden bg-emerald-200">
-                <div className="absolute inset-0 agentic-grid opacity-30" />
-                <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-4 border-white/60 bg-[#07110f] text-5xl font-bold text-emerald-200 shadow-2xl">RR</div>
-                <div className="absolute bottom-5 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">Photo coming next</div>
+              <div className="relative min-h-80 overflow-hidden bg-emerald-950 sm:min-h-full">
+                <Image
+                  src="/images/rico-romero-instructor.webp"
+                  alt="Rico Romero, course instructor"
+                  fill
+                  sizes="(min-width: 1024px) 24vw, (min-width: 640px) 36vw, 100vw"
+                  className="object-cover object-[center_28%]"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#07110f]/50 to-transparent" />
               </div>
               <div className="p-8 md:p-10"><GraduationCap className="h-7 w-7 text-emerald-300" /><p className="mt-7 font-mono text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Learn from someone building this for real</p><h3 className="mt-4 text-3xl font-semibold tracking-tight">{course.instructor.name}</h3><p className="mt-2 font-semibold text-emerald-200">Senior Tech Lead at Capital One</p><p className="mt-5 text-sm leading-7 text-slate-300">Rico has taught thousands of engineers inside Capital One and beyond. He led the team behind <a href="https://github.com/capitalone/context-specs" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline decoration-emerald-300 underline-offset-4">context-specs</a>, Capital One&apos;s first open-source agent harness—a workflow that takes engineering intent through implementation and verification to a pull request.</p><p className="mt-4 text-sm leading-7 text-slate-300">Mastering, teaching, and applying these systems helped Rico earn a promotion, professional recognition, and opportunities to lead teams through the transition to agentic development.</p><p className="mt-5 text-xs leading-5 text-slate-500">Capital One is Rico&apos;s employer and is not affiliated with or an endorser of this independent course.</p></div>
             </div>

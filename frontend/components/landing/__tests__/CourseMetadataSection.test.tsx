@@ -54,6 +54,7 @@ describe('CourseMetadataSection', () => {
     render(<CourseMetadataSection course={mockCourse} />);
     expect(screen.getByText(mockCourse.instructor.name)).toBeInTheDocument();
     expect(screen.getByText(/senior tech lead at capital one/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /rico romero, course instructor/i })).toBeInTheDocument();
   });
 
   it('renders the curriculum', () => {
