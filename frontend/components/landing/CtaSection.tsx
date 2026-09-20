@@ -1,73 +1,14 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, Sparkles } from 'lucide-react';
 import { track } from '@vercel/analytics';
+import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+
+const included = ['Immediate access to the complete course', 'The next 8-week guided cohort', 'Weekly live office hours', 'Practical exercises and capstone', 'Certificate of Achievement', 'Ongoing course updates'];
 
 export function CtaSection() {
   const router = useRouter();
-
-  const handleGetStartedClick = () => {
-    // Track CTA click for analytics
-    track('cta_clicked', { location: 'cta_section' });
-    // Store hardcoded courseId as per spec
-    sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
-    router.push('/enroll');
-  };
-
-  return (
-    <section className="py-20 lg:py-32 bg-gradient-to-br from-primary via-indigo-600 to-purple-700 relative overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:24px_24px]" />
-      </div>
-
-      <div className="container mx-auto px-4 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto text-center"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            whileInView={{ scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="w-16 h-16 mx-auto mb-8 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl"
-          >
-            <Sparkles className="w-8 h-8 text-white" />
-          </motion.div>
-
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white">
-            Take Control of Your AI Coding Workflow
-          </h2>
-          <p className="text-lg text-white/80 mb-10 leading-relaxed">
-            Move beyond guesswork and learn a proven system that turns AI into a reliable engineering tool.
-          </p>
-
-          <div className="flex justify-center">
-            <Button
-              size="lg"
-              onClick={handleGetStartedClick}
-              className="bg-white text-primary hover:bg-white/90 shadow-2xl shadow-black/20 hover:shadow-3xl hover:-translate-y-1 transition-all duration-300 text-base px-8 py-6 font-semibold"
-            >
-              Get Started <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </div>
-
-          <p className="mt-6 text-sm text-white/60">
-            Join 100+ developers already mastering AI-powered development
-          </p>
-        </motion.div>
-      </div>
-    </section>
-  );
+  const enroll = () => { track('cta_clicked', { location: 'offer', offer: 'founding' }); sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini'); router.push('/enroll'); };
+  return <section id="enroll" className="bg-[#d9f99d] py-24 lg:py-32"><div className="container mx-auto px-4"><div className="mx-auto grid max-w-5xl overflow-hidden rounded-3xl bg-[#07110f] text-white shadow-2xl shadow-emerald-950/20 lg:grid-cols-[1.05fr_.95fr]"><div className="p-8 md:p-12 lg:p-14"><p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Founding offer</p><h2 className="mt-5 text-4xl font-semibold tracking-[-.035em] md:text-5xl">Become the engineer who can lead the shift to autonomous development.</h2><p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">Start learning today. Follow the guided cohort for momentum. Get live help whenever the hard parts stop being theoretical.</p><ul className="mt-9 grid gap-4 sm:grid-cols-2">{included.map(item => <li key={item} className="flex gap-3 text-sm text-slate-300"><Check className="h-5 w-5 shrink-0 text-emerald-300" />{item}</li>)}</ul></div><div className="border-t border-white/10 bg-white/[.04] p-8 md:p-12 lg:border-l lg:border-t-0 lg:p-14"><div className="text-sm font-semibold text-slate-400">Founding cohort price</div><div className="mt-2 flex items-end gap-2"><span className="text-6xl font-bold tracking-tight">$399</span><span className="pb-2 text-slate-400">one time</span></div><p className="mt-5 text-sm leading-6 text-slate-400">Founding pricing is available for the initial cohort and may increase as the program expands.</p><Button size="lg" onClick={enroll} className="mt-8 h-14 w-full rounded-xl bg-emerald-300 text-base font-bold text-[#07110f] hover:bg-emerald-200">Join the founding cohort <ArrowRight className="ml-2 h-5 w-5" /></Button><div className="mt-6 flex gap-3 rounded-xl border border-white/10 p-4"><ShieldCheck className="h-6 w-6 shrink-0 text-emerald-300" /><div><div className="font-bold">30-day satisfaction guarantee</div><p className="mt-1 text-sm leading-6 text-slate-400">Go through the material. If it is not the right fit, let us know within 30 days for a refund.</p></div></div></div></div></div></section>;
 }

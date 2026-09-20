@@ -13,17 +13,17 @@ jest.mock('motion/react', () => {
 });
 
 describe('TrustIndicators', () => {
-  it('renders heading', async () => {
+  it('renders the guided cohort', async () => {
     render(<TrustIndicators />);
     await waitFor(() => {
-      expect(screen.getByText(/crafted from real-world engineering battles/i)).toBeInTheDocument();
+      expect(screen.getByText(/8-week cohort/i)).toBeInTheDocument();
     });
   });
 
-  it('renders description text', async () => {
+  it('renders office hours support', async () => {
     render(<TrustIndicators />);
     await waitFor(() => {
-      expect(screen.getByText(/these techniques come from leading large-scale software projects/i)).toBeInTheDocument();
+      expect(screen.getByText(/expert help when you get stuck/i)).toBeInTheDocument();
     });
   });
 });

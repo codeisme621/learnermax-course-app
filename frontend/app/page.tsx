@@ -4,17 +4,20 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { TrustIndicators } from '@/components/landing/TrustIndicators';
+import { StorySection } from '@/components/landing/StorySection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { CourseMetadataSection } from '@/components/landing/CourseMetadataSection';
 import { CtaSection } from '@/components/landing/CtaSection';
+import { FaqSection } from '@/components/landing/FaqSection';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { getCourseForLanding } from '@/lib/api/courses';
 
 // Fallback metadata if course data fetch fails
+const pageDescription = 'Stop chasing agentic coding buzzwords. Learn the evergreen engineering patterns behind reliable coding agents and build from intent to verified PR.';
+
 const fallbackMetadata: Metadata = {
-  title: 'Spec-Driven Development with Context Engineering - LearnWithRico',
-  description:
-    'Turn AI into your superpower: master Spec-Driven Development and produce world-class code that sets you apart.',
+  title: 'Agentic Engineering — Build Reliable Coding Agents | LearnWithRico',
+  description: pageDescription,
 };
 
 // Dynamic metadata generation based on course data
@@ -23,19 +26,19 @@ export async function generateMetadata(): Promise<Metadata> {
     const course = await getCourseForLanding('spec-driven-dev-mini');
 
     return {
-      title: `${course.title} - LearnWithRico`,
-      description: course.description,
+      title: fallbackMetadata.title,
+      description: pageDescription,
       openGraph: {
-        title: course.title,
-        description: course.subtitle,
+        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        description: pageDescription,
         type: 'website',
         locale: 'en_US',
         siteName: 'LearnWithRico',
       },
       twitter: {
         card: 'summary_large_image',
-        title: course.title,
-        description: course.subtitle,
+        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        description: pageDescription,
       },
     };
   } catch (error) {
@@ -68,9 +71,11 @@ export default async function HomePage() {
         <main className="min-h-screen pt-16">
           <HeroSection course={course} />
           <TrustIndicators />
+          <StorySection />
           <BenefitsSection />
           <CourseMetadataSection course={course} />
           <CtaSection />
+          <FaqSection />
         </main>
         <Footer />
         <ScrollToTop />

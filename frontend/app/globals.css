@@ -206,4 +206,16 @@
   .font-heading {
     font-family: var(--font-heading);
   }
+
+  .agentic-grid {
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, black, transparent 92%);
+  }
+
+  .eyebrow {
+    @apply font-mono text-xs font-bold uppercase tracking-[0.2em] text-emerald-700;
+  }
 }

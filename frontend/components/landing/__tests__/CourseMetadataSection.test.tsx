@@ -53,18 +53,18 @@ describe('CourseMetadataSection', () => {
   it('renders instructor information', () => {
     render(<CourseMetadataSection course={mockCourse} />);
     expect(screen.getByText(mockCourse.instructor.name)).toBeInTheDocument();
-    expect(screen.getByText(mockCourse.instructor.title)).toBeInTheDocument();
+    expect(screen.getByText(/senior tech lead at capital one/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /rico romero, course instructor/i })).toBeInTheDocument();
   });
 
-  it('renders course details', () => {
+  it('renders the curriculum', () => {
     render(<CourseMetadataSection course={mockCourse} />);
-    expect(screen.getByText(/duration:/i)).toBeInTheDocument();
-    expect(screen.getByText(/level:/i)).toBeInTheDocument();
+    expect(screen.getByText(/how agents actually work/i)).toBeInTheDocument();
+    expect(screen.getByText(/operating autonomous engineering/i)).toBeInTheDocument();
   });
 
-  it('renders learning outcomes', () => {
+  it('renders the capstone outcome', () => {
     render(<CourseMetadataSection course={mockCourse} />);
-    expect(screen.getByText(/what you'll learn/i)).toBeInTheDocument();
-    expect(screen.getByText(mockCourse.outcomes[0])).toBeInTheDocument();
+    expect(screen.getByText(/build an autonomous coding system from goal to verified pr/i)).toBeInTheDocument();
   });
 });

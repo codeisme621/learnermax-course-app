@@ -27,15 +27,14 @@ jest.mock('motion/react', () => {
 describe('BenefitsSection', () => {
   it('renders section heading', () => {
     render(<BenefitsSection />);
-    expect(screen.getByText(/why choose us/i)).toBeInTheDocument();
+    expect(screen.getByText(/the transformation/i)).toBeInTheDocument();
   });
 
   it('renders all benefit cards', () => {
     render(<BenefitsSection />);
-    expect(screen.getByText('Lifetime Access')).toBeInTheDocument();
-    expect(screen.getByText(/master spec-driven development/i)).toBeInTheDocument();
-    expect(screen.getByText(/ship 10x faster/i)).toBeInTheDocument();
-    expect(screen.getByText('Weekly Developer Meetups')).toBeInTheDocument();
-    expect(screen.getByText(/build skills your peers/i)).toBeInTheDocument();
+    expect(screen.getByText(/you know what context matters/i)).toBeInTheDocument();
+    expect(screen.getByText(/you know when “done” is real/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can repeat the workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can improve the system/i)).toBeInTheDocument();
   });
 });
