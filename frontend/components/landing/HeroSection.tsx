@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 
 interface HeroSectionProps { course: CourseData; }
 
-const beforeAfter = [
-  ['The agent forgets critical context', 'The right context is available at every step'],
-  ['“Tests pass” still does not earn your trust', 'Verification checks the behavior that matters'],
-  ['Every PR becomes another manual review', 'You review by risk—not by default'],
+const durablePrinciples = [
+  ['Context', 'Give the agent what it needs—without flooding it'],
+  ['Verification', 'Know the work is right before you trust it'],
+  ['Harnesses', 'Turn good results into a repeatable system'],
 ];
 
 export function HeroSection({ course }: HeroSectionProps) {
@@ -32,10 +32,10 @@ export function HeroSection({ course }: HeroSectionProps) {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Founding cohort · Enrollment open
           </div>
           <h1 className="max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-white md:text-6xl lg:text-7xl">
-            Your coding agent moves fast. <span className="text-emerald-300">You still have to check everything.</span>
+            Stop chasing every new <span className="text-emerald-300">agentic coding buzzword.</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl">
-            Learn how to turn unpredictable AI output into an engineering system you can trust—from context and specs to evals, harnesses, and verified pull requests.
+            Learn the evergreen engineering patterns behind reliable coding agents—and build a system that can take intent all the way to a verified pull request.
           </p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Button size="lg" onClick={handleEnrollClick} className="h-14 rounded-xl bg-emerald-300 px-7 text-base font-bold text-[#07110f] shadow-[0_16px_50px_rgba(110,231,183,.18)] hover:bg-emerald-200">
@@ -53,11 +53,11 @@ export function HeroSection({ course }: HeroSectionProps) {
           <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-emerald-300/20 to-cyan-300/5 blur-2xl" />
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b1714]/95 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div className="text-sm font-semibold text-white">What changes when you can trust the system</div>
+              <div className="text-sm font-semibold text-white">What still matters when the tools change</div>
               <div className="flex gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-slate-700" /><span className="h-2.5 w-2.5 rounded-full bg-slate-700" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-300" /></div>
             </div>
             <div className="space-y-4 p-6 text-sm">
-              {beforeAfter.map(([before, after]) => <div key={before} className="rounded-xl border border-white/5 bg-white/[.025] p-4"><div className="text-slate-500 line-through decoration-slate-600">{before}</div><div className="mt-2 flex gap-2 font-semibold text-emerald-200"><span>→</span>{after}</div></div>)}
+              {durablePrinciples.map(([principle, outcome]) => <div key={principle} className="rounded-xl border border-white/5 bg-white/[.025] p-4"><div className="font-mono text-xs uppercase tracking-widest text-emerald-300">{principle}</div><div className="mt-2 font-semibold text-slate-200">{outcome}</div></div>)}
               <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/5 px-4 py-3 font-mono text-emerald-200">goal → working change → verified PR</div>
             </div>
           </div>

@@ -27,14 +27,14 @@ jest.mock('motion/react', () => {
 describe('BenefitsSection', () => {
   it('renders section heading', () => {
     render(<BenefitsSection />);
-    expect(screen.getByText(/sound familiar/i)).toBeInTheDocument();
+    expect(screen.getByText(/the transformation/i)).toBeInTheDocument();
   });
 
   it('renders all benefit cards', () => {
     render(<BenefitsSection />);
-    expect(screen.getByText(/your agent loses the plot/i)).toBeInTheDocument();
-    expect(screen.getByText(/you cannot trust “done”/i)).toBeInTheDocument();
-    expect(screen.getByText(/every chat starts over/i)).toBeInTheDocument();
-    expect(screen.getByText(/you cannot see improvement/i)).toBeInTheDocument();
+    expect(screen.getByText(/you know what context matters/i)).toBeInTheDocument();
+    expect(screen.getByText(/you know when “done” is real/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can repeat the workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can improve the system/i)).toBeInTheDocument();
   });
 });

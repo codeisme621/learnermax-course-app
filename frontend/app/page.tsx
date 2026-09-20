@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { TrustIndicators } from '@/components/landing/TrustIndicators';
+import { StorySection } from '@/components/landing/StorySection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { CourseMetadataSection } from '@/components/landing/CourseMetadataSection';
 import { CtaSection } from '@/components/landing/CtaSection';
@@ -12,7 +13,7 @@ import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { getCourseForLanding } from '@/lib/api/courses';
 
 // Fallback metadata if course data fetch fails
-const pageDescription = 'Stop checking everything your coding agent produces. Build an autonomous engineering system you can trust, measure, and improve.';
+const pageDescription = 'Stop chasing agentic coding buzzwords. Learn the evergreen engineering patterns behind reliable coding agents and build from intent to verified PR.';
 
 const fallbackMetadata: Metadata = {
   title: 'Agentic Engineering — Build Reliable Coding Agents | LearnWithRico',
@@ -70,6 +71,7 @@ export default async function HomePage() {
         <main className="min-h-screen pt-16">
           <HeroSection course={course} />
           <TrustIndicators />
+          <StorySection />
           <BenefitsSection />
           <CourseMetadataSection course={course} />
           <CtaSection />

@@ -63,8 +63,8 @@ describe('HeroSection', () => {
 
   it('renders the agentic engineering promise', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('heading', { name: /your coding agent moves fast/i })).toBeInTheDocument();
-    expect(screen.getByText(/unpredictable ai output/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /stop chasing every new/i })).toBeInTheDocument();
+    expect(screen.getByText(/evergreen engineering patterns/i)).toBeInTheDocument();
   });
 
   it('renders enroll CTA button', () => {
