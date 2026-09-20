@@ -63,18 +63,18 @@ describe('HeroSection', () => {
 
   it('renders the agentic engineering promise', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('heading', { name: /build reliable coding agents/i })).toBeInTheDocument();
-    expect(screen.getByText(/autonomous systems they can trust/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /your coding agent moves fast/i })).toBeInTheDocument();
+    expect(screen.getByText(/unpredictable ai output/i)).toBeInTheDocument();
   });
 
   it('renders enroll CTA button', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('button', { name: /join the founding cohort/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /build your agentic workflow/i })).toBeInTheDocument();
   });
 
   it('stores courseId in sessionStorage and navigates when enroll button clicked', () => {
     render(<HeroSection course={mockCourse} />);
-    const enrollButton = screen.getByRole('button', { name: /join the founding cohort/i });
+    const enrollButton = screen.getByRole('button', { name: /build your agentic workflow/i });
 
     enrollButton.click();
 

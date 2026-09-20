@@ -12,7 +12,7 @@ import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { getCourseForLanding } from '@/lib/api/courses';
 
 // Fallback metadata if course data fetch fails
-const pageDescription = 'Go from ad-hoc AI coding to reliable autonomous engineering systems you can trust, measure, and improve.';
+const pageDescription = 'Stop checking everything your coding agent produces. Build an autonomous engineering system you can trust, measure, and improve.';
 
 const fallbackMetadata: Metadata = {
   title: 'Agentic Engineering — Build Reliable Coding Agents | LearnWithRico',

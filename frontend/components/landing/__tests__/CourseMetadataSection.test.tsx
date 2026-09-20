@@ -53,7 +53,7 @@ describe('CourseMetadataSection', () => {
   it('renders instructor information', () => {
     render(<CourseMetadataSection course={mockCourse} />);
     expect(screen.getByText(mockCourse.instructor.name)).toBeInTheDocument();
-    expect(screen.getByText(/software engineer, system builder/i)).toBeInTheDocument();
+    expect(screen.getByText(/senior tech lead at capital one/i)).toBeInTheDocument();
   });
 
   it('renders the curriculum', () => {
