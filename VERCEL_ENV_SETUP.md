@@ -116,3 +116,14 @@ After configuring variables in Vercel:
 - **Error: "Invalid state"**: Ensure `AUTH_SECRET` is identical across all environments
 - **Google OAuth in preview**: This is not supported - use email/password sign-in for preview testing
 - **Production OAuth fails**: Verify production Cognito User Pool has the correct callback URL configured
+
+## Hero Video (Mux)
+
+The landing page hero video is streamed from Mux. Set this in **Production** and **Preview**:
+
+```bash
+# Public playback ID of the hero video asset in Mux (not a secret)
+NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID=<mux-playback-id>
+```
+
+If it isn't set, the hero renders without the video block. The player poster is `frontend/public/images/hero-video-poster.jpg`.

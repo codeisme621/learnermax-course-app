@@ -10,6 +10,12 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
+// The Mux player is a web component; render a stand-in in jsdom
+jest.mock('@mux/mux-player-react/lazy', () => ({
+  __esModule: true,
+  default: ({ playbackId }: { playbackId: string }) => <div data-testid="mux-player" data-playback-id={playbackId} />,
+}));
+
 // Mock framer motion to avoid async rendering issues in tests
 jest.mock('motion/react', () => {
   const MockDiv = ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
@@ -63,18 +69,18 @@ describe('HeroSection', () => {
 
   it('renders the agentic engineering promise', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('heading', { name: /stop chasing every new/i })).toBeInTheDocument();
-    expect(screen.getByText(/evergreen engineering patterns/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /become the engineer your team follows/i })).toBeInTheDocument();
+    expect(screen.getByText(/coding agents your team can actually trust/i)).toBeInTheDocument();
   });
 
   it('renders enroll CTA button', () => {
     render(<HeroSection course={mockCourse} />);
-    expect(screen.getByRole('button', { name: /build your agentic workflow/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /join the founding cohort/i })).toBeInTheDocument();
   });
 
   it('stores courseId in sessionStorage and navigates when enroll button clicked', () => {
     render(<HeroSection course={mockCourse} />);
-    const enrollButton = screen.getByRole('button', { name: /build your agentic workflow/i });
+    const enrollButton = screen.getByRole('button', { name: /join the founding cohort/i });
 
     enrollButton.click();
 
@@ -86,5 +92,18 @@ describe('HeroSection', () => {
     render(<HeroSection course={mockCourse} />);
     expect(screen.getByText(/weekly live office hours/i)).toBeInTheDocument();
     expect(screen.getByText(/30-day guarantee/i)).toBeInTheDocument();
+  });
+
+  it('shows the hero video when a playback ID is configured', () => {
+    process.env.NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID = 'test-playback-id';
+    render(<HeroSection course={mockCourse} />);
+    expect(screen.getByTestId('mux-player')).toHaveAttribute('data-playback-id', 'test-playback-id');
+    delete process.env.NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID;
+  });
+
+  it('hides the video block when no playback ID is configured', () => {
+    delete process.env.NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID;
+    render(<HeroSection course={mockCourse} />);
+    expect(screen.queryByTestId('mux-player')).not.toBeInTheDocument();
   });
 });

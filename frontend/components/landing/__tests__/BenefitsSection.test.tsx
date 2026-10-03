@@ -34,7 +34,7 @@ describe('BenefitsSection', () => {
     render(<BenefitsSection />);
     expect(screen.getByText(/you know what context matters/i)).toBeInTheDocument();
     expect(screen.getByText(/you know when “done” is real/i)).toBeInTheDocument();
-    expect(screen.getByText(/you can repeat the workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can hand the workflow to your team/i)).toBeInTheDocument();
     expect(screen.getByText(/you can improve the system/i)).toBeInTheDocument();
   });
 });

@@ -6,6 +6,8 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { TrustIndicators } from '@/components/landing/TrustIndicators';
 import { StorySection } from '@/components/landing/StorySection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
+import { ProofLoopSection } from '@/components/landing/ProofLoopSection';
+import { TwoCampsSection } from '@/components/landing/TwoCampsSection';
 import { CourseMetadataSection } from '@/components/landing/CourseMetadataSection';
 import { CtaSection } from '@/components/landing/CtaSection';
 import { FaqSection } from '@/components/landing/FaqSection';
@@ -13,10 +15,10 @@ import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { getCourseForLanding } from '@/lib/api/courses';
 
 // Fallback metadata if course data fetch fails
-const pageDescription = 'Stop chasing agentic coding buzzwords. Learn the evergreen engineering patterns behind reliable coding agents and build from intent to verified PR.';
+const pageDescription = 'Become the engineer your team follows into agentic development. Learn the durable patterns (context, verification, and harnesses) that make coding agents produce work you can trust, from intent to verified PR.';
 
 const fallbackMetadata: Metadata = {
-  title: 'Agentic Engineering — Build Reliable Coding Agents | LearnWithRico',
+  title: 'Agentic Engineering — Lead Your Team Into Agentic Development | LearnWithRico',
   description: pageDescription,
 };
 
@@ -29,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: fallbackMetadata.title,
       description: pageDescription,
       openGraph: {
-        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        title: 'Agentic Engineering — Lead Your Team Into Agentic Development',
         description: pageDescription,
         type: 'website',
         locale: 'en_US',
@@ -37,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'Agentic Engineering — Build Reliable Coding Agents',
+        title: 'Agentic Engineering — Lead Your Team Into Agentic Development',
         description: pageDescription,
       },
     };
@@ -72,7 +74,9 @@ export default async function HomePage() {
           <HeroSection course={course} />
           <TrustIndicators />
           <StorySection />
+          <ProofLoopSection />
           <BenefitsSection />
+          <TwoCampsSection />
           <CourseMetadataSection course={course} />
           <CtaSection />
           <FaqSection />
