@@ -1,7 +1,7 @@
 import { NotFoundError } from '@/platform/errors';
 import * as repo from './courses.repo';
 import type { CourseRow } from './courses.repo';
-import type { CourseDTO, CourseId } from './courses.types';
+import type { CourseDTO, CourseId, LessonDTO, LessonsDTO } from './courses.types';
 
 function toDTO(row: CourseRow, totalLessons: number): CourseDTO {
   return {
@@ -32,4 +32,18 @@ export async function getCourse(courseId: CourseId): Promise<CourseDTO> {
   }
   const lessonCounts = await repo.countLessonsByCourse();
   return toDTO(row, lessonCounts.get(row.id) ?? 0);
+}
+
+/** Lessons of a course in order. Callers must check course access first. */
+export async function listLessons(courseId: CourseId): Promise<LessonsDTO> {
+  const rows = await repo.findLessons(courseId);
+  const lessons: LessonDTO[] = rows.map((row) => ({
+    lessonId: row.lessonId,
+    courseId: row.courseId,
+    title: row.title,
+    ...(row.description ? { description: row.description } : {}),
+    ...(row.lengthInMins !== null ? { lengthInMins: row.lengthInMins } : {}),
+    order: row.order,
+  }));
+  return { lessons, totalLessons: lessons.length };
 }

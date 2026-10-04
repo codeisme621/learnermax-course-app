@@ -9,9 +9,7 @@ export function Header() {
   const router = useRouter();
 
   const handleEnrollClick = () => {
-    // Store courseId for enrollment
-    sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
-    router.push('/enroll');
+    router.push('/checkout');
   };
 
   return (

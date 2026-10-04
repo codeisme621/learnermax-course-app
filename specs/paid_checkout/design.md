@@ -141,19 +141,24 @@ Price ID env var; the client sends only `courseId` (+ `email` for guests).
 auth                                                   // Better Auth instance (used by /api/auth/[...all])
 getSession(): Promise<Session | null>
 requireSession(): Promise<Session>                     // throws UnauthorizedError
-provisionBuyer(tx: Tx, email: string): Promise<{ userId: UserId; needsActivation: boolean }>
+provisionBuyer(email: string): Promise<{ userId: UserId; created: boolean; needsActivation: boolean }>
 sendAccessEmail(userId: UserId, courseId: CourseId): Promise<void>  // activation link OR "sign in" email
 requestActivation(email: string): Promise<void>        // resend; always resolves (no account-existence leak)
 setInitialPassword(newPassword: string): Promise<void> // server action on /activate
 ```
 Uses: `students.ensureStudentProfile` (Better Auth user-created hook), platform/email.
 Owns: Better Auth tables `user`, `session`, `account`, `verification`.
+⚠ `provisionBuyer` runs **before** the fulfillment transaction, not inside it: Better Auth's
+`createUser` uses its own connection. It is idempotent and race-safe (unique email; a lost race
+re-reads the winner), so a rollback after it only leaves an account that the retry reuses.
+⚠ A password-reset request for a not-yet-activated account sends the activation link instead
+(a reset alone would set a password without proving the email).
 
 **enrollment** — access rules. The single answer to "can this user use this course?"
 ```ts
 getCourseAccess(userId: UserId, courseId: CourseId): Promise<{ status: 'active' | 'none' }>
-requireCourseAccess(courseId: CourseId): Promise<{ session: Session }>   // throws Unauthorized/Forbidden
-requireAnyEnrollment(): Promise<{ session: Session }>                    // dashboard gate
+requireCourseAccess(courseId: CourseId): Promise<Session>               // throws Unauthorized/Forbidden
+requireAnyEnrollment(): Promise<Session>                                 // dashboard gate
 listEnrollments(userId: UserId): Promise<EnrollmentDTO[]>                // GET /api/enrollments
 grant(tx: Tx, a: { userId: UserId; courseId: CourseId; purchaseId: string }): Promise<void>
 revokeForPurchase(tx: Tx, purchaseId: string): Promise<void>

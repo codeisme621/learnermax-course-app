@@ -1,50 +1,26 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Session } from 'next-auth';
 import { Card } from '@/components/ui/card';
 import { motion } from 'motion/react';
 import { BookOpen, Loader2 } from 'lucide-react';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useProgress } from '@/hooks/useProgress';
-import type { Course } from '@/lib/data/courses';
+import type { CourseDTO } from '@/features/courses';
+import type { EnrollmentDTO } from '@/features/enrollment';
 import { CourseCard } from './CourseCard';
 import { PremiumCourseCard } from './PremiumCourseCard';
 
 interface DashboardContentProps {
-  session: Session;
-  courses: Course[];
+  userName: string;
+  courses: CourseDTO[];
 }
 
 /**
  * Dashboard content with SWR for user-specific data
  * Courses are passed from SSR, user data fetched via SWR
  */
-export function DashboardContent({ session, courses }: DashboardContentProps) {
-  const { enroll, getEnrollment, isLoading: isLoadingEnrollments } = useEnrollments();
-
-  // Check for pending enrollment on mount
-  useEffect(() => {
-    const pendingCourseId = sessionStorage.getItem('pendingEnrollmentCourseId');
-    if (pendingCourseId) {
-      console.log('Auto-enrolling in course:', pendingCourseId);
-      enroll(pendingCourseId)
-        .then(() => {
-          console.log('Auto-enrollment successful');
-        })
-        .catch((err) => {
-          console.error('Auto-enrollment failed:', err);
-        })
-        .finally(() => {
-          sessionStorage.removeItem('pendingEnrollmentCourseId');
-        });
-    }
-  }, [enroll]);
-
-  // Handler for manual enrollment from course card
-  const handleEnroll = async (courseId: string) => {
-    await enroll(courseId);
-  };
+export function DashboardContent({ userName, courses }: DashboardContentProps) {
+  const { getEnrollment, isLoading: isLoadingEnrollments } = useEnrollments();
 
   const isLoading = isLoadingEnrollments;
 
@@ -64,7 +40,7 @@ export function DashboardContent({ session, courses }: DashboardContentProps) {
 
           <div className="relative z-10">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}!
+              Welcome back, {userName.split(' ')[0] || 'Student'}!
             </h1>
             <p className="text-muted-foreground">
               Ready to continue your learning journey?
@@ -119,7 +95,6 @@ export function DashboardContent({ session, courses }: DashboardContentProps) {
                     <CourseCardWithProgress
                       course={course}
                       enrollment={getEnrollment(course.courseId)}
-                      onEnroll={handleEnroll}
                     />
                   )}
                 </motion.div>
@@ -136,23 +111,8 @@ export function DashboardContent({ session, courses }: DashboardContentProps) {
 /**
  * CourseCard wrapper that fetches progress via SWR
  */
-function CourseCardWithProgress({
-  course,
-  enrollment,
-  onEnroll,
-}: {
-  course: Course;
-  enrollment?: ReturnType<typeof useEnrollments>['enrollments'][number];
-  onEnroll: (courseId: string) => Promise<void>;
-}) {
+function CourseCardWithProgress({ course, enrollment }: { course: CourseDTO; enrollment?: EnrollmentDTO }) {
   const { progress } = useProgress(enrollment ? course.courseId : '');
 
-  return (
-    <CourseCard
-      course={course}
-      enrollment={enrollment}
-      progress={progress ?? undefined}
-      onEnroll={onEnroll}
-    />
-  );
+  return <CourseCard course={course} enrollment={enrollment} progress={progress ?? undefined} />;
 }

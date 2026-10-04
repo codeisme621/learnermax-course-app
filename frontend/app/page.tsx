@@ -59,7 +59,7 @@ export default async function HomePage() {
       <>
         <Header />
         <main className="min-h-screen pt-16">
-          <HeroSection course={course} />
+          <HeroSection />
           <TrustIndicators />
           <StorySection />
           <ProofLoopSection />

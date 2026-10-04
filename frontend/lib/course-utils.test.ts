@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { determineCurrentLesson, getNextLesson } from './course-utils';
-import type { LessonResponse } from '@/lib/data/lessons';
+import type { LessonDTO as LessonResponse } from '@/features/courses';
 import type { ProgressResponse } from '@/app/actions/progress';
 
 describe('course-utils', () => {

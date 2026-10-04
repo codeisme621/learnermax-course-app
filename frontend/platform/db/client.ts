@@ -28,6 +28,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
+/** Anything that can run a query: the shared client or an open transaction. */
+export type Executor = Db | Tx;
+
 export function withTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(fn);
 }

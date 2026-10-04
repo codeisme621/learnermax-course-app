@@ -19,3 +19,13 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+export class ValidationError extends Error {
+  constructor(
+    message = 'Invalid request',
+    readonly details: unknown[] = [],
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}

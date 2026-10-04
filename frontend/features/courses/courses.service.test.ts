@@ -22,9 +22,9 @@ describe('courses service (real Postgres)', () => {
     expect(course.learningObjectives).toHaveLength(12);
   });
 
-  it('lists exactly the seeded courses', async () => {
+  it('lists the seeded course first (other test files add throwaway courses to the shared test DB)', async () => {
     const courses = await listCourses();
-    expect(courses.map((c) => c.courseId)).toEqual(['agentic-coding']);
+    expect(courses[0]).toEqual(await getCourse(AGENTIC_CODING_COURSE_ID));
   });
 
   it('throws NotFoundError for an unknown course', async () => {

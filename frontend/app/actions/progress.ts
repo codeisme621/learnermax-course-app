@@ -1,145 +1,27 @@
 'use server';
-/**
- * ProgressResponse - API response for student's course progress
- * Returned when frontend requests progress for a specific course
- */
-export interface ProgressResponse {
-  courseId: string;           // "spec-driven-dev-mini"
-  completedLessons: string[]; // ["lesson-1", "lesson-2", "lesson-3"]
-  lastAccessedLesson?: string; // "lesson-3" (for "Resume" button)
-  percentage: number;         // 60 (calculated: 3/5 * 100)
-  totalLessons: number;       // 5 (total lessons in course, for UI progress bar)
-  updatedAt: string;          // "2025-01-15T10:30:00Z" (last progress update)
-}
 
-import { getAuthToken } from './auth';
+import { requireCourseAccess } from '@/features/enrollment';
+import * as progress from '@/features/progress';
+import type { ProgressDTO } from '@/features/progress';
+import { actionError } from '@/platform/http';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+export type ProgressResponse = ProgressDTO;
 
-/**
- * Mark a lesson as complete
- * Protected endpoint - requires authentication
- *
- * @param courseId - The ID of the course
- * @param lessonId - The ID of the lesson to mark complete
- * @returns Updated progress data or error
- */
-export async function markLessonComplete(
-  courseId: string,
-  lessonId: string
-): Promise<ProgressResponse | { error: string }> {
-  console.log('[markLessonComplete] Marking lesson complete:', { courseId, lessonId });
-
+export async function markLessonComplete(courseId: string, lessonId: string): Promise<ProgressDTO | { error: string }> {
   try {
-    const token = await getAuthToken();
-
-    if (!token) {
-      console.error('[markLessonComplete] No auth token available');
-      return { error: 'Authentication required' };
-    }
-
-    const endpoint = `${API_URL}/api/progress`;
-    console.log('[markLessonComplete] Posting to:', endpoint);
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ courseId, lessonId }),
-      cache: 'no-store',
-    });
-
-    console.log('[markLessonComplete] Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[markLessonComplete] Backend returned error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-        url: endpoint,
-      });
-
-      if (response.status === 404) {
-        return { error: 'Course or lesson not found' };
-      }
-      if (response.status === 403) {
-        return { error: 'Not enrolled in this course' };
-      }
-      return { error: `Failed to mark lesson complete: ${response.statusText}` };
-    }
-
-    const data: ProgressResponse = await response.json();
-    console.log('[markLessonComplete] Successfully marked complete. New progress:', {
-      percentage: data.percentage,
-      completedLessons: data.completedLessons.length,
-      totalLessons: data.totalLessons,
-    });
-    return data;
+    const session = await requireCourseAccess(courseId);
+    return await progress.markLessonComplete(session.user.id, courseId, lessonId);
   } catch (error) {
-    console.error('[markLessonComplete] Exception occurred:', error);
-    console.error('[markLessonComplete] API_URL:', API_URL);
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      return { error: 'Failed to connect to backend. Please check if backend is running.' };
-    }
-    return { error: 'Failed to mark lesson complete' };
+    return actionError(error);
   }
 }
 
-/**
- * Track lesson access (lightweight update when user clicks/opens a lesson)
- * Protected endpoint - requires authentication
- * Fire-and-forget: returns void, does not block UI
- *
- * @param courseId - The ID of the course
- * @param lessonId - The ID of the lesson being accessed
- */
-export async function trackLessonAccess(
-  courseId: string,
-  lessonId: string
-): Promise<void> {
-  console.log('[trackLessonAccess] Tracking lesson access:', { courseId, lessonId });
-
+/** Fire-and-forget "resume here" marker; failures are logged, never surfaced. */
+export async function trackLessonAccess(courseId: string, lessonId: string): Promise<void> {
   try {
-    const token = await getAuthToken();
-
-    if (!token) {
-      console.error('[trackLessonAccess] No auth token available');
-      return;
-    }
-
-    const endpoint = `${API_URL}/api/progress/access`;
-    console.log('[trackLessonAccess] Posting to:', endpoint);
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ courseId, lessonId }),
-      cache: 'no-store',
-    });
-
-    console.log('[trackLessonAccess] Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[trackLessonAccess] Backend returned error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-        url: endpoint,
-      });
-      // Fire-and-forget: don't throw, just log
-      return;
-    }
-
-    console.log('[trackLessonAccess] Successfully tracked lesson access');
+    const session = await requireCourseAccess(courseId);
+    await progress.trackLessonAccess(session.user.id, courseId, lessonId);
   } catch (error) {
-    // Fire-and-forget: don't throw, just log
-    console.error('[trackLessonAccess] Exception occurred:', error);
+    actionError(error);
   }
 }

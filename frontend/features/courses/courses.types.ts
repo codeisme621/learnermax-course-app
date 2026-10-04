@@ -16,3 +16,20 @@ export interface CourseDTO {
   estimatedDuration?: string;
   totalLessons: number;
 }
+
+export type LessonId = string;
+
+// REST contract for GET /api/courses/:courseId/lessons (hlsManifestKey dropped with CloudFront video).
+export interface LessonDTO {
+  lessonId: LessonId;
+  courseId: CourseId;
+  title: string;
+  description?: string;
+  lengthInMins?: number;
+  order: number;
+}
+
+export interface LessonsDTO {
+  lessons: LessonDTO[];
+  totalLessons: number;
+}

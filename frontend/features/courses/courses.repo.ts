@@ -20,3 +20,9 @@ export async function countLessonsByCourse(): Promise<Map<string, number>> {
     .groupBy(lessons.courseId);
   return new Map(rows.map((r) => [r.courseId, r.total]));
 }
+
+export type LessonRow = typeof lessons.$inferSelect;
+
+export function findLessons(courseId: string): Promise<LessonRow[]> {
+  return db.select().from(lessons).where(eq(lessons.courseId, courseId)).orderBy(asc(lessons.order));
+}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
-import { SessionProvider } from "@/components/providers/session-provider";
 import { SWRProvider } from "@/lib/swr-config";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
@@ -19,8 +18,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "LearnerMax - Online Course Platform",
-  description: "Enroll in courses and learn new skills",
+  title: "LearnWithRico",
+  description: "Agentic Coding with Rico Romero",
 };
 
 export default function RootLayout({
@@ -33,11 +32,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${poppins.variable} font-sans antialiased`}
       >
-        <SessionProvider>
-          <SWRProvider>
-            {children}
-          </SWRProvider>
-        </SessionProvider>
+        <SWRProvider>
+          {children}
+        </SWRProvider>
         <Analytics />
       </body>
     </html>
