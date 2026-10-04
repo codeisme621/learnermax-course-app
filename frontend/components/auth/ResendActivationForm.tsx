@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { resendActivationAction, type FormState } from '@/app/actions/accounts';
 import { FormMessage } from './FormMessage';
+import { fieldClass, labelClass, secondaryActionClass } from './styles';
 
 export function ResendActivationForm({ defaultEmail = '' }: { defaultEmail?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(resendActivationAction, {});
@@ -20,10 +21,10 @@ export function ResendActivationForm({ defaultEmail = '' }: { defaultEmail?: str
 
   return (
     <form action={action} className="space-y-3" aria-label="Resend activation email">
-      <Label htmlFor="activation-email">Purchase email</Label>
-      <Input id="activation-email" name="email" type="email" defaultValue={defaultEmail} required />
+      <Label className={labelClass} htmlFor="activation-email">Purchase email</Label>
+      <Input className={fieldClass} id="activation-email" name="email" type="email" defaultValue={defaultEmail} required />
       {state.error && <FormMessage kind="error">{state.error}</FormMessage>}
-      <Button type="submit" variant="outline" className="w-full" disabled={pending}>
+      <Button type="submit" variant="outline" className={secondaryActionClass} disabled={pending}>
         {pending ? 'Sending…' : 'Resend activation email'}
       </Button>
     </form>

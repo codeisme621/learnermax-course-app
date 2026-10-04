@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormMessage } from '@/components/auth/FormMessage';
 import { startCheckoutAction, type CheckoutFormState } from '@/app/actions/checkout';
+import { fieldClass, labelClass, primaryActionClass } from '@/components/auth/styles';
 
 interface CheckoutFormProps {
   courseId: string;
@@ -32,13 +33,13 @@ export function CheckoutForm({ courseId, askEmail, autoStart = false }: Checkout
       <input type="hidden" name="courseId" value={courseId} />
       {askEmail && (
         <div className="space-y-2">
-          <Label htmlFor="checkout-email">Email</Label>
-          <Input id="checkout-email" name="email" type="email" autoComplete="email" required />
-          <p className="text-xs text-muted-foreground">Your course access is tied to this email. No password needed yet.</p>
+          <Label className={labelClass} htmlFor="checkout-email">Email</Label>
+          <Input className={fieldClass} id="checkout-email" name="email" type="email" autoComplete="email" required />
+          <p className="text-xs text-slate-600">Your course access is tied to this email. No password needed yet.</p>
         </div>
       )}
       {state.error && <FormMessage kind="error">{state.error}</FormMessage>}
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      <Button type="submit" className={primaryActionClass} disabled={pending}>
         {pending ? 'Opening secure checkout…' : 'Continue to payment'}
       </Button>
     </form>

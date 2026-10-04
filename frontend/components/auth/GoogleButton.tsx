@@ -2,13 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/features/accounts/auth-client';
+import { secondaryActionClass } from './styles';
 
 export function GoogleButton({ callbackURL, label = 'Continue with Google' }: { callbackURL: string; label?: string }) {
   return (
     <Button
       type="button"
       variant="outline"
-      className="w-full"
+      className={secondaryActionClass}
       onClick={() => authClient.signIn.social({ provider: 'google', callbackURL, errorCallbackURL: '/signin' })}
     >
       <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" aria-hidden="true">

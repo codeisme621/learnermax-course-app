@@ -18,8 +18,8 @@ async function Activate() {
   }
   return (
     <>
-      <p className="mb-6 text-sm text-muted-foreground text-center">
-        Signed in as <span className="font-medium text-foreground">{session.user.email}</span>. Choose a password
+      <p className="mb-6 text-sm text-slate-600 text-center">
+        Signed in as <span className="font-medium text-slate-900">{session.user.email}</span>. Choose a password
         for future sign-ins — or use Continue with Google with this same email.
       </p>
       <ActivateForm />

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { authClient } from '@/features/accounts/auth-client';
 import { FormMessage } from './FormMessage';
 import { NewPasswordFields } from './NewPasswordFields';
+import { linkClass, primaryActionClass } from './styles';
 
 export function ResetPasswordForm({ token }: { token: string | null }) {
   const router = useRouter();
@@ -17,7 +18,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
     return (
       <div className="space-y-4">
         <FormMessage kind="error">This reset link is invalid or has expired.</FormMessage>
-        <Link href="/forgot-password" className="block text-center text-sm text-primary hover:underline">
+        <Link href="/forgot-password" className={`block text-center text-sm ${linkClass}`}>
           Request a new link
         </Link>
       </div>
@@ -46,7 +47,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Choose a new password">
       <NewPasswordFields />
       {error && <FormMessage kind="error">{error}</FormMessage>}
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className={primaryActionClass} disabled={pending}>
         {pending ? 'Saving…' : 'Update password'}
       </Button>
     </form>

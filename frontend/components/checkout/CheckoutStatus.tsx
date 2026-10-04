@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { FormMessage } from '@/components/auth/FormMessage';
 import { ResendActivationForm } from '@/components/auth/ResendActivationForm';
 import type { CheckoutStatusDTO } from '@/features/purchases';
+import { linkClass } from '@/components/auth/styles';
 
 const POLL_MS = 2000;
 const GIVE_UP_MS = 60_000;
@@ -55,7 +56,7 @@ export function CheckoutStatus({ sessionId }: { sessionId: string }) {
   }
   if (status.state === 'processing' || status.next === 'dashboard') {
     return (
-      <div className="flex items-center justify-center gap-3 py-6 text-muted-foreground" role="status">
+      <div className="flex items-center justify-center gap-3 py-6 text-slate-600" role="status">
         <Loader2 className="w-5 h-5 animate-spin" /> Confirming your payment…
       </div>
     );
@@ -71,8 +72,8 @@ export function CheckoutStatus({ sessionId }: { sessionId: string }) {
     return (
       <div className="space-y-4 text-center">
         <p className="text-lg font-semibold">Payment confirmed — you&apos;re in!</p>
-        <p className="text-sm text-muted-foreground">This email already has an account. Sign in to open your dashboard.</p>
-        <Link href="/signin?callbackUrl=%2Fdashboard" className="inline-block text-primary font-medium hover:underline">
+        <p className="text-sm text-slate-600">This email already has an account. Sign in to open your dashboard.</p>
+        <Link href="/signin?callbackUrl=%2Fdashboard" className={`inline-block ${linkClass}`}>
           Sign in
         </Link>
       </div>
@@ -82,12 +83,12 @@ export function CheckoutStatus({ sessionId }: { sessionId: string }) {
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <p className="text-lg font-semibold">Payment confirmed — check your email</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-600">
           We sent an activation link to the email you used at checkout. Open it to set your password and enter your dashboard.
         </p>
       </div>
       <div className="border-t pt-6">
-        <p className="text-sm text-muted-foreground mb-3">Didn&apos;t get it? Check spam, or resend it:</p>
+        <p className="text-sm text-slate-600 mb-3">Didn&apos;t get it? Check spam, or resend it:</p>
         <ResendActivationForm />
       </div>
     </div>

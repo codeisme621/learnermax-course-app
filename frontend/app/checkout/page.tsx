@@ -5,12 +5,13 @@ import { redirect } from 'next/navigation';
 import { AuthPage } from '@/components/auth/AuthCard';
 import { FormMessage } from '@/components/auth/FormMessage';
 import { GoogleButton } from '@/components/auth/GoogleButton';
-import { Separator } from '@/components/ui/separator';
+import { OrDivider } from '@/components/auth/OrDivider';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
 import { SignOutLink } from '@/components/checkout/SignOutLink';
 import { getSession } from '@/features/accounts';
 import { AGENTIC_CODING_COURSE_ID, getCourse } from '@/features/courses';
 import { getCourseAccess } from '@/features/enrollment';
+import { linkClass } from '@/components/auth/styles';
 
 export const metadata: Metadata = { title: 'Checkout - LearnWithRico' };
 
@@ -28,24 +29,24 @@ async function Checkout({ searchParams }: { searchParams: Search }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border p-4 flex items-baseline justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
         <div>
-          <p className="font-semibold">{course.name}</p>
-          <p className="text-xs text-muted-foreground">One-time payment · 30-day refund</p>
+          <p className="font-semibold text-slate-900">{course.name}</p>
+          <p className="mt-0.5 text-xs text-slate-600">One-time payment · 30-day refund guarantee</p>
         </div>
-        <p className="text-2xl font-bold">${course.price}</p>
+        <p className="text-3xl font-bold tracking-tight text-slate-900">${course.price}</p>
       </div>
 
       {search.canceled && <FormMessage kind="info">Checkout canceled — you weren&apos;t charged.</FormMessage>}
 
       {session ? (
         <>
-          <p className="text-sm text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{session.user.email}</span>. This account
+          <p className="text-sm text-slate-600">
+            Signed in as <span className="font-medium text-slate-900">{session.user.email}</span>. This account
             doesn&apos;t have the course yet.
           </p>
           <CheckoutForm courseId={courseId} askEmail={false} autoStart={search.resume === '1'} />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-600">
             Already bought it with a different email? <SignOutLink>Sign out</SignOutLink> and sign in with your
             purchase email — access stays with the email used at checkout.
           </p>
@@ -55,18 +56,13 @@ async function Checkout({ searchParams }: { searchParams: Search }) {
           {process.env.GOOGLE_CLIENT_ID && (
             <>
               <GoogleButton callbackURL={`/checkout?resume=1&course=${courseId}`} />
-              <div className="relative">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  OR
-                </span>
-              </div>
+              <OrDivider />
             </>
           )}
           <CheckoutForm courseId={courseId} askEmail />
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-slate-600 text-center">
             Already purchased?{' '}
-            <Link href="/signin" className="text-primary hover:underline font-medium">
+            <Link href="/signin" className={linkClass}>
               Sign in
             </Link>
           </p>
