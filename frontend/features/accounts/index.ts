@@ -1,4 +1,4 @@
-export { auth, type Session } from './auth';
+export { auth, authOptions, type Session } from './auth';
 export {
   getSession,
   requireSession,

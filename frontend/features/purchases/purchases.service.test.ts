@@ -173,6 +173,27 @@ describe('fulfillment webhook', () => {
   });
 });
 
+describe('purchases that never completed grant nothing', () => {
+  it('a signed-in buyer with a pending (unpaid or declined) or expired checkout has no access', async () => {
+    const email = uniqueEmail('pending');
+    const { userId } = await provisionBuyer(email);
+
+    await startCheckout({ courseId: COURSE, userId, email }); // pending: unpaid / card declined
+    expect((await purchaseOf(email)).status).toBe('pending');
+    expect((await getCourseAccess(userId, COURSE)).status).toBe('none');
+
+    const pending = await purchaseOf(email);
+    const session = await paidSession(pending.stripeCheckoutSessionId!);
+    await deliver('checkout.session.expired', { ...session, status: 'expired', payment_status: 'unpaid' });
+    expect((await purchaseOf(email)).status).toBe('expired');
+    expect((await getCourseAccess(userId, COURSE)).status).toBe('none');
+
+    // A completion that arrives after expiry cannot revive it.
+    expect(await deliver('checkout.session.completed', session)).toBe('already_processed');
+    expect((await getCourseAccess(userId, COURSE)).status).toBe('none');
+  });
+});
+
 describe('refunds', () => {
   async function paidBuyer() {
     const checkout = await guestCheckout();

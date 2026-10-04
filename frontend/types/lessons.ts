@@ -5,7 +5,7 @@
 
 /**
  * Lesson - Domain model for a single video lesson within a course
- * This is the clean business domain type (no DynamoDB implementation details)
+ * This is the clean business domain type (no storage implementation details)
  */
 export interface Lesson {
   lessonId: string;        // Unique identifier: "lesson-1", "lesson-2"

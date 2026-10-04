@@ -410,3 +410,8 @@ Mux adds a lesson column and this endpoint. Purchases and enrollment don't chang
 - D5 No partial refunds; every refund is full and revokes access.
 - Email sending is best-effort after commit, with a resend button as the recovery path
   (no outbox table or cron in the MVP).
+- Google is not a Better Auth "trusted provider": linking needs Google's email_verified AND an
+  activated local account (trusting Google would link unverified Google emails).
+- The CloudFront video player (VideoPlayer, CourseVideoSection, hls.js) was removed; lesson list
+  and sidebar components remain for the Mux work.
+- Sign-out clears the SWR cache so the next user in the same tab never sees cached user data.

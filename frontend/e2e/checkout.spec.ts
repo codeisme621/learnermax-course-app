@@ -5,7 +5,7 @@ import { purchases } from '@/platform/db/schema';
 import { findUser, uniqueEmail } from '@/platform/db/testing/fixtures';
 import { firstLink } from '@/platform/email/testing';
 import { stripe } from '@/platform/stripe';
-import { PASSWORD, payOnStripe, waitForEmail } from './support';
+import { PASSWORD, activate, payOnStripe, unpaidAccount, waitForEmail } from './support';
 
 // Real Stripe-hosted Checkout in the sandbox, real webhooks via `stripe listen`.
 test.describe.configure({ timeout: 180_000 });
@@ -26,6 +26,11 @@ async function startGuestCheckout(page: import('@playwright/test').Page, email: 
 
 test('email buyer: landing → Stripe Checkout → webhook → activation email → password → dashboard', async ({ page }) => {
   const email = uniqueEmail('e2e-buyer');
+  // The browser must never talk to the retired AWS stack.
+  const legacyRequests: string[] = [];
+  page.on('request', (req) => {
+    if (/amazonaws\.com|amazoncognito|execute-api|cloudfront\.net/i.test(req.url())) legacyRequests.push(req.url());
+  });
 
   await startGuestCheckout(page, email);
   await payOnStripe(page);
@@ -60,6 +65,8 @@ test('email buyer: landing → Stripe Checkout → webhook → activation email 
   await payOnStripe(page);
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
   await expect(page.getByText('✓ Enrolled')).toBeVisible();
+
+  expect(legacyRequests).toEqual([]);
 });
 
 test('buyer who never returns from Stripe still gets access and the activation email', async ({ page }) => {
@@ -89,4 +96,29 @@ test('the checkout API ignores client-supplied prices and identities', async ({ 
   const session = await stripe().checkout.sessions.retrieve(sessionId);
   expect(session.amount_total).toBe(39900);
   expect((await latestPurchase(session.customer_email!))?.userId).toBeNull();
+});
+
+test('a declined card grants nothing', async ({ page }) => {
+  const email = uniqueEmail('e2e-declined');
+  await startGuestCheckout(page, email);
+  await payOnStripe(page, '4000000000000002');
+
+  await expect(page.getByText(/declined/i).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/checkout\.stripe\.com/);
+  expect(await latestPurchase(email)).toMatchObject({ status: 'pending', userId: null });
+  expect(await findUser(email)).toBeUndefined();
+});
+
+test('a signed-in account without the course resumes straight to payment (e.g. after Google sign-in)', async ({ page }) => {
+  const { email } = await unpaidAccount();
+  await activate(page, email);
+  await expect(page).toHaveURL(/\/checkout$/);
+  // Next keeps the previous route's DOM hidden (cacheComponents), so match checkout's own sentence.
+  await expect(page.getByText(`Signed in as ${email}. This account doesn't have the course yet.`)).toBeVisible();
+
+  await page.goto('/checkout?resume=1&course=agentic-coding');
+  await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
+  const purchase = await latestPurchase(email);
+  expect(purchase).toMatchObject({ status: 'pending', userId: expect.any(String) });
+  expect(await findUser(email)).toMatchObject({ id: purchase!.userId });
 });

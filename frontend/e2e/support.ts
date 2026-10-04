@@ -78,11 +78,11 @@ export async function signOut(page: Page) {
 }
 
 /** Fill and submit Stripe's hosted Checkout page with a sandbox test card. */
-export async function payOnStripe(page: Page) {
+export async function payOnStripe(page: Page, cardNumber = '4242424242424242') {
   await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
   const card = page.locator('#cardNumber');
   await card.waitFor({ timeout: 30_000 });
-  await card.fill('4242424242424242');
+  await card.fill(cardNumber);
   await page.locator('#cardExpiry').fill('12 / 34');
   await page.locator('#cardCvc').fill('123');
   await page.locator('#billingName').fill('Test Buyer');

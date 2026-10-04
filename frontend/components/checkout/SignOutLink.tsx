@@ -1,19 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { authClient } from '@/features/accounts/auth-client';
+import { useSignOut } from '@/features/accounts/use-sign-out';
 import { linkClass } from '@/components/auth/styles';
 
 export function SignOutLink({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const signOut = useSignOut(null);
   return (
     <button
       type="button"
       className={linkClass}
-      onClick={async () => {
-        await authClient.signOut();
-        router.refresh();
-      }}
+      onClick={signOut}
     >
       {children}
     </button>

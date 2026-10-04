@@ -1,4 +1,4 @@
-import { betterAuth } from 'better-auth';
+import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin, magicLink } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
@@ -15,7 +15,8 @@ const google =
     ? { google: { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET } }
     : undefined;
 
-export const auth = betterAuth({
+/** Exported so tests can run Better Auth's real flows against this exact configuration. */
+export const authOptions = {
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: 'pg', schema }),
@@ -41,10 +42,10 @@ export const auth = betterAuth({
 
   account: {
     accountLinking: {
+      // A Google sign-in links to an existing account only when BOTH emails are proven: Google reports
+      // email_verified and the local account is activated. Google is deliberately NOT a trusted provider —
+      // that would link even when Google says the email is unverified. Never across different emails.
       enabled: true,
-      // Google proves email ownership, so a Google sign-in links to an existing account with the same,
-      // already-verified email. Never across different emails.
-      trustedProviders: ['google'],
       allowDifferentEmails: false,
     },
   },
@@ -93,7 +94,9 @@ export const auth = betterAuth({
     }),
     nextCookies(), // must stay last
   ],
-});
+} satisfies BetterAuthOptions;
+
+export const auth = betterAuth(authOptions);
 
 export type Session = typeof auth.$Infer.Session;
 

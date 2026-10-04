@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { PASSWORD, activate, paidBuyer, signIn, signInError, signOut, unpaidAccount, waitForEmail } from './support';
+import { like } from 'drizzle-orm';
+import { db } from '@/platform/db/client';
+import { verification } from '@/platform/db/schema';
 import { firstLink } from '@/platform/email/testing';
+import { requestActivationFromSignIn } from './support';
 
 test.describe('accounts', () => {
   test('a signed-out visitor is sent to sign in, then back', async ({ page }) => {
@@ -25,6 +29,21 @@ test.describe('accounts', () => {
     await page.goto(link);
     await expect(page).toHaveURL(/\/signin\?activation=expired/);
     await expect(page.getByText('That activation link has expired or was already used')).toBeVisible();
+  });
+
+  test('an expired activation link is refused, and a resent link still activates the account', async ({ page }) => {
+    const { email } = await paidBuyer();
+    const expiredLink = await requestActivationFromSignIn(page, email);
+    // Age the link past its 24h lifetime (tokens are stored hashed; the row's value carries the email).
+    await db.update(verification).set({ expiresAt: new Date(Date.now() - 60_000) }).where(like(verification.value, `%${email}%`));
+
+    await page.goto(expiredLink);
+    await expect(page).toHaveURL(/\/signin\?activation=expired/);
+    await expect(page.getByText('That activation link has expired or was already used')).toBeVisible();
+
+    // Recovery without buying again: resend, then activate.
+    await activate(page, email);
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test('password sign-in, wrong password and sign-out', async ({ page }) => {

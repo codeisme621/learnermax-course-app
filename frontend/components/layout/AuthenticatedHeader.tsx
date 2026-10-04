@@ -16,8 +16,7 @@ import { FeedbackModal } from '@/components/modals/FeedbackModal';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { MessageCircle, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { authClient } from '@/features/accounts/auth-client';
+import { useSignOut } from '@/features/accounts/use-sign-out';
 import { useProgress } from '@/hooks/useProgress';
 
 export interface AuthenticatedHeaderProps {
@@ -48,7 +47,7 @@ export function AuthenticatedHeader({
   courseId,
 }: AuthenticatedHeaderProps) {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
-  const router = useRouter();
+  const signOut = useSignOut('/');
 
   // Use SWR hook for progress when in course variant
   const { percentage, completedCount, totalLessons, isLoading: isLoadingProgress } = useProgress(
@@ -60,9 +59,7 @@ export function AuthenticatedHeader({
       userId: user.id,
       timestamp: new Date().toISOString(),
     });
-    await authClient.signOut();
-    router.push('/');
-    router.refresh();
+    await signOut();
   };
 
   const handleFeedbackClick = () => {
