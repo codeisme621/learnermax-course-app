@@ -13,7 +13,7 @@ const modules = [
   ['06', 'Goal-driven development', 'Translate product intent into executable engineering direction.'],
   ['07', 'SDD + TDD for agents', 'Use specs and tests as control surfaces—not paperwork.'],
   ['08', 'Harness engineering', 'Build the orchestration layer around models, tools, and feedback.'],
-  ['09', 'Agent legibility', 'Make plans, decisions, and failures visible to humans.'],
+  ['09', 'Agent legibility', 'Make the codebase easy for agents to navigate, understand, and change safely.'],
   ['10', 'Environment engineering', 'Create safe, useful environments where agents can operate.'],
   ['11', 'Autonomous coding agents', 'Run longer, headless workflows without losing control.'],
   ['12', 'Operating autonomous engineering', 'Measure, debug, and improve the system over time.'],
