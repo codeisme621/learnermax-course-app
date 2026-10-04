@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e",
+    "stripe:setup": "tsx platform/stripe/setup-prices.ts",
+    "stripe:listen": "./scripts/stripe-listen.sh"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1146.0",
@@ -48,6 +50,7 @@
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.64.0",
+    "stripe": "^23.0.0",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.3.1",
     "ws": "^8.22.0",

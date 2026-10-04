@@ -6,5 +6,6 @@ export {
   requestActivation,
   setInitialPassword,
   hasPassword,
+  isActivated,
   PasswordAlreadySetError,
 } from './accounts.service';

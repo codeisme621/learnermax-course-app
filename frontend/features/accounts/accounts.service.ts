@@ -72,3 +72,9 @@ export async function setInitialPassword(newPassword: string): Promise<void> {
 export async function hasPassword(userId: string): Promise<boolean> {
   return repo.hasPassword(userId);
 }
+
+/** Has this account proven its email (activation link, Google, or verified sign-up)? */
+export async function isActivated(userId: string): Promise<boolean> {
+  const row = await repo.findUserById(userId);
+  return row?.emailVerified ?? false;
+}

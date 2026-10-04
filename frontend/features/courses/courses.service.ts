@@ -1,7 +1,7 @@
 import { NotFoundError } from '@/platform/errors';
 import * as repo from './courses.repo';
 import type { CourseRow } from './courses.repo';
-import type { CourseDTO, CourseId, LessonDTO, LessonsDTO } from './courses.types';
+import type { CourseDTO, CourseId, CourseOffer, LessonDTO, LessonsDTO } from './courses.types';
 
 function toDTO(row: CourseRow, totalLessons: number): CourseDTO {
   return {
@@ -46,4 +46,21 @@ export async function listLessons(courseId: CourseId): Promise<LessonsDTO> {
     order: row.order,
   }));
   return { lessons, totalLessons: lessons.length };
+}
+
+export function stripePriceLookupKey(row: { id: string; currency: string; priceCents: number }): string {
+  return `${row.id}-${row.currency}-${row.priceCents}`;
+}
+
+export async function getOffer(courseId: CourseId): Promise<CourseOffer> {
+  const row = await repo.findCourse(courseId);
+  if (!row || row.comingSoon) {
+    throw new NotFoundError('Course not found');
+  }
+  return {
+    courseId: row.id,
+    amountCents: row.priceCents,
+    currency: row.currency,
+    stripePriceLookupKey: stripePriceLookupKey(row),
+  };
 }

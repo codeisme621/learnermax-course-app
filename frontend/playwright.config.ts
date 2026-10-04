@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { testDatabaseUrl } from './platform/db/testing/test-env';
+import { sandboxStripeKey, testDatabaseUrl } from './platform/db/testing/test-env';
 
 import path from 'node:path';
 
@@ -14,6 +14,7 @@ const testEnv = {
   BETTER_AUTH_SECRET: 'e2e-only-secret-not-used-anywhere-else-0123456789',
   EMAIL_TRANSPORT: 'capture',
   EMAIL_CAPTURE_DIR,
+  STRIPE_SECRET_KEY: sandboxStripeKey(),
 };
 Object.assign(process.env, testEnv);
 

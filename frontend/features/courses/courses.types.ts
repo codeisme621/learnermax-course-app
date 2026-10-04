@@ -33,3 +33,12 @@ export interface LessonsDTO {
   lessons: LessonDTO[];
   totalLessons: number;
 }
+
+/** What a course sells for. Server-owned: checkout never accepts a price, amount or currency from the client. */
+export interface CourseOffer {
+  courseId: CourseId;
+  amountCents: number;
+  currency: string;
+  /** Stripe Price lookup key; the same key exists in each Stripe account (sandbox, live). */
+  stripePriceLookupKey: string;
+}

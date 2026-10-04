@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
-import { testDatabaseUrl } from './platform/db/testing/test-env';
+import { sandboxStripeKey, testDatabaseUrl } from './platform/db/testing/test-env';
 
 export default defineConfig({
   resolve: {
@@ -18,7 +18,11 @@ export default defineConfig({
       BETTER_AUTH_URL: 'http://localhost:3100',
       EMAIL_TRANSPORT: 'capture',
       EMAIL_CAPTURE_DIR: path.resolve(import.meta.dirname, '.email-capture-vitest'),
+      STRIPE_SECRET_KEY: sandboxStripeKey(),
+      // Tests sign their own webhook payloads with this; it is not a real endpoint secret.
+      STRIPE_WEBHOOK_SECRET: 'whsec_vitest_only_secret',
     },
     fileParallelism: false,
+    testTimeout: 30_000,
   },
 });
