@@ -1,5 +1,5 @@
 import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { user } from '@/features/accounts/accounts.schema';
+import { user } from '../accounts/accounts.schema';
 
 // App-owned profile, one per Better Auth user.
 export const students = pgTable('students', {

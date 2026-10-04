@@ -5,8 +5,6 @@ export type { Course, CourseModule } from './courses';
 export { getLessons, getVideoUrl } from './lessons';
 export type { Lesson, LessonResponse, VideoUrlResponse } from './lessons';
 
-export { getMeetups } from './meetups';
-export type { MeetupData } from './meetups';
 
 // Not cached but needed to run on server side to check enrollment
 export { checkEnrollment } from './enrollments';

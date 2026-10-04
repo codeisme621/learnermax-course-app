@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { getAuthToken } from '@/app/actions/auth';
 import { getAllCourses } from '@/lib/data/courses';
-import { getMeetups } from '@/lib/data/meetups';
 import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
 import { Footer } from '@/components/layout/Footer';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
@@ -30,17 +29,11 @@ async function DashboardLoader() {
     redirect('/signin?callbackUrl=/dashboard');
   }
 
-  // Fetch cached data in parallel
-  const [coursesResult, meetupsResult] = await Promise.all([
-    getAllCourses(token),
-    getMeetups(token),
-  ]);
+  // Fetch cached data
+  const coursesResult = await getAllCourses(token);
 
   // Extract courses (default to empty array on error)
   const courses = 'courses' in coursesResult ? coursesResult.courses : [];
-
-  // Extract meetups (default to empty array on error)
-  const meetups = Array.isArray(meetupsResult) ? meetupsResult : [];
 
   return (
     <>
@@ -50,7 +43,6 @@ async function DashboardLoader() {
           <DashboardContent
             session={session}
             courses={courses}
-            meetups={meetups}
           />
         </div>
       </main>

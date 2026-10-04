@@ -3,29 +3,25 @@
 import { useEffect } from 'react';
 import { Session } from 'next-auth';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
-import { BookOpen, Loader2, AlertCircle, Users } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useProgress } from '@/hooks/useProgress';
 import type { Course } from '@/lib/data/courses';
-import type { MeetupData } from '@/lib/data/meetups';
 import { CourseCard } from './CourseCard';
 import { PremiumCourseCard } from './PremiumCourseCard';
-import { MeetupCard } from './MeetupCard';
 
 interface DashboardContentProps {
   session: Session;
   courses: Course[];
-  meetups: MeetupData[];
 }
 
 /**
  * Dashboard content with SWR for user-specific data
- * Courses and meetups are passed from SSR, user data fetched via SWR
+ * Courses are passed from SSR, user data fetched via SWR
  */
-export function DashboardContent({ session, courses, meetups }: DashboardContentProps) {
-  const { enrollments, enroll, isEnrolled, getEnrollment, isLoading: isLoadingEnrollments } = useEnrollments();
+export function DashboardContent({ session, courses }: DashboardContentProps) {
+  const { enroll, getEnrollment, isLoading: isLoadingEnrollments } = useEnrollments();
 
   // Check for pending enrollment on mount
   useEffect(() => {
@@ -132,51 +128,6 @@ export function DashboardContent({ session, courses, meetups }: DashboardContent
           )}
         </section>
 
-        {/* Section Divider */}
-        {!isLoading && meetups.length > 0 && (
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          </div>
-        )}
-
-        {/* Meetups Section */}
-        {!isLoading && meetups.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <div className="flex items-center gap-3 mb-4 md:mb-6">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-xl md:text-2xl font-bold">Community Meetups</h2>
-              <Badge variant="secondary" className="bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50">
-                New
-              </Badge>
-            </div>
-            <p className="text-muted-foreground mb-4 md:mb-6">
-              Join our weekly meetups to connect with fellow learners, ask questions, and dive deeper into topics.
-            </p>
-
-            <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
-              {meetups.map((meetup, index) => (
-                <motion.div
-                  key={meetup.meetupId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.4,
-                    delay: 0.4 + index * 0.1,
-                    ease: 'easeOut',
-                  }}
-                >
-                  <MeetupCard meetup={meetup} />
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
-        )}
       </motion.div>
     </div>
   );

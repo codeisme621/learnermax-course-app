@@ -133,19 +133,16 @@ async function handleVideoAccess(request: NextRequest): Promise<NextResponse | n
  * 1. Try to set video access cookies for course pages
  * 2. Fall through to NextAuth proxy for auth handling
  */
-export default async function proxy(request: NextRequest) {
-  // Try to set video access cookies first (for course pages only)
+export default auth(async (request) => {
+  // Try to set video access cookies first (for course pages only).
+  // Returning nothing lets NextAuth's authorized callback decide:
+  // - Redirecting unauthenticated users away from protected routes
+  // - Redirecting authenticated users away from auth pages
   const videoResponse = await handleVideoAccess(request);
   if (videoResponse) {
     return videoResponse;
   }
-
-  // Fall through to NextAuth proxy for auth handling
-  // This handles:
-  // - Redirecting unauthenticated users away from protected routes
-  // - Redirecting authenticated users away from auth pages
-  return auth(request as any);
-}
+});
 
 export const config = {
   // Match all routes except static files and API routes

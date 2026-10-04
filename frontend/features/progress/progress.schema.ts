@@ -1,6 +1,6 @@
 import { foreignKey, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
-import { user } from '@/features/accounts/accounts.schema';
-import { courses, lessons } from '@/features/courses/courses.schema';
+import { user } from '../accounts/accounts.schema';
+import { courses, lessons } from '../courses/courses.schema';
 
 export const lessonProgress = pgTable(
   'lesson_progress',

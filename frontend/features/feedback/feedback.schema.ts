@@ -1,6 +1,6 @@
 import { check, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { user } from '@/features/accounts/accounts.schema';
+import { user } from '../accounts/accounts.schema';
 
 export const feedbackCategory = pgEnum('feedback_category', ['bug', 'feature', 'general']);
 

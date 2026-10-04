@@ -36,7 +36,6 @@ export async function fetchStudent(): Promise<{
   updatedAt: string;
   interestedInPremium?: boolean;
   premiumInterestDate?: string;
-  signedUpMeetups?: string[];
 } | null> {
   try {
     return await baseFetcher('/api/student');

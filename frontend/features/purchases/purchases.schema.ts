@@ -1,6 +1,6 @@
 import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { user } from '@/features/accounts/accounts.schema';
-import { courses } from '@/features/courses/courses.schema';
+import { user } from '../accounts/accounts.schema';
+import { courses } from '../courses/courses.schema';
 
 export const purchaseStatus = pgEnum('purchase_status', ['pending', 'paid', 'expired', 'refunded']);
 

@@ -1,7 +1,7 @@
 import { pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
-import { user } from '@/features/accounts/accounts.schema';
-import { courses } from '@/features/courses/courses.schema';
-import { purchases } from '@/features/purchases/purchases.schema';
+import { user } from '../accounts/accounts.schema';
+import { courses } from '../courses/courses.schema';
+import { purchases } from '../purchases/purchases.schema';
 
 export const enrollmentStatus = pgEnum('enrollment_status', ['active', 'revoked']);
 

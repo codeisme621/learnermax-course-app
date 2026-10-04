@@ -16,7 +16,7 @@ function createDb() {
   return drizzle({ client: new Pool({ connectionString }), schema });
 }
 
-type Db = ReturnType<typeof createDb>;
+export type Db = ReturnType<typeof createDb>;
 
 const globalForDb = globalThis as unknown as { db?: Db };
 

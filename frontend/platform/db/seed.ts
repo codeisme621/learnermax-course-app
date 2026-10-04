@@ -1,8 +1,7 @@
-import { config } from 'dotenv';
+import { courses } from './schema';
+import type { Db } from './client';
 
-config({ path: '.env.local', quiet: true });
-
-const AGENTIC_CODING = {
+export const AGENTIC_CODING_SEED = {
   id: 'agentic-coding',
   name: 'Agentic Coding',
   description:
@@ -30,20 +29,9 @@ const AGENTIC_CODING = {
 };
 
 // Deterministic and idempotent: safe to run on every fresh or existing database.
-async function main() {
-  // Imported after dotenv so the client sees DATABASE_URL.
-  const { db } = await import('./client');
-  const { courses } = await import('./schema');
-  const { id, ...fields } = AGENTIC_CODING;
+export async function seedDatabase(db: Db): Promise<void> {
   await db
     .insert(courses)
-    .values(AGENTIC_CODING)
-    .onConflictDoUpdate({ target: courses.id, set: fields });
-  console.log(`Seeded course ${id}`);
-  await db.$client.end();
+    .values(AGENTIC_CODING_SEED)
+    .onConflictDoUpdate({ target: courses.id, set: { ...AGENTIC_CODING_SEED, updatedAt: new Date() } });
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
