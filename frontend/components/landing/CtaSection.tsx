@@ -5,7 +5,7 @@ import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-const included = ['Immediate access to the complete course', 'The next 8-week guided cohort', 'Weekly live office hours', 'Practical exercises and capstone', 'Certificate of Achievement', 'Ongoing course updates'];
+const included = ['Immediate access to the current course', 'The next 8-week guided cohort', 'Weekly live office hours', 'Practical exercises and capstone', 'Certificate of Achievement', 'Ongoing course updates'];
 
 export function CtaSection() {
   const router = useRouter();
