@@ -19,9 +19,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e",
+    "verify": "pnpm typecheck && pnpm lint && pnpm build:check && pnpm test && pnpm test:e2e",
     "stripe:setup": "tsx platform/stripe/setup-prices.ts",
-    "stripe:listen": "./scripts/stripe-listen.sh"
+    "stripe:listen": "./scripts/stripe-listen.sh",
+    "build:check": "NEXT_DIST_DIR=.next-build next build --turbopack"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1146.0",
@@ -37,7 +38,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@vercel/analytics": "^1.6.1",
-    "@vercel/functions": "^3.9.11",
+    "@vercel/oidc-aws-credentials-provider": "^3.3.11",
     "better-auth": "^1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

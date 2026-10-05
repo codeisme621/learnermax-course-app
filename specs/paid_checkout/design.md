@@ -132,9 +132,10 @@ handleStripeEvent(rawBody: string, signature: string)
 Uses: `courses.getOffer`, `enrollment.getCourseAccess / grant / revokeForPurchase`,
 `accounts.provisionBuyer / sendAccessEmail`, platform/stripe.
 Owns: `purchases`, `stripe_events`.
-⚠ Price/amount/currency come from `courses.getOffer(courseId)` + the server's Stripe
-Price ID env var; the client sends only `courseId` (+ `email` for guests).
-⚠ Card-only Checkout → no delayed payment methods, so `async_payment_*` events never occur.
+⚠ Price/amount/currency come from `courses.getOffer(courseId)`; the Stripe Price is found by lookup key
+(`agentic-coding-usd-39900`, created per account by `pnpm stripe:setup`) and must match the offer exactly.
+The client sends only `courseId` (+ `email` for guests).
+⚠ Card + Link only (`allowed_payment_method_types`) → no delayed payment methods, so `async_payment_*` events never occur.
 
 **accounts** — identity. Wraps Better Auth so no other module imports it directly.
 ```ts
@@ -173,7 +174,7 @@ This is also the interface the future Mux work plugs into (§5).
 listCourses(): Promise<CourseDTO[]>
 getCourse(courseId: CourseId): Promise<CourseDTO>          // throws NotFoundError
 listLessons(courseId: CourseId): Promise<LessonsDTO>       // callers must check access first
-getOffer(courseId: CourseId): Promise<{ courseId; amountCents: 39900; currency: 'usd'; stripePriceId: string }>
+getOffer(courseId: CourseId): Promise<{ courseId; amountCents: 39900; currency: 'usd'; stripePriceLookupKey: string }>
 ```
 Owns: `courses`, `lessons`. Seed: `agentic-coding`, 0 lessons.
 

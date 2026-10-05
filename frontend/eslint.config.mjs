@@ -10,6 +10,7 @@ export default defineConfig([
     "node_modules/**",
     ".next/**",
     ".next-e2e/**",
+    ".next-build/**",
     "playwright-report/**",
     "test-results/**",
     "out/**",

@@ -47,9 +47,9 @@ importers:
       '@vercel/analytics':
         specifier: ^1.6.1
         version: 1.6.1(next@16.1.1(@babel/core@7.28.4)(@playwright/test@1.63.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
-      '@vercel/functions':
-        specifier: ^3.9.11
-        version: 3.9.11(@aws-sdk/credential-provider-web-identity@3.972.78)(ws@8.22.0)
+      '@vercel/oidc-aws-credentials-provider':
+        specifier: ^3.3.11
+        version: 3.3.11
       better-auth:
         specifier: ^1.7.7
         version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@neondatabase/serverless@1.2.0)(kysely@0.29.6))(next@16.1.1(@babel/core@7.28.4)(@playwright/test@1.63.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@5.0.3(@types/node@20.19.19)(vite@8.3.2(@types/node@20.19.19)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)))
@@ -1990,17 +1990,9 @@ packages:
     resolution: {integrity: sha512-g9XerViJ/paZujufXYcu5XYI2vU2rtB4sgdpjUHde5RnOkdmpu0ngH46LCFGHoPXO/C+qDPSczIHIRN+8Q2YKQ==}
     engines: {node: '>= 18'}
 
-  '@vercel/functions@3.9.11':
-    resolution: {integrity: sha512-DbqKqcbUHGBTYgHZieSNDuF1/L2iSPZV0OGm0Xkm/t+s61lFk4VX8yGQ22Og3WYGxypW1l4Elx1NP8BL928u8Q==}
+  '@vercel/oidc-aws-credentials-provider@3.3.11':
+    resolution: {integrity: sha512-y1xQBLiVZS41COSCCSbL4hj1mp3cI56io9sUBKtL991ss7rXb1Yn8U6W2tfzhoSByjjxBzHWwZpYrzIpAlZ5tA==}
     engines: {node: '>= 20'}
-    peerDependencies:
-      '@aws-sdk/credential-provider-web-identity': '*'
-      ws: '>=8'
-    peerDependenciesMeta:
-      '@aws-sdk/credential-provider-web-identity':
-        optional: true
-      ws:
-        optional: true
 
   '@vercel/oidc@4.0.0':
     resolution: {integrity: sha512-ko6ATeRUlHZMB5hLFdC7+/Q1dI2f3NX3gZHxtpALdkxurwjD5HFHGWYF+4o+4SF0E47jg6KzcHknmRpHcKgJ5A==}
@@ -5534,12 +5526,10 @@ snapshots:
     dependencies:
       execa: 5.1.1
 
-  '@vercel/functions@3.9.11(@aws-sdk/credential-provider-web-identity@3.972.78)(ws@8.22.0)':
+  '@vercel/oidc-aws-credentials-provider@3.3.11':
     dependencies:
-      '@vercel/oidc': 4.0.0
-    optionalDependencies:
       '@aws-sdk/credential-provider-web-identity': 3.972.78
-      ws: 8.22.0
+      '@vercel/oidc': 4.0.0
 
   '@vercel/oidc@4.0.0':
     dependencies:

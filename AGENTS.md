@@ -49,6 +49,7 @@ and `learnwithrico-preview` (Vercel Preview, with `dev` and `test` branches).
 |---|---|---|
 | Types | `pnpm typecheck` | |
 | Lint | `pnpm lint` | |
+| Build | `pnpm build:check` | the production build (prerendering, Suspense/dynamic rules) into `.next-build` |
 | Service tests | `pnpm test` (Vitest) | business rules against **real Postgres** (Neon `test` branch, dropped, migrated and seeded per run) |
 | End-to-end | `pnpm test:e2e` (Playwright) | the real app in a real browser; Playwright starts its own dev server on :3100 wired to the `test` branch |
 
@@ -60,5 +61,9 @@ and `learnwithrico-preview` (Vercel Preview, with `dev` and `test` branches).
 ## Conventions
 
 - pnpm 10, TypeScript, ES modules.
+- Route handlers wrap their body in `handle()` (`platform/http.ts`), which rethrows Next.js control flow
+  (`unstable_rethrow`) before mapping service errors — never catch-and-swallow in transport code.
+- Client components import Better Auth only via `features/accounts/auth-client.ts` / `use-sign-out.ts`
+  (the feature's `index.ts` is server-only).
 - Errors from services: `UnauthorizedError` / `ForbiddenError` / `NotFoundError` (`platform/errors.ts`); transport maps them to redirects or 401/403/404.
 - Never cache user-specific authorization data (`'use cache'`, SWR across users, cookie caches).
