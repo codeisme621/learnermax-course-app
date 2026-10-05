@@ -107,6 +107,22 @@ them.** For the full go-live setup see `VERCEL_ENV_SETUP.md`; for the app runboo
 - **CLI** `gh` (repo and workflow scopes). PRs get a Claude code review (`.github/workflows/claude-review.yml`).
   `main` deploys to production.
 
+## Known gotchas (learned the hard way)
+
+- **`npx vercel@latest …` can hang after succeeding** when it inherits a terminal; always add `</dev/null`
+  (and a `timeout`) in scripts.
+- **Vercel branch URLs are truncated** for long branch names (e.g. `…-git-feature-enable-str-327bfe-learner-max.vercel.app`).
+  Never guess them; read them with Vercel MCP `list_deployment_aliases` for the deployment.
+- **Vercel's bypass secret** for protected previews: read it into the shell from
+  `npx vercel@latest api /v9/projects/<id>` (`protectionBypass` → scope `automation-bypass`) without printing it,
+  then `export VERCEL_AUTOMATION_BYPASS_SECRET` for `pnpm smoke`.
+- **Node versions:** the app needs Node 22 (`nvm use` in `frontend/`). Global CLIs such as `neonctl` must be
+  installed under the active Node; it's installed under both 20 and 22.
+- **`neonctl connection-string <branch-id>`**: pass the branch id (`br-…`); fetch it *before* switching Node
+  versions in a script, or the CLI may not be on PATH.
+- **The existing IAM OIDC provider `oidc.vercel.com`** (global issuer) is an unused leftover. This project uses
+  **team** issuer mode → provider `oidc.vercel.com/learner-max`.
+
 ## Promoting a change: local → preview → production
 
 1. **Local:** make the change and run `cd frontend && pnpm verify`.
