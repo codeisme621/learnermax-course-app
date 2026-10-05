@@ -4,8 +4,9 @@
  * - contactEmail:   must be an inbox you actually read (refunds and privacy requests arrive here)
  * - governingLaw:   usually the state your company is formed in (Atlas companies are Delaware entities)
  */
+// Confirmed by the owner (2026-10-05): LearnerMax, LLC, a Delaware LLC; it is the Stripe merchant of record.
 export const LEGAL = {
-  operator: 'LearnWithRico',
+  operator: 'LearnerMax, LLC (doing business as LearnWithRico)',
   site: 'learnwithrico.com',
   contactEmail: 'support@learnwithrico.com',
   governingLaw: 'the State of Delaware, United States',
