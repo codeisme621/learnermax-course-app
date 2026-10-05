@@ -7,7 +7,7 @@
 export const LEGAL = {
   operator: 'LearnWithRico',
   site: 'learnwithrico.com',
-  contactEmail: 'hello@learnwithrico.com',
+  contactEmail: 'support@learnwithrico.com',
   governingLaw: 'the State of Delaware, United States',
   refundWindowDays: 30,
   lastUpdated: 'October 5, 2026',

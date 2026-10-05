@@ -48,7 +48,7 @@ saying "Confirming your payment…" and no activation email arrives.
 1. On `/`, click **Join the founding cohort**, enter an email you can read, then **Continue to payment**.
 2. Pay with `4242 4242 4242 4242`, any future expiry, any CVC and any ZIP. Untick Stripe's "Save my
    information" (Link) box, or it will ask for a phone number.
-3. The success page says "check your email". The activation email comes from `hello@learnwithrico.com` (real SES).
+3. The success page says "check your email". The activation email comes from `support@learnwithrico.com` (real SES).
 4. Open the link, set a password, and you land on the dashboard.
 5. Refund the payment in the Stripe sandbox Dashboard, then reload `/dashboard`: you're sent to `/checkout`.
 

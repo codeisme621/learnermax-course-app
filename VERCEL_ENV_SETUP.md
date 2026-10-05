@@ -20,7 +20,7 @@ Production origin: `https://www.learnwithrico.com`.
 | `STRIPE_SECRET_KEY` | sandbox `sk_test_…`, **sensitive** | **live** key, **sensitive**, pasted by the owner (§3) | |
 | `STRIPE_WEBHOOK_SECRET` | the sandbox `stripe listen` secret, **sensitive** | live Dashboard endpoint secret, **sensitive**, pasted by the owner | previews get webhooks via CLI forwarding (§3) |
 | `EMAIL_TRANSPORT` | `ses` | `ses` | |
-| `EMAIL_FROM` | `LearnWithRico <hello@learnwithrico.com>` | same | any address @learnwithrico.com (domain is verified in SES) |
+| `EMAIL_FROM` | `LearnWithRico <support@learnwithrico.com>` | same | any address @learnwithrico.com (domain is verified in SES) |
 | `AWS_REGION` | `us-east-1` | `us-east-1` | must be pinned; Vercel otherwise sets it to the function region |
 | `AWS_ROLE_ARN` | role from §4 | same | enables OIDC credentials for SES |
 | `NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID` | ✅ already set | ✅ already set | |

@@ -45,7 +45,7 @@ them.** For the full go-live setup see `VERCEL_ENV_SETUP.md`; for the app runboo
 | `GOOGLE_CLIENT_ID` / `_SECRET` | `scripts/pull-local-secrets.sh` | **sensitive** | **sensitive** | AWS Secrets Manager `learnermax/google-oauth` (GCP project "Gemini API") |
 | `STRIPE_SECRET_KEY` | sandbox (pull script) | sandbox, **sensitive** | **live**, **sensitive** (owner pastes) | sandbox: Secrets Manager `learnermax/stripe`; live: Stripe Dashboard only |
 | `STRIPE_WEBHOOK_SECRET` | `stripe listen --print-secret` | the same CLI listen secret | live Dashboard endpoint secret (owner pastes) | Stripe |
-| `EMAIL_TRANSPORT` / `EMAIL_FROM` / `AWS_REGION` | `ses` / `LearnWithRico <hello@learnwithrico.com>` / `us-east-1` | same | same | — |
+| `EMAIL_TRANSPORT` / `EMAIL_FROM` / `AWS_REGION` | `ses` / `LearnWithRico <support@learnwithrico.com>` / `us-east-1` | same | same | — |
 | `AWS_ROLE_ARN` | *(unset: default credential chain)* | `arn:aws:iam::853219709625:role/learnwithrico-ses-sender` | same | AWS IAM |
 | `OPS_SECRET` | optional | random, **sensitive** | random, **sensitive** | `openssl rand -hex 32`; used by `pnpm ops:reconcile` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | export when running smoke tests | system variable (Deployment Protection → Protection Bypass for Automation) | — | Vercel |

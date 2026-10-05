@@ -44,7 +44,7 @@ Run with `pnpm dev` and `pnpm stripe:listen` (second terminal).
   `/checkout?resume=1` and go straight to Stripe → pay with `4242 4242 4242 4242` → dashboard.
   Sign out, sign in with Google again → dashboard, without paying.
 - **M2 Real inbox (SES).** Buy with a real email address you can read → the activation email
-  arrives from `hello@learnwithrico.com` → the link activates → set a password → dashboard.
+  arrives from `support@learnwithrico.com` (it was sent from `hello@` during the 2026-10-04 run) → the link activates → set a password → dashboard.
   *(Done by the owner on 2026-10-04.)*
 - **M3 Google with the purchase email.** After M2, sign out → Continue with Google using that
   same email → same dashboard, with no new purchase.
