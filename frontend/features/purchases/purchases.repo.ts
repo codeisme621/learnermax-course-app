@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db, type Executor } from '@/platform/db/client';
 import { purchases, stripeEvents } from './purchases.schema';
 
@@ -71,4 +71,10 @@ export async function markRefunded(ex: Executor, id: string, stripeRefundId: str
     .where(and(eq(purchases.id, id), eq(purchases.status, 'paid')))
     .returning({ id: purchases.id });
   return rows.length === 1;
+}
+
+export async function findByIds(ids: string[]): Promise<PurchaseRow[]> {
+  if (ids.length === 0) return [];
+  const valid = ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  return valid.length ? db.select().from(purchases).where(inArray(purchases.id, valid)) : [];
 }

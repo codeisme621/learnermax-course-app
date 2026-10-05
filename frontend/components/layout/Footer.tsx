@@ -2,6 +2,7 @@ import { Youtube, Linkedin } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { cacheLife } from 'next/cache';
+import { LEGAL } from '@/lib/legal';
 
 // Cached function for the current year - computed once during prerendering
 async function getCurrentYear() {
@@ -45,6 +46,13 @@ export async function Footer() {
         </div>
 
         <Separator className="mb-8" />
+
+        <nav aria-label="Legal" className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+          <Link href="/terms" className="text-muted-foreground hover:text-foreground">Terms of Service</Link>
+          <Link href="/privacy" className="text-muted-foreground hover:text-foreground">Privacy Policy</Link>
+          <Link href="/refund-policy" className="text-muted-foreground hover:text-foreground">Refund Policy</Link>
+          <a href={`mailto:${LEGAL.contactEmail}`} className="text-muted-foreground hover:text-foreground">Contact</a>
+        </nav>
 
         <div className="text-center text-sm text-muted-foreground">
           <p>© {year} LearnWithRico. All rights reserved.</p>

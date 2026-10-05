@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { db, withTransaction } from '@/platform/db/client';
+import { resolveAppUrl } from '@/platform/app-url';
 import { NotFoundError, ValidationError } from '@/platform/errors';
 import { sendEmail } from '@/platform/email';
 import { stripe, verifyWebhook, type Stripe } from '@/platform/stripe';
@@ -13,13 +14,7 @@ import type { CheckoutStatusDTO, StartCheckoutInput, StartCheckoutResult, Stripe
 
 const CHECKOUT_TTL_SECONDS = 30 * 60; // Stripe's minimum; keeps abandoned sessions short-lived.
 
-function appUrl(): string {
-  const url = process.env.BETTER_AUTH_URL;
-  if (!url) {
-    throw new Error('BETTER_AUTH_URL is not set');
-  }
-  return url.replace(/\/$/, '');
-}
+const appUrl = () => resolveAppUrl();
 
 const priceCache = new Map<string, Stripe.Price>();
 

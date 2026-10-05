@@ -1,14 +1,25 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { admin, magicLink } from 'better-auth/plugins';
+import { admin, magicLink, oAuthProxy } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { db } from '@/platform/db/client';
 import * as schema from '@/platform/db/schema';
+import { resolveAppUrl, resolveTrustedOrigins } from '@/platform/app-url';
 import { sendEmail } from '@/platform/email';
 import { ensureStudentProfile } from '@/features/students';
 import { activationEmail, passwordResetEmail } from './accounts.emails';
 
 const ACTIVATION_LINK_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * Google only accepts exact redirect URLs, and preview URLs are dynamic. With OAUTH_PROXY_SECRET set (preview and
+ * production, same value), a preview's Google sign-in goes through production's registered callback and the
+ * encrypted profile is handed back to the preview, which signs the user in against its own database.
+ * Local development (unset) talks to Google directly via localhost.
+ */
+const oauthProxy = process.env.OAUTH_PROXY_SECRET
+  ? [oAuthProxy({ productionURL: process.env.AUTH_PRODUCTION_URL ?? 'https://www.learnwithrico.com', secret: process.env.OAUTH_PROXY_SECRET })]
+  : [];
 
 const google =
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -17,7 +28,8 @@ const google =
 
 /** Exported so tests can run Better Auth's real flows against this exact configuration. */
 export const authOptions = {
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: resolveAppUrl(),
+  trustedOrigins: resolveTrustedOrigins(),
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: 'pg', schema }),
 
@@ -92,6 +104,7 @@ export const authOptions = {
         await sendEmail(activationEmail(email, url));
       },
     }),
+    ...oauthProxy,
     nextCookies(), // must stay last
   ],
 } satisfies BetterAuthOptions;

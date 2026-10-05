@@ -11,11 +11,14 @@ Production origin: `https://www.learnwithrico.com`.
 | Variable | Preview | Production | Notes |
 |---|---|---|---|
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `PG*`, `POSTGRES_*` | ✅ already set | ✅ already set | Neon integration: `learnwithrico-preview` / `learnwithrico-production` |
-| `BETTER_AUTH_SECRET` | new random value | new random value | `openssl rand -base64 32`; different per environment |
-| `BETTER_AUTH_URL` | stable preview origin (see §5) | `https://www.learnwithrico.com` | also the base of Stripe redirect URLs and email links |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from `learnermax/google-oauth` | same | omit to hide the Google button |
-| `STRIPE_SECRET_KEY` | sandbox `sk_test_…` | **live** `sk_live_…` (or a restricted key, §3) | |
-| `STRIPE_WEBHOOK_SECRET` | sandbox endpoint secret | live endpoint secret | from the Dashboard endpoint created in §3 |
+| `BETTER_AUTH_SECRET` | random, **sensitive** | random, **sensitive** | `openssl rand -base64 32`; different per environment |
+| `BETTER_AUTH_URL` | **leave unset** | `https://www.learnwithrico.com` | Preview derives its origin from `VERCEL_BRANCH_URL`/`VERCEL_URL` (dynamic URLs) |
+| `OAUTH_PROXY_SECRET` | shared random value, **sensitive** | **the same value**, **sensitive** | lets dynamic previews use Google through production's callback (§5) |
+| `AUTH_PRODUCTION_URL` | `https://www.learnwithrico.com` | `https://www.learnwithrico.com` | |
+| `OPS_SECRET` | random, **sensitive** | random, **sensitive** | protects `/api/ops/reconcile` (`pnpm ops:reconcile`) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from `learnermax/google-oauth`, **sensitive** | same | one OAuth client for every environment |
+| `STRIPE_SECRET_KEY` | sandbox `sk_test_…`, **sensitive** | **live** key, **sensitive**, pasted by the owner (§3) | |
+| `STRIPE_WEBHOOK_SECRET` | the sandbox `stripe listen` secret, **sensitive** | live Dashboard endpoint secret, **sensitive**, pasted by the owner | previews get webhooks via CLI forwarding (§3) |
 | `EMAIL_TRANSPORT` | `ses` | `ses` | |
 | `EMAIL_FROM` | `LearnWithRico <hello@learnwithrico.com>` | same | any address @learnwithrico.com (domain is verified in SES) |
 | `AWS_REGION` | `us-east-1` | `us-east-1` | must be pinned; Vercel otherwise sets it to the function region |
@@ -46,15 +49,20 @@ Migrations are additive SQL in `platform/db/migrations/`, and the seed is idempo
 
 ## 3. Stripe
 
-For each account (sandbox for Preview, live for Production):
-
-1. **Product and price:** `STRIPE_SECRET_KEY=<that account's key> pnpm stripe:setup`. This creates
-   "Agentic Coding" at $399.00 USD with lookup key `agentic-coding-usd-39900`. The app finds the price by
-   lookup key and refuses to start checkout if Stripe's amount or currency differs from the course's.
-2. **Webhook endpoint:** Developers → Webhooks → Add endpoint:
-   - URL: `https://<origin>/api/webhooks/stripe`
-   - Events: `checkout.session.completed`, `checkout.session.expired`, `refund.created`, `refund.updated`
-   - Copy its signing secret into `STRIPE_WEBHOOK_SECRET` for that environment.
+1. **Product and price.**
+   - Sandbox: `pnpm stripe:setup`.
+   - Live: the same product and price ("Agentic Coding", $399.00 USD, lookup key `agentic-coding-usd-39900`),
+     created through the Stripe MCP once it's connected to the live account, or in the Dashboard. The live key
+     never leaves Vercel.
+   - The app finds the price by lookup key and refuses to start checkout if Stripe's amount or currency
+     differs from the course's.
+2. **Webhooks.**
+   - **Production:** Developers → Webhooks → Add endpoint `https://www.learnwithrico.com/api/webhooks/stripe` with
+     events `checkout.session.completed`, `checkout.session.expired`, `refund.created`, `refund.updated`. The owner
+     pastes its signing secret into the Production `STRIPE_WEBHOOK_SECRET`.
+   - **Preview:** URLs are dynamic, so there's no Dashboard endpoint. While verifying a preview,
+     `pnpm smoke <preview-url> --purchase` forwards sandbox events with `stripe listen` (plus the protection-bypass
+     header). Preview's `STRIPE_WEBHOOK_SECRET` is the sandbox CLI listen secret, the same one used locally.
 3. **Payment methods:** checkout allows only card (including Apple Pay and Google Pay) and Link, which
    confirm synchronously. Disable Link in the Dashboard if you don't want it offered.
 4. **Optional, least privilege:** a restricted key with write access to Checkout Sessions, and read access
@@ -113,18 +121,17 @@ environment variables. `learnermax/cloudfront-private-key-*` are not used by the
 
 ## 5. Google OAuth (GCP project "Gemini API")
 
-The authorized redirect URIs currently point at the Cognito hosted domain for preview and production. Add:
+One OAuth client serves every environment. Its authorized redirect URIs must include exactly:
 
-- `https://www.learnwithrico.com/api/auth/callback/google`
-- `https://<stable preview origin>/api/auth/callback/google`
-- keep `http://localhost:3000/api/auth/callback/google`
+- `http://localhost:3000/api/auth/callback/google` (local)
+- `https://www.learnwithrico.com/api/auth/callback/google` (production, **add this**; it currently points at Cognito)
+
+**Previews need no redirect URI of their own.** With `OAUTH_PROXY_SECRET` set in both Preview and Production,
+Better Auth's OAuth proxy sends a preview's Google sign-in through production's callback and hands the
+encrypted profile back to the preview, which signs the user in against the preview database
+(`frontend/features/accounts/oauth-proxy.test.ts`). This only works once production runs this code.
 
 You can remove the Cognito `…/oauth2/idpresponse` URIs once Cognito is retired.
-
-**Preview origins:** Google and Stripe need fixed URLs, but each Vercel preview deployment gets a new one.
-Give Preview a stable domain (for example `preview.learnwithrico.com` attached to a `preview` branch) and
-set `BETTER_AUTH_URL` to it. Ad-hoc per-commit preview URLs still render, but sign-in callbacks and Stripe
-redirects go to the stable origin.
 
 ## 6. Legacy AWS stack
 

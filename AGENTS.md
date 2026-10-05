@@ -8,6 +8,11 @@ do not add to it and do not call it from `frontend/`.
 
 Current feature work: `specs/paid_checkout/design.md` (issue #31).
 
+**External systems** (Vercel, Neon, Stripe, AWS, Google OAuth, Mux, GitHub): read
+`.claude/skills/external-systems/SKILL.md` before inspecting or changing any of them. It has the resource IDs
+per environment, how to connect (CLI or MCP), where credentials live, and the local → preview → production
+promotion steps. Every external change needs the owner's approval.
+
 ## Layout (frontend/)
 
 ```

@@ -1,12 +1,13 @@
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormMessage } from '@/components/auth/FormMessage';
 import { startCheckoutAction, type CheckoutFormState } from '@/app/actions/checkout';
-import { fieldClass, labelClass, primaryActionClass } from '@/components/auth/styles';
+import { fieldClass, labelClass, linkClass, primaryActionClass } from '@/components/auth/styles';
 
 interface CheckoutFormProps {
   courseId: string;
@@ -42,6 +43,12 @@ export function CheckoutForm({ courseId, askEmail, autoStart = false }: Checkout
       <Button type="submit" className={primaryActionClass} disabled={pending}>
         {pending ? 'Opening secure checkout…' : 'Continue to payment'}
       </Button>
+      <p className="text-center text-xs leading-5 text-slate-500">
+        By continuing you agree to our{' '}
+        <Link href="/terms" className={linkClass}>Terms</Link> and{' '}
+        <Link href="/privacy" className={linkClass}>Privacy Policy</Link>. 30-day{' '}
+        <Link href="/refund-policy" className={linkClass}>refund policy</Link>.
+      </p>
     </form>
   );
 }

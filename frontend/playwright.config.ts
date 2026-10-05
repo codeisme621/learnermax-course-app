@@ -15,11 +15,13 @@ const testEnv = {
   EMAIL_TRANSPORT: 'capture',
   EMAIL_CAPTURE_DIR,
   STRIPE_SECRET_KEY: sandboxStripeKey(),
+  OPS_SECRET: 'e2e-ops-secret',
 };
 Object.assign(process.env, testEnv);
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['smoke/**'], // deployment smoke checks: playwright.smoke.config.ts
   // Specs share one database, so run them in order.
   fullyParallel: false,
   workers: 1,
