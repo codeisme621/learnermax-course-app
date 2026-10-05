@@ -1,63 +1,29 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useRouter } from 'next/navigation';
-import { BookOpen, Clock, Award, Loader2, AlertCircle, Play, ArrowRight } from 'lucide-react';
+import { BookOpen, Clock, Award, Play, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import type { Course } from '@/types/courses';
-import type { Enrollment } from '@/app/actions/enrollments';
-import type { ProgressResponse } from '@/app/actions/progress';
+import type { CourseDTO } from '@/features/courses';
+import type { EnrollmentDTO } from '@/features/enrollment';
+import type { ProgressDTO } from '@/features/progress';
 
 interface CourseCardProps {
-  course: Course;
-  enrollment?: Enrollment; // Present if user is enrolled
-  progress?: ProgressResponse; // Live progress from Progress API
-  onEnroll?: (courseId: string) => Promise<void>; // Callback for enrollment action
+  course: CourseDTO;
+  enrollment?: EnrollmentDTO; // Present if the user has paid access
+  progress?: ProgressDTO; // Live progress from the Progress API
 }
 
-export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCardProps) {
-  const router = useRouter();
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+export function CourseCard({ course, enrollment, progress }: CourseCardProps) {
   const isEnrolled = !!enrollment;
-
-  const handleEnrollClick = async () => {
-    if (!onEnroll) return;
-
-    setError(null);
-    setIsEnrolling(true);
-
-    try {
-      await onEnroll(course.courseId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enroll');
-    } finally {
-      setIsEnrolling(false);
-    }
-  };
-
-  const handleCardClick = () => {
-    if (isEnrolled) {
-      router.push(`/course/${course.courseId}`);
-    } else if (onEnroll && !isEnrolling) {
-      handleEnrollClick();
-    }
-  };
+  const hasLessons = course.totalLessons > 0;
 
   // Card content with improved styling
   const cardContent = (
     <Card
-      className={`overflow-hidden transition-all duration-300 group ${
-        isEnrolled || onEnroll
-          ? 'hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30 cursor-pointer'
-          : ''
-      }`}
-      onClick={!isEnrolled ? handleCardClick : undefined}
+      className="overflow-hidden transition-all duration-300 group hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30 cursor-pointer"
     >
       {/* Course Thumbnail - Enhanced gradient */}
       <div className="relative h-32 md:h-36 bg-gradient-to-br from-blue-500/20 via-primary/15 to-cyan-500/20 overflow-hidden">
@@ -76,10 +42,6 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
           {isEnrolled ? (
             <Badge variant="default" className="bg-green-600 hover:bg-green-600 shadow-md">
               ✓ Enrolled
-            </Badge>
-          ) : course.pricingModel === 'free' ? (
-            <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg border-0">
-              FREE
             </Badge>
           ) : (
             <Badge variant="secondary" className="shadow-md bg-white/90 dark:bg-gray-800/90">
@@ -115,7 +77,11 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
           </div>
 
           {/* Enrolled State - Progress Section */}
-          {isEnrolled && enrollment && progress && (
+          {isEnrolled && !hasLessons && (
+            <p className="pt-2 text-sm font-medium text-primary">Lessons coming soon — you&apos;ll see them here first.</p>
+          )}
+
+          {isEnrolled && hasLessons && progress && (
             <div className="space-y-2 pt-2">
               <div className="flex justify-between text-xs md:text-sm">
                 <span className="text-muted-foreground">Your Progress</span>
@@ -137,13 +103,6 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
                 </p>
               )}
 
-              {/* Error Message */}
-              {error && (
-                <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded-lg text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-xs">{error}</p>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -161,37 +120,19 @@ export function CourseCard({ course, enrollment, progress, onEnroll }: CourseCar
             <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
           </Button>
         ) : (
-          <Button
-            className="w-full cursor-pointer"
-            size="lg"
-            variant={isEnrolling ? 'secondary' : 'default'}
-            disabled={isEnrolling}
-          >
-            {isEnrolling ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Enrolling...
-              </>
-            ) : (
-              <>
-                Enroll Now
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
+          <Button className="w-full cursor-pointer" size="lg">
+            Get access
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         )}
       </CardFooter>
     </Card>
   );
 
-  // Wrap enrolled courses in Link for proper navigation
-  if (isEnrolled) {
-    return (
-      <Link href={`/course/${course.courseId}`} className="block active:scale-[0.98] active:opacity-90 transition-transform">
-        {cardContent}
-      </Link>
-    );
-  }
-
-  return cardContent;
+  const href = isEnrolled ? `/course/${course.courseId}` : `/checkout?course=${course.courseId}`;
+  return (
+    <Link href={href} className="block active:scale-[0.98] active:opacity-90 transition-transform">
+      {cardContent}
+    </Link>
+  );
 }

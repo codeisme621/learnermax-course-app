@@ -1,30 +1,14 @@
-import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { auth } from '@/lib/auth';
-import { getAuthToken } from '@/app/actions/auth';
-import { getCourse } from '@/lib/data/courses';
-import { getLessons } from '@/lib/data/lessons';
-import { checkEnrollment } from '@/lib/data/enrollments';
-import { getProgress } from '@/lib/data/progress';
 import { Card } from '@/components/ui/card';
 import { AuthenticatedHeader } from '@/components/layout/AuthenticatedHeader';
-import { CourseVideoSection } from '@/components/course/CourseVideoSection';
-import { CollapsibleLessonSidebar } from '@/components/course/CollapsibleLessonSidebar';
+import { getCourse } from '@/features/courses';
+import { pageRequireCourseAccess } from '@/lib/page-guards';
 import CoursePageLoading from './loading';
-import {
-  CheckCircle,
-  Clock,
-  Award
-} from 'lucide-react';
+import { CheckCircle, Clock, Award, PlayCircle } from 'lucide-react';
 import type { Metadata } from 'next';
 
 interface CoursePageProps {
-  params: Promise<{
-    courseId: string;
-  }>;
-  searchParams?: Promise<{
-    lesson?: string;
-  }>;
+  params: Promise<{ courseId: string }>;
 }
 
 // Static metadata - protected page doesn't need SEO
@@ -33,93 +17,26 @@ export const metadata: Metadata = {
   description: 'Access your course content',
 };
 
-// Dynamic content loader - all auth and data fetching inside Suspense
-async function CoursePageLoader({ courseId, search }: { courseId: string; search?: { lesson?: string } }) {
-  // Check authentication
-  const session = await auth();
-  if (!session) {
-    redirect(`/signin?callbackUrl=/course/${courseId}`);
-  }
-
-  // Get auth token for data fetching
-  const token = await getAuthToken();
-  if (!token) {
-    redirect(`/signin?callbackUrl=/course/${courseId}`);
-  }
-
-  // Parallel fetch: course (cached), lessons (cached), enrollment + progress (not cached)
-  const [courseResult, lessonsResult, isEnrolled, progress] = await Promise.all([
-    getCourse(token, courseId),
-    getLessons(token, courseId),
-    checkEnrollment(token, courseId),
-    getProgress(token, courseId),
-  ]);
-
-  // Check enrollment
-  if (!isEnrolled) {
-    redirect('/dashboard?error=not-enrolled');
-  }
-
-  // Handle course fetch error
-  if ('error' in courseResult) {
-    redirect('/dashboard?error=course-not-found');
-  }
-
-  const course = courseResult.course;
-
-  // Handle lessons fetch error
-  if ('error' in lessonsResult) {
-    redirect('/dashboard?error=lessons-not-found');
-  }
-
-  const lessons = lessonsResult.lessons;
-  const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
-
-  // Determine which lesson to display:
-  // 1. URL param lesson if specified
-  // 2. lastAccessedLesson from progress (resume where user left off)
-  // 3. First lesson (fallback)
-  const requestedLessonId = search?.lesson;
-  const lastAccessedLesson = progress?.lastAccessedLesson
-    ? lessons.find(l => l.lessonId === progress.lastAccessedLesson)
-    : null;
-  const currentLesson = requestedLessonId
-    ? lessons.find(l => l.lessonId === requestedLessonId) || sortedLessons[0]
-    : lastAccessedLesson || sortedLessons[0];
-
-  if (!currentLesson) {
-    redirect('/dashboard?error=no-lessons');
-  }
+// Video playback is paused until the Mux integration ships; paid students see the course
+// overview and a "lessons coming soon" state. Access is still enforced here.
+async function CoursePageLoader({ courseId }: { courseId: string }) {
+  const session = await pageRequireCourseAccess(courseId);
+  const course = await getCourse(courseId);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Authenticated Header with Course Progress (fetched via SWR) */}
-      <AuthenticatedHeader
-        variant="course"
-        user={session.user}
-        courseId={courseId}
-      />
+      <AuthenticatedHeader variant="course" user={session.user} courseId={courseId} />
 
-      {/* Main Layout: Flexbox with Left Sidebar */}
       <main className="flex pt-16">
-        {/* Left Sidebar: Collapsible Lesson Navigation (fetches progress via SWR) */}
-        <CollapsibleLessonSidebar
-          course={course}
-          lessons={lessons}
-          currentLessonId={currentLesson.lessonId}
-        />
+        <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
+          <Card className="p-6 md:p-10 text-center">
+            <PlayCircle className="w-12 h-12 mx-auto text-primary mb-4" />
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">Lessons are on the way</h1>
+            <p className="text-muted-foreground">
+              You&apos;re enrolled. New lessons will appear here as soon as they&apos;re published.
+            </p>
+          </Card>
 
-        {/* Main Content: Video Player and Course Info */}
-        <div className="flex-1 p-4 md:p-6 lg:p-8">
-          {/* Video Player Section (fetches progress via SWR) */}
-          <CourseVideoSection
-            courseId={courseId}
-            initialLesson={currentLesson}
-            lessons={lessons}
-            pricingModel={course.pricingModel}
-          />
-
-          {/* Course Info Section (below video player) */}
           <div className="mt-6 md:mt-8 space-y-4 md:space-y-6">
             <Card className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">{course.name}</h2>
@@ -163,13 +80,12 @@ async function CoursePageLoader({ courseId, search }: { courseId: string; search
   );
 }
 
-export default async function CoursePage({ params, searchParams }: CoursePageProps) {
+export default async function CoursePage({ params }: CoursePageProps) {
   const { courseId } = await params;
-  const search = searchParams ? await searchParams : undefined;
 
   return (
     <Suspense fallback={<CoursePageLoading />}>
-      <CoursePageLoader courseId={courseId} search={search} />
+      <CoursePageLoader courseId={courseId} />
     </Suspense>
   );
 }

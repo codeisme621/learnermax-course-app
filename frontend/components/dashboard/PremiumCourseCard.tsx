@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, CheckCircle2, Crown, Sparkles, Target, Zap, Star } from 'lucide-react';
 import { useStudent } from '@/hooks/useStudent';
-import type { Course } from '@/types/courses';
+import type { CourseDTO as Course } from '@/features/courses';
 
 interface PremiumCourseCardProps {
   course: Course;

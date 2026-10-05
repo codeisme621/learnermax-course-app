@@ -1,9 +1,8 @@
 /**
- * Course API client and transformation layer
- * Used for SSG build-time data fetching
+ * Landing page course data: the course from Postgres plus curated static content.
  */
 
-import type { Course } from '@/types/course';
+import { getCourse } from '@/features/courses';
 import type { CourseData } from '@/types/landing';
 import {
   getInstructorProfile,
@@ -15,45 +14,14 @@ import {
   getStaticDuration,
   getStaticLevel,
 } from '@/lib/static-content';
-import { getApiBaseUrl } from '@/lib/env';
 
 /**
- * Fetch course from backend API
- * Used at build time for SSG
- */
-export async function fetchCourse(courseId: string): Promise<Course> {
-  const API_BASE_URL = getApiBaseUrl();
-  const url = `${API_BASE_URL}/api/courses/${courseId}`;
-
-  console.log('[fetchCourse] Fetching course from:', url);
-
-  const response = await fetch(url, {
-    // Force cache for SSG - data fetched once at build time
-    cache: 'force-cache',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch course: ${response.status} ${response.statusText}`);
-  }
-
-  const course: Course = await response.json();
-  console.log('[fetchCourse] Successfully fetched course:', course.courseId);
-
-  return course;
-}
-
-/**
- * Transform backend Course to landing page CourseData
+ * Build landing page CourseData
  * Includes static content like instructor bio and testimonials
  */
 export async function getCourseForLanding(courseId: string): Promise<CourseData> {
-  // Fetch course from backend
-  const course = await fetchCourse(courseId);
-
-  // Extract lesson titles from curriculum
-  const topics = course.curriculum.flatMap((module) =>
-    module.lessons.map((lesson) => lesson.title)
-  );
+  const course = await getCourse(courseId);
+  const topics = course.learningObjectives;
 
   // Get static content
   const instructorProfile = getInstructorProfile();

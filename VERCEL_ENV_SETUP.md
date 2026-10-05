@@ -1,129 +1,141 @@
-# Vercel Environment Variables Setup
+# Going live: Vercel, Neon, Stripe, Google and AWS configuration
 
-This document explains how to configure environment variables in the Vercel dashboard for different deployment environments.
+What has to be configured outside the repo before Preview/Production can run the paid-checkout app (issue #31).
+Nothing here has been applied: no deploys, and no production or infrastructure changes have been made.
 
-## Authentication Strategy by Environment
+Vercel project: `learner-max/learnermax-course-app` (root directory `frontend`, Node 22).
+Production origin: `https://www.learnwithrico.com`.
 
-**Production**: Full OAuth support (Google via Cognito) + Email/Password
-**Preview**: Email/Password only (OAuth disabled due to dynamic URLs)
-**Local**: Full OAuth support + Email/Password
+## 1. Environment variables
 
-> **Note**: Auth.js redirect proxy (`AUTH_REDIRECT_PROXY_URL`) does not work with Cognito/OIDC providers - it only supports GitHub. Preview deployments use credentials-based authentication only.
+| Variable | Preview | Production | Notes |
+|---|---|---|---|
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `PG*`, `POSTGRES_*` | ✅ already set | ✅ already set | Neon integration: `learnwithrico-preview` / `learnwithrico-production` |
+| `BETTER_AUTH_SECRET` | random, **sensitive** | random, **sensitive** | `openssl rand -base64 32`; different per environment |
+| `BETTER_AUTH_URL` | **leave unset** | `https://www.learnwithrico.com` | Preview derives its origin from `VERCEL_BRANCH_URL`/`VERCEL_URL` (dynamic URLs) |
+| `OAUTH_PROXY_SECRET` | shared random value, **sensitive** | **the same value**, **sensitive** | lets dynamic previews use Google through production's callback (§5) |
+| `AUTH_PRODUCTION_URL` | `https://www.learnwithrico.com` | `https://www.learnwithrico.com` | |
+| `OPS_SECRET` | random, **sensitive** | random, **sensitive** | protects `/api/ops/reconcile` (`pnpm ops:reconcile`) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from `learnermax/google-oauth`, **sensitive** | same | one OAuth client for every environment |
+| `STRIPE_SECRET_KEY` | sandbox `sk_test_…`, **sensitive** | **live** key, **sensitive**, pasted by the owner (§3) | |
+| `STRIPE_WEBHOOK_SECRET` | the sandbox `stripe listen` secret, **sensitive** | live Dashboard endpoint secret, **sensitive**, pasted by the owner | previews get webhooks via CLI forwarding (§3) |
+| `EMAIL_TRANSPORT` | `ses` | `ses` | |
+| `EMAIL_FROM` | `LearnWithRico <support@learnwithrico.com>` | same | any address @learnwithrico.com (domain is verified in SES) |
+| `AWS_REGION` | `us-east-1` | `us-east-1` | must be pinned; Vercel otherwise sets it to the function region |
+| `AWS_ROLE_ARN` | role from §4 | same | enables OIDC credentials for SES |
+| `NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID` | ✅ already set | ✅ already set | |
 
-## Environment Variables to Configure
+**Remove these legacy variables, which nothing reads anymore:** `AUTH_SECRET`, `AUTH_URL`,
+`COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `COGNITO_ISSUER_URL`,
+`COGNITO_USER_POOL_DOMAIN`, `NEXT_PUBLIC_COGNITO_REGION`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`,
+`NEXT_PUBLIC_API_URL`, `COOKIE_DOMAIN` and `NEXT_PUBLIC_VIDEO_CDN_DOMAIN`.
 
-### Production Environment
+## 2. Database (Neon)
 
-In Vercel Dashboard → Project Settings → Environment Variables → Production:
-
-```bash
-AUTH_URL=https://www.learnwithrico.com
-AUTH_SECRET=<your-secret-from-local-env>
-
-# Cognito Configuration
-COGNITO_REGION=<your-region>
-COGNITO_USER_POOL_ID=<your-user-pool-id>
-COGNITO_CLIENT_ID=<your-client-id>
-COGNITO_ISSUER_URL=https://cognito-idp.<region>.amazonaws.com/<user-pool-id>
-COGNITO_USER_POOL_DOMAIN=<your-cognito-domain>.auth.<region>.amazoncognito.com
-
-# Client-side Cognito
-NEXT_PUBLIC_COGNITO_REGION=<your-region>
-NEXT_PUBLIC_COGNITO_CLIENT_ID=<your-client-id>
-
-# Backend API
-NEXT_PUBLIC_API_URL=<your-api-gateway-url>
-```
-
-### Preview Environment
-
-In Vercel Dashboard → Project Settings → Environment Variables → Preview:
+Each environment's database is empty until migrated. Variables already set in the shell take precedence
+over `.env.local` (dotenv never overrides them), so point the normal scripts at the target database:
 
 ```bash
-# DO NOT set AUTH_URL - let Auth.js auto-detect from VERCEL_URL
-# NOTE: OAuth (Google) is disabled in preview - only credentials work
-AUTH_SECRET=<same-secret-as-production>
-
-# Cognito Configuration (same as production)
-COGNITO_REGION=<your-region>
-COGNITO_USER_POOL_ID=<your-user-pool-id>
-COGNITO_CLIENT_ID=<your-client-id>
-COGNITO_ISSUER_URL=https://cognito-idp.<region>.amazonaws.com/<user-pool-id>
-COGNITO_USER_POOL_DOMAIN=<your-cognito-domain>.auth.<region>.amazoncognito.com
-
-# Client-side Cognito
-NEXT_PUBLIC_COGNITO_REGION=<your-region>
-NEXT_PUBLIC_COGNITO_CLIENT_ID=<your-client-id>
-
-# Backend API
-NEXT_PUBLIC_API_URL=<your-api-gateway-url>
+cd frontend
+vercel env pull .env.target --environment=production        # or preview
+URL="$(grep '^DATABASE_URL_UNPOOLED=' .env.target | cut -d= -f2- | tr -d '"')"
+DATABASE_URL="$URL" DATABASE_URL_UNPOOLED="$URL" pnpm db:migrate
+DATABASE_URL="$URL" pnpm db:seed
+rm .env.target
 ```
 
-### Development Environment (Optional)
+Migrations are additive SQL in `platform/db/migrations/`, and the seed is idempotent. Consider running
+`drizzle-kit migrate` as a step in the deploy pipeline once you're comfortable with it.
 
-In Vercel Dashboard → Project Settings → Environment Variables → Development:
+## 3. Stripe
 
-```bash
-# These are for `vercel dev` command - local development typically uses .env.local
-AUTH_URL=http://localhost:3000
-AUTH_SECRET=<same-secret-as-production>
+1. **Product and price.**
+   - Sandbox: `pnpm stripe:setup`.
+   - Live: the same product and price ("Agentic Coding", $399.00 USD, lookup key `agentic-coding-usd-39900`),
+     created through the Stripe MCP once it's connected to the live account, or in the Dashboard. The live key
+     never leaves Vercel.
+   - The app finds the price by lookup key and refuses to start checkout if Stripe's amount or currency
+     differs from the course's.
+2. **Webhooks.**
+   - **Production:** Developers → Webhooks → Add endpoint `https://www.learnwithrico.com/api/webhooks/stripe` with
+     events `checkout.session.completed`, `checkout.session.expired`, `refund.created`, `refund.updated`. The owner
+     pastes its signing secret into the Production `STRIPE_WEBHOOK_SECRET`.
+   - **Preview:** URLs are dynamic, so there's no Dashboard endpoint. While verifying a preview,
+     `pnpm smoke <preview-url> --purchase` forwards sandbox events with `stripe listen` (plus the protection-bypass
+     header). Preview's `STRIPE_WEBHOOK_SECRET` is the sandbox CLI listen secret, the same one used locally.
+3. **Payment methods:** checkout allows only card (including Apple Pay and Google Pay) and Link, which
+   confirm synchronously. Disable Link in the Dashboard if you don't want it offered.
+4. **Optional, least privilege:** a restricted key with write access to Checkout Sessions, and read access
+   to Prices, Payment Intents and Refunds.
+5. **Refund policy as implemented:** any refund that reaches `succeeded` revokes access, because partial
+   refunds are not offered. Refund from the Dashboard within the 30-day window.
+
+## 4. AWS: SES from Vercel through OIDC (no long-lived keys)
+
+The only AWS service the app calls at runtime is **SES `SendEmail`**. Credentials come from Vercel OIDC.
+
+1. **IAM → Identity providers → Add provider → OpenID Connect**
+   - Provider URL: `https://oidc.vercel.com/learner-max` (team issuer mode; check
+     Project Settings → Security → OIDC Federation. If it shows Global, use `https://oidc.vercel.com`)
+   - Audience: `https://vercel.com/learner-max`
+2. **IAM role `learnwithrico-ses-sender`, trust policy:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Federated": "arn:aws:iam::853219709625:oidc-provider/oidc.vercel.com/learner-max" },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": { "oidc.vercel.com/learner-max:aud": "https://vercel.com/learner-max" },
+      "StringLike": {
+        "oidc.vercel.com/learner-max:sub": [
+          "owner:learner-max:project:learnermax-course-app:environment:preview",
+          "owner:learner-max:project:learnermax-course-app:environment:production"
+        ]
+      }
+    }
+  }]
+}
 ```
 
-## Important Notes
+3. **Permission policy (send-only, this domain only):**
 
-1. **AUTH_SECRET Must Be Identical**: All environments (local, preview, production) must use the same `AUTH_SECRET`. Copy the value from your local `.env.local` file.
-
-2. **Preview Environment - No AUTH_URL**: In preview deployments, do NOT set `AUTH_URL`. Auth.js will automatically detect the deployment URL from Vercel's `VERCEL_URL` system variable.
-
-3. **Production Environment - Explicit AUTH_URL**: In production, explicitly set `AUTH_URL=<Your domain>` to ensure consistent behavior.
-
-4. **Preview OAuth Limitation**: Google OAuth does not work in preview deployments due to dynamic URLs. Users must use email/password sign-in for preview testing.
-
-5. **Replace Placeholders**: Update all `<placeholders>` with your actual values from your local `.env.local` or AWS outputs.
-
-## How It Works
-
-### Production:
-1. User visits `<Your Domain>`
-2. Clicks "Sign in with Google"
-3. Auth.js redirects to Cognito → Google
-4. After Google authentication, callback goes to `<Your Domain>/api/auth/callback/cognito`
-5. User is authenticated on production
-
-### Preview:
-1. User visits preview deployment (e.g., `project-abc123.vercel.app`)
-2. Only email/password sign-in available (Google OAuth disabled)
-3. User authenticates with credentials via Cognito
-4. User is authenticated on preview deployment
-
-### Local:
-1. User visits `localhost:3000`
-2. Can use both Google OAuth and email/password
-3. OAuth callback goes to `http://localhost:3000/api/auth/callback/cognito`
-
-## Verification Steps
-
-After configuring variables in Vercel:
-
-1. Trigger a new preview deployment (push to a branch)
-2. Visit the preview URL
-3. Try signing in with Google
-4. Verify successful authentication
-
-## Troubleshooting
-
-- **Error: "Redirect URI mismatch"**: Ensure Cognito callback URLs in SAM template match your domain (`<Your Domain>/api/auth/callback/cognito` and `http://localhost:3000/api/auth/callback/cognito`)
-- **Error: "Invalid state"**: Ensure `AUTH_SECRET` is identical across all environments
-- **Google OAuth in preview**: This is not supported - use email/password sign-in for preview testing
-- **Production OAuth fails**: Verify production Cognito User Pool has the correct callback URL configured
-
-## Hero Video (Mux)
-
-The landing page hero video is streamed from Mux. Set this in **Production** and **Preview**:
-
-```bash
-# Public playback ID of the hero video asset in Mux (not a secret)
-NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID=<mux-playback-id>
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "ses:SendEmail",
+    "Resource": "arn:aws:ses:us-east-1:853219709625:identity/learnwithrico.com"
+  }]
+}
 ```
 
-If it isn't set, the hero renders without the video block. The player poster is `frontend/public/images/hero-video-poster.jpg`.
+4. Set `AWS_ROLE_ARN=arn:aws:iam::853219709625:role/learnwithrico-ses-sender` in Preview and Production.
+
+**Secrets Manager is not used at runtime.** `learnermax/google-oauth` and `learnermax/stripe` remain the
+source for local development (`scripts/pull-local-secrets.sh`), and their values are copied into Vercel
+environment variables. `learnermax/cloudfront-private-key-*` are not used by the new app.
+
+## 5. Google OAuth (GCP project "Gemini API")
+
+One OAuth client serves every environment. Its authorized redirect URIs must include exactly:
+
+- `http://localhost:3000/api/auth/callback/google` (local)
+- `https://www.learnwithrico.com/api/auth/callback/google` (production, **add this**; it currently points at Cognito)
+
+**Previews need no redirect URI of their own.** With `OAUTH_PROXY_SECRET` set in both Preview and Production,
+Better Auth's OAuth proxy sends a preview's Google sign-in through production's callback and hands the
+encrypted profile back to the preview, which signs the user in against the preview database
+(`frontend/features/accounts/oauth-proxy.test.ts`). This only works once production runs this code.
+
+You can remove the Cognito `…/oauth2/idpresponse` URIs once Cognito is retired.
+
+## 6. Legacy AWS stack
+
+Cognito, API Gateway, the Express Lambda, DynamoDB, SNS onboarding/email Lambdas and the CloudFront video
+infrastructure are **no longer called by the app** (a test enforces this:
+`frontend/platform/runtime-boundaries.test.ts`). They were deliberately left deployed and untouched; retire
+them separately, and keep the video infrastructure until the Mux work lands.

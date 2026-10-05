@@ -54,7 +54,6 @@ export function ExpandedSidebarView({
         {sortedLessons.map((lesson) => {
           const isCompleted = completedLessons.includes(lesson.lessonId);
           const isCurrent = lesson.lessonId === currentLessonId;
-          const isLastAccessed = lesson.lessonId === progress?.lastAccessedLesson;
 
           return (
             <Link

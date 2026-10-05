@@ -3,7 +3,6 @@
 import useSWR from 'swr';
 import { fetchStudent } from '@/lib/fetchers';
 import { signUpForEarlyAccess } from '@/app/actions/students';
-import { signupForMeetup as signupForMeetupAction } from '@/app/actions/meetups';
 
 export interface StudentData {
   studentId: string;
@@ -14,7 +13,6 @@ export interface StudentData {
   updatedAt: string;
   interestedInPremium?: boolean;
   premiumInterestDate?: string;
-  signedUpMeetups?: string[];
 }
 
 /**
@@ -22,7 +20,6 @@ export interface StudentData {
  *
  * Features:
  * - Fetches student profile from API
- * - Provides signedUpMeetups for meetup signup status
  * - Optimistic update for early access signup
  */
 export function useStudent() {
@@ -70,61 +67,14 @@ export function useStudent() {
     );
   };
 
-  /**
-   * Sign up for a meetup
-   * Uses optimistic update for instant UI feedback
-   */
-  const signupForMeetup = async (meetupId: string): Promise<{ error?: string }> => {
-    if (!data) return { error: 'Not logged in' };
-
-    // Check if already signed up
-    if (data.signedUpMeetups?.includes(meetupId)) {
-      return {}; // Already signed up, no-op
-    }
-
-    const newSignedUpMeetups = [...(data.signedUpMeetups ?? []), meetupId];
-
-    try {
-      // Optimistic update
-      await mutate(
-        async () => {
-          const result = await signupForMeetupAction(meetupId);
-
-          if (result && 'error' in result) {
-            throw new Error(result.error);
-          }
-
-          // Return updated student data
-          return {
-            ...data,
-            signedUpMeetups: newSignedUpMeetups,
-          };
-        },
-        {
-          optimisticData: {
-            ...data,
-            signedUpMeetups: newSignedUpMeetups,
-          },
-          rollbackOnError: true,
-          revalidate: true,
-        }
-      );
-      return {};
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : 'Failed to sign up' };
-    }
-  };
-
   return {
     student: data,
     isLoading,
     error,
     // Derived data
-    signedUpMeetups: data?.signedUpMeetups ?? [],
     interestedInPremium: data?.interestedInPremium ?? false,
     // Mutations
     setInterestedInPremium,
-    signupForMeetup,
     // Revalidate
     mutate,
   };

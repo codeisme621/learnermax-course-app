@@ -5,13 +5,12 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export function Header() {
+/** `minimal` (auth + checkout pages): logo and a way back to the course page only. */
+export function Header({ minimal = false }: { minimal?: boolean }) {
   const router = useRouter();
 
   const handleEnrollClick = () => {
-    // Store courseId for enrollment
-    sessionStorage.setItem('pendingEnrollmentCourseId', 'spec-driven-dev-mini');
-    router.push('/enroll');
+    router.push('/checkout');
   };
 
   return (
@@ -29,14 +28,22 @@ export function Header() {
         </Link>
 
         <nav className="flex items-center gap-2 sm:gap-4">
-          <a href="#curriculum" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Curriculum</a>
-          <a href="#support" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Office hours</a>
-          <Button variant="ghost" asChild className="text-slate-200 hover:bg-white/10 hover:text-white">
-            <Link href="/signin">Sign in</Link>
-          </Button>
-          <Button onClick={handleEnrollClick} className="bg-emerald-300 font-bold text-[#07110f] hover:bg-emerald-200">
-            Join cohort
-          </Button>
+          {minimal ? (
+            <Link href="/" className="text-sm font-semibold text-slate-300 hover:text-white">
+              ← Back to course
+            </Link>
+          ) : (
+            <>
+              <a href="#curriculum" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Curriculum</a>
+              <a href="#support" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Office hours</a>
+              <Button variant="ghost" asChild className="text-slate-200 hover:bg-white/10 hover:text-white">
+                <Link href="/signin">Sign in</Link>
+              </Button>
+              <Button onClick={handleEnrollClick} className="bg-emerald-300 font-bold text-[#07110f] hover:bg-emerald-200">
+                Join cohort
+              </Button>
+            </>
+          )}
         </nav>
       </div>
     </motion.header>

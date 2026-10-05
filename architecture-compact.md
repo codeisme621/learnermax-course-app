@@ -1,3 +1,6 @@
+> **Legacy (pre-#31).** This describes the retired Cognito + API Gateway + DynamoDB architecture.
+> Current design: `specs/paid_checkout/design.md`; setup: `frontend/README.md`; deployment config: `VERCEL_ENV_SETUP.md`.
+
 # LearnerMax Architecture (Compact)
 
 ```

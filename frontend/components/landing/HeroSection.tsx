@@ -3,18 +3,14 @@
 import { track } from '@vercel/analytics';
 import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { CourseData } from '@/types/landing';
 import { Button } from '@/components/ui/button';
 import { HeroVideo } from './HeroVideo';
 
-interface HeroSectionProps { course: CourseData; }
-
-export function HeroSection({ course }: HeroSectionProps) {
+export function HeroSection() {
   const router = useRouter();
   const handleEnrollClick = () => {
     track('cta_clicked', { location: 'hero', offer: 'founding' });
-    sessionStorage.setItem('pendingEnrollmentCourseId', course.id);
-    router.push('/enroll');
+    router.push('/checkout');
   };
 
   return (
