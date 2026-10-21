@@ -11,7 +11,7 @@ test.describe('read-only (every environment)', () => {
     const res = await page.goto('/');
     expect(res?.status()).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(page.locator('#enroll').getByText('$399')).toBeVisible();
+    await expect(page.locator('#enroll').getByText('$39', { exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   });
 

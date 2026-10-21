@@ -18,7 +18,7 @@ test.describe('landing page', () => {
     await expect(page.getByText('Failed to Load Course Data')).toHaveCount(0);
 
     const offer = page.locator('#enroll');
-    await expect(offer.getByText('$399')).toBeVisible();
+    await expect(offer.getByText('$39', { exact: true })).toBeVisible();
     await expect(offer.getByRole('button', { name: /Join the founding cohort/ })).toBeVisible();
 
     expect(consoleErrors).toEqual([]);

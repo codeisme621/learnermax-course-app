@@ -14,7 +14,7 @@ export async function payOnStripe(page: Page, cardNumber = '4242424242424242') {
     await postal.fill('10001');
   }
   // Stripe pre-checks Link's "save my info", which then requires a phone number. Opt out.
-  const saveWithLink = page.getByRole('checkbox', { name: 'Save my information for faster checkout' });
+  const saveWithLink = page.getByRole('checkbox', { name: /Save my information .*for faster checkout/ });
   if ((await saveWithLink.isVisible()) && (await saveWithLink.isChecked())) {
     await saveWithLink.uncheck();
   }
