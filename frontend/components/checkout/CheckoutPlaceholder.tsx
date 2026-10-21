@@ -15,8 +15,8 @@ export function CheckoutPlaceholder() {
       </div>
       <ul className="space-y-2 text-sm text-slate-600">
         <li>Immediate access to the current course</li>
-        <li>The next 8-week guided cohort and weekly live office hours</li>
-        <li>Founding cohort pricing</li>
+        <li>Self-paced online lessons</li>
+        <li>Founding pricing</li>
       </ul>
       <Button type="button" className={primaryActionClass}>
         Continue to payment

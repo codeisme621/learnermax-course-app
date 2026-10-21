@@ -35,12 +35,12 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
           ) : (
             <>
               <a href="#curriculum" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Curriculum</a>
-              <a href="#support" className="hidden text-sm font-semibold text-slate-300 hover:text-white md:block">Office hours</a>
+              {/* TODO: Office hours and cohort hidden for now; restore the "Office hours" link to #support and the "Join cohort" button label. */}
               <Button variant="ghost" asChild className="text-slate-200 hover:bg-white/10 hover:text-white">
                 <Link href="/signin">Sign in</Link>
               </Button>
               <Button onClick={handleEnrollClick} className="bg-emerald-300 font-bold text-[#07110f] hover:bg-emerald-200">
-                Join cohort
+                Enroll
               </Button>
             </>
           )}
