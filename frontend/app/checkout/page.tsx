@@ -7,6 +7,7 @@ import { FormMessage } from '@/components/auth/FormMessage';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { OrDivider } from '@/components/auth/OrDivider';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
+import { CheckoutPlaceholder } from '@/components/checkout/CheckoutPlaceholder';
 import { SignOutLink } from '@/components/checkout/SignOutLink';
 import { getSession } from '@/features/accounts';
 import { AGENTIC_CODING_COURSE_ID, getCourse } from '@/features/courses';
@@ -73,6 +74,17 @@ async function Checkout({ searchParams }: { searchParams: Search }) {
 }
 
 export default function CheckoutPage({ searchParams }: { searchParams: Search }) {
+  // TODO: Bring the real checkout back for everyone (remove this placeholder and the flag) once the
+  // displayed price matches Stripe again. Until then visitors see a $39 page whose button does nothing;
+  // the Stripe flow ($399) still runs where CHECKOUT_ENABLED=true (the e2e test server sets it).
+  if (process.env.CHECKOUT_ENABLED !== 'true') {
+    return (
+      <AuthPage title="Get Agentic Coding">
+        <CheckoutPlaceholder />
+      </AuthPage>
+    );
+  }
+
   return (
     <AuthPage title="Get Agentic Coding" subtitle="Secure payment by Stripe. You'll set up your login after paying.">
       <Suspense>

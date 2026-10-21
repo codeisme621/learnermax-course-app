@@ -16,6 +16,8 @@ const testEnv = {
   EMAIL_CAPTURE_DIR,
   STRIPE_SECRET_KEY: sandboxStripeKey(),
   OPS_SECRET: 'e2e-ops-secret',
+  // Exercise the real Stripe checkout; without it /checkout shows the temporary $39 placeholder.
+  CHECKOUT_ENABLED: 'true',
 };
 Object.assign(process.env, testEnv);
 

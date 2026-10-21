@@ -4,7 +4,7 @@ import { track } from '@vercel/analytics';
 import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { HeroVideo } from './HeroVideo';
+import { HeroIntro } from './HeroIntro';
 
 export function HeroSection() {
   const router = useRouter();
@@ -28,7 +28,10 @@ export function HeroSection() {
           Learn the durable patterns behind coding agents your team can actually trust: context, verification, and harnesses. Then build a system that takes intent all the way to a verified pull request.
         </p>
         <div className="mt-12 w-full">
-          <HeroVideo />
+          {/* TODO: Replace HeroIntro with <HeroVideo /> once the new hero video is recorded.
+              The previous video is retired; upload the new one to Mux and set
+              NEXT_PUBLIC_HERO_VIDEO_PLAYBACK_ID to its playback ID. */}
+          <HeroIntro />
         </div>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
           <Button size="lg" onClick={handleEnrollClick} className="h-14 rounded-xl bg-emerald-300 px-7 text-base font-bold text-[#07110f] shadow-[0_16px_50px_rgba(110,231,183,.18)] hover:bg-emerald-200">
