@@ -17,7 +17,7 @@ async function latestPurchase(email: string) {
 
 async function startGuestCheckout(page: import('@playwright/test').Page, email: string) {
   await page.goto('/');
-  await page.locator('#enroll').getByRole('button', { name: /Join the founding cohort/ }).click();
+  await page.locator('#enroll').getByRole('button', { name: /Enroll in the course/ }).click();
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: 'Get Agentic Coding' })).toBeVisible();
   await page.getByLabel('Email').fill(email);

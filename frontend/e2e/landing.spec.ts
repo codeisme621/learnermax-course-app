@@ -19,7 +19,7 @@ test.describe('landing page', () => {
 
     const offer = page.locator('#enroll');
     await expect(offer.getByText('$39', { exact: true })).toBeVisible();
-    await expect(offer.getByRole('button', { name: /Join the founding cohort/ })).toBeVisible();
+    await expect(offer.getByRole('button', { name: /Enroll in the course/ })).toBeVisible();
 
     expect(consoleErrors).toEqual([]);
   });

@@ -1,9 +1,9 @@
 const faqs = [
-  ['When can I start?', 'Immediately. You get course access as soon as you enroll, then you can use the next guided cohort and weekly office hours to keep moving.'],
+  ['When can I start?', 'Immediately. You get course access as soon as you enroll and work through it online at your own pace.'],
   ['Who is this for?', 'Engineers, tech leads, engineering managers, and technical founders who already use AI coding tools and want a more reliable, production-minded system.'],
   ['Do I need to be an AI or ML engineer?', 'No. The focus is software engineering around coding agents—not training foundation models. You should be comfortable reading code and working in a repository.'],
   ['What will I finish with?', 'A working capstone that takes an engineering goal through an agentic workflow to a verified pull request, plus a reusable pattern you can carry into other repositories.'],
-  ['What happens in office hours?', 'Bring the problems blocking your progress. You can ask questions, get feedback, and learn from the real implementation challenges other engineers bring.'],
+  // TODO: Office hours and cohort hidden for now; restore the 'What happens in office hours?' FAQ and the cohort line in 'When can I start?'.
   ['Is there a guarantee?', 'Yes. If the course is not the right fit, contact us within 30 days of purchase for a refund.'],
 ];
 
